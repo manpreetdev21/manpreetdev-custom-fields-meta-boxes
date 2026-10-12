@@ -103,6 +103,18 @@ final class Renderer extends Module {
 	}
 
 	/**
+	 * Where instructions sit, for the group currently being rendered.
+	 *
+	 * Held here rather than passed through render() because sub fields are
+	 * rendered by a callable with a fixed four-argument signature, and a
+	 * repeater's sub field has to place its instructions the same way the
+	 * group around it does.
+	 *
+	 * @var string
+	 */
+	private string $instruction_placement = 'field';
+
+	/**
 	 * Render every field in a group.
 	 *
 	 * @param FieldGroup $group  Field group.
@@ -111,6 +123,8 @@ final class Renderer extends Module {
 	 */
 	public function group( FieldGroup $group, ObjectRef $ref, string $prefix = self::INPUT_PREFIX ): void {
 		$values = $this->container->get( Values::class );
+
+		$this->instruction_placement = 'label' === ( $group->settings['instruction_placement'] ?? 'field' ) ? 'label' : 'field';
 
 		printf(
 			'<div class="wpcmb-group-fields wpcmb-labels--%s" data-wpcmb-group="%s">',
@@ -152,12 +166,14 @@ final class Renderer extends Module {
 	 * @param string               $input_id   Input id.
 	 */
 	public function field( array $field, mixed $value, string $input_name, string $input_id ): void {
-		$type      = (string) ( $field['type'] ?? 'text' );
-		$name      = (string) ( $field['name'] ?? '' );
-		$handler   = $this->container->get( Registry::class )->get( $type );
-		$width     = (string) ( $field['wrapper']['width'] ?? '' );
-		$error     = $this->errors[ $name ] ?? '';
-		$is_marker = in_array( $type, array( 'tab', 'accordion' ), true );
+		$type    = (string) ( $field['type'] ?? 'text' );
+		$name    = (string) ( $field['name'] ?? '' );
+		$handler = $this->container->get( Registry::class )->get( $type );
+		$width   = (string) ( $field['wrapper']['width'] ?? '' );
+		$error   = $this->errors[ $name ] ?? '';
+		// Types that draw their own heading, so the wrapper must not draw one
+		// above it as well.
+		$is_marker = in_array( $type, array( 'tab', 'accordion', 'separator' ), true );
 
 		$attributes = array(
 			'class'                  => trim( 'wpcmb-field wpcmb-field--' . sanitize_html_class( $type ) . ' ' . (string) ( $field['wrapper']['class'] ?? '' ) ),
@@ -186,14 +202,26 @@ final class Renderer extends Module {
 			);
 		}
 
+		$instructions = (string) ( $field['instructions'] ?? '' );
+
+		// Above the control, the instructions read as part of the label and
+		// are announced with it; below, they read as a note about what was
+		// entered. Which one is right depends on the form, so it is a setting.
+		if ( '' !== $instructions && 'label' === $this->instruction_placement ) {
+			printf(
+				'<p class="wpcmb-field__instructions wpcmb-field__instructions--label">%s</p>',
+				wp_kses_post( $instructions )
+			);
+		}
+
 		echo '<div class="wpcmb-field__control">';
 
 		$handler->render( $field, $value, $input_name, $input_id );
 
-		if ( '' !== (string) ( $field['instructions'] ?? '' ) ) {
+		if ( '' !== $instructions && 'label' !== $this->instruction_placement ) {
 			printf(
 				'<p class="wpcmb-field__instructions">%s</p>',
-				wp_kses_post( (string) $field['instructions'] )
+				wp_kses_post( $instructions )
 			);
 		}
 

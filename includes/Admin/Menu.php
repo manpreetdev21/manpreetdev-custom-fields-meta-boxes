@@ -41,7 +41,78 @@ final class Menu extends Module {
 	 */
 	public function boot(): void {
 		add_action( 'admin_menu', array( $this, 'register' ) );
+
+		/*
+		 * Last, once everything that belongs in this menu has registered.
+		 *
+		 * The order a submenu ends up in is the order things happened to be
+		 * registered: post types register on `init`, pages on `admin_menu`,
+		 * and a submissions type only exists from its first submission — so
+		 * the menu rearranged itself as a site was used. One sort at the end
+		 * is the only way the order is the same on every screen.
+		 */
+		add_action( 'admin_menu', array( $this, 'order_submenu' ), 100 );
+
 		add_filter( 'submenu_file', array( $this, 'highlight_parent' ) );
+	}
+
+	/**
+	 * Put this plugin's submenu into a fixed order.
+	 *
+	 * Overview first, because it is the screen that explains the rest. The
+	 * things a site makes — forms and options pages, both of which there can
+	 * be any number of — go after the fixed screens, so the menu does not
+	 * grow in its middle.
+	 */
+	public function order_submenu(): void {
+		if ( empty( $GLOBALS['submenu'][ self::SLUG ] ) || ! is_array( $GLOBALS['submenu'][ self::SLUG ] ) ) {
+			return;
+		}
+
+		/**
+		 * Rank one submenu entry. Lower sorts higher.
+		 *
+		 * @param array<int, string> $item Submenu entry; index 2 is its slug.
+		 */
+		$rank = static function ( array $item ): int {
+			$slug = (string) ( $item[2] ?? '' );
+
+			return match ( true ) {
+				self::SLUG === $slug                                         => 0,
+				'edit.php?post_type=' . FieldGroupPostType::POST_TYPE === $slug => 1,
+				str_starts_with( $slug, 'wpcmb-options-' )                   => 5,
+				str_starts_with( $slug, 'edit.php?post_type=wpcmb_' )        => 4,
+				'wpcmb-settings' === $slug                                   => 2,
+				'wpcmb-tools' === $slug                                      => 3,
+				default                                                      => 4,
+			};
+		};
+
+		$items = $GLOBALS['submenu'][ self::SLUG ];
+
+		// A stable sort, so two forms keep the order they registered in
+		// rather than swapping places between page loads.
+		$ordered = array_values( $items );
+
+		usort(
+			$ordered,
+			static function ( array $a, array $b ) use ( $rank, $items ): int {
+				$difference = $rank( $a ) <=> $rank( $b );
+
+				return 0 !== $difference ? $difference : array_search( $a, $items, true ) <=> array_search( $b, $items, true );
+			}
+		);
+
+		/*
+		 * Writing to $submenu is the only way to order one.
+		 *
+		 * `custom_menu_order` and `menu_order` reorder top-level menus only;
+		 * core exposes no filter for the items inside one. Only this plugin's
+		 * own key is touched, and the entries are the ones already in it,
+		 * reordered — nothing is added, removed or rewritten.
+		 */
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Reordering this plugin's own submenu; see above.
+		$GLOBALS['submenu'][ self::SLUG ] = $ordered;
 	}
 
 	/**

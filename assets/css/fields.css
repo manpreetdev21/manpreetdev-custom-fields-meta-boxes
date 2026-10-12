@@ -156,6 +156,11 @@
 	margin: 5px 0 0;
 }
 
+/* Above the control, the spacing belongs on the other side. */
+.wpcmb-field__instructions--label {
+	margin: 0 0 6px;
+}
+
 /*
  * An error is the one place colour is spent freely. A red sentence under a
  * control is easy to miss in a long form; a tinted block with a rule beside
@@ -1609,4 +1614,127 @@ input.wpcmb-input[type="datetime-local"] {
 	.wpcmb-block-editor * {
 		transition-duration: 0.01ms !important;
 	}
+}
+
+/*
+ * Hide-on-screen, for the two elements core does not render as a meta box.
+ *
+ * Both are gated behind a class this plugin puts on the body, so nothing
+ * here can reach a screen that did not ask for it. The classic editor is
+ * what these ids belong to; the block editor has its own panels and its own
+ * ways of hiding them, and there is nothing here that will match it.
+ */
+
+.wpcmb-hide-permalink #edit-slug-box,
+.wpcmb-hide-permalink #sample-permalink {
+	display: none;
+}
+
+.wpcmb-hide-content #postdivrich {
+	display: none;
+}
+
+/*
+ * A separator is a rule with an optional legend sitting on it. The label is
+ * drawn by the field rather than the wrapper, because a rule with a label
+ * above it is two horizontal lines where one was asked for.
+ */
+
+.wpcmb-separator {
+	align-items: center;
+	border-block-start: 1px solid var( --wpcmb-border );
+	display: flex;
+	gap: 10px;
+	margin-block: 4px;
+}
+
+.wpcmb-separator__label {
+	background: var( --wpcmb-surface );
+	color: var( --wpcmb-muted );
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	margin-block-start: -0.75em;
+	padding-inline-end: 8px;
+	text-transform: uppercase;
+}
+
+/*
+ * Prepend and append: text fused to the control's edge.
+ *
+ * The affix is not a button and not a control; it takes the input's border so
+ * the three read as one box, and it never shrinks below its own text.
+ */
+
+.wpcmb-affix {
+	align-items: stretch;
+	display: flex;
+}
+
+.wpcmb-affix__text {
+	align-items: center;
+	background: var( --wpcmb-sunken );
+	border: 1px solid var( --wpcmb-border-strong );
+	color: var( --wpcmb-muted );
+	display: flex;
+	flex: 0 0 auto;
+	font-size: 13px;
+	padding-inline: 10px;
+}
+
+.wpcmb-affix__text:first-child {
+	border-end-end-radius: 0;
+	border-inline-end: 0;
+	border-start-end-radius: 0;
+}
+
+.wpcmb-affix__text:last-child {
+	border-end-start-radius: 0;
+	border-inline-start: 0;
+	border-start-start-radius: 0;
+}
+
+.wpcmb-affix .wpcmb-input {
+	border-radius: 0;
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+/*
+ * Choices in a row rather than a column, and the "Other" box under them.
+ *
+ * `wrap` rather than a fixed count: a row of eight checkboxes in a side
+ * meta box has to go somewhere, and overflowing is worse than wrapping.
+ */
+
+.wpcmb-choices--row {
+	display: flex;
+
+	/*
+	 * The base `.wpcmb-choices` is a flex column, so a modifier that only
+	 * says `display: flex` inherits the column and changes nothing. The
+	 * direction is the whole point of this rule.
+	 */
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: 6px 16px;
+}
+
+/* Select-all is a control over the list, so it sits above all of it. */
+.wpcmb-choice--toggle-all {
+	border-block-end: 1px solid var( --wpcmb-border );
+	flex-basis: 100%;
+	font-weight: 600;
+	margin-block-end: 4px;
+	padding-block-end: 4px;
+}
+
+.wpcmb-choice-other {
+	flex-basis: 100%;
+	margin-block-start: 6px;
+}
+
+.wpcmb-choice-other__label {
+	display: block;
+	font-size: 12px;
 }

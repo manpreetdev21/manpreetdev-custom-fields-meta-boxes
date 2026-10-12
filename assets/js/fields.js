@@ -225,10 +225,32 @@
 
 		root.querySelector( '.wpcmb-media__select' ).addEventListener( 'click', function () {
 			if ( ! frame ) {
+				var library = {};
+
+				// `type` takes a family ("image"), a full mime type
+				// ("image/png"), or a list of either. Extensions configured on
+				// the field are not mime types, so they are left to the check
+				// on save rather than guessed at here.
+				if ( root.dataset.wpcmbMime ) {
+					library.type = root.dataset.wpcmbMime.split( ',' ).filter( function ( part ) {
+						return part.indexOf( '/' ) > -1 || [ 'image', 'video', 'audio', 'text', 'application' ].indexOf( part ) > -1;
+					} );
+
+					if ( ! library.type.length ) {
+						delete library.type;
+					}
+				}
+
+				// "Only what was uploaded to this item" is the media library's
+				// own uploadedTo filter, which needs the post being edited.
+				if ( 'uploaded' === root.dataset.wpcmbLibrary && config.postId ) {
+					library.uploadedTo = config.postId;
+				}
+
 				frame = window.wp.media( {
 					title: config.i18n.selectMedia,
 					multiple: multiple ? 'add' : false,
-					library: root.dataset.wpcmbMime ? { type: root.dataset.wpcmbMime } : {},
+					library: library,
 				} );
 
 				frame.on( 'select', function () {
@@ -499,6 +521,48 @@
 					output.textContent = input.value;
 				} );
 			}
+		} );
+
+		// Select all. The box is a control of its own, not one of the values,
+		// so it has no name and nothing it does is submitted directly.
+		root.querySelectorAll( '[data-wpcmb-toggle-all]' ).forEach( function ( master ) {
+			var group = master.closest( '.wpcmb-choices' );
+
+			if ( ! group ) {
+				return;
+			}
+
+			var boxes = function () {
+				return Array.prototype.slice
+					.call( group.querySelectorAll( 'input[type="checkbox"]' ) )
+					.filter( function ( box ) {
+						return box !== master;
+					} );
+			};
+
+			master.addEventListener( 'change', function () {
+				boxes().forEach( function ( box ) {
+					box.checked = master.checked;
+				} );
+
+				// The change was made to the boxes, not by them, so nothing
+				// listening for a value change has heard about it yet.
+				group.dispatchEvent( new Event( 'change', { bubbles: true } ) );
+			} );
+
+			// And the other way round: ticking the last one on its own should
+			// leave the master checked, not stale.
+			group.addEventListener( 'change', function ( event ) {
+				if ( event.target === master ) {
+					return;
+				}
+
+				var all = boxes();
+
+				master.checked = all.length > 0 && all.every( function ( box ) {
+					return box.checked;
+				} );
+			} );
 		} );
 
 		/**

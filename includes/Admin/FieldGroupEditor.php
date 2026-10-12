@@ -262,7 +262,7 @@ final class FieldGroupEditor extends Module {
 		$settings = $this->group( $post )->settings;
 
 		$selects = array(
-			'position'        => array(
+			'position'              => array(
 				'label'   => __( 'Position', 'metafields-custom-fields' ),
 				'choices' => array(
 					'normal'   => __( 'After content', 'metafields-custom-fields' ),
@@ -270,18 +270,25 @@ final class FieldGroupEditor extends Module {
 					'advanced' => __( 'Advanced', 'metafields-custom-fields' ),
 				),
 			),
-			'style'           => array(
+			'style'                 => array(
 				'label'   => __( 'Style', 'metafields-custom-fields' ),
 				'choices' => array(
 					'default'  => __( 'Standard meta box', 'metafields-custom-fields' ),
 					'seamless' => __( 'Seamless', 'metafields-custom-fields' ),
 				),
 			),
-			'label_placement' => array(
+			'label_placement'       => array(
 				'label'   => __( 'Label placement', 'metafields-custom-fields' ),
 				'choices' => array(
 					'top'  => __( 'Above fields', 'metafields-custom-fields' ),
 					'left' => __( 'Beside fields', 'metafields-custom-fields' ),
+				),
+			),
+			'instruction_placement' => array(
+				'label'   => __( 'Instruction placement', 'metafields-custom-fields' ),
+				'choices' => array(
+					'field' => __( 'Below the field', 'metafields-custom-fields' ),
+					'label' => __( 'Above the field', 'metafields-custom-fields' ),
 				),
 			),
 		);
@@ -318,6 +325,29 @@ final class FieldGroupEditor extends Module {
 			esc_attr( (string) ( $settings['description'] ?? '' ) )
 		);
 
+		printf(
+			'<p><label class="wpcmb-label" for="wpcmb-display-title">%s</label>
+			<input class="widefat" type="text" id="wpcmb-display-title" name="wpcmb[settings][display_title]" value="%s" />
+			<span class="description">%s</span></p>',
+			esc_html__( 'Display title', 'metafields-custom-fields' ),
+			esc_attr( (string) ( $settings['display_title'] ?? '' ) ),
+			esc_html__( 'Heading shown above the fields on the edit screen. Leave empty to use the group title.', 'metafields-custom-fields' )
+		);
+
+		/*
+		 * The hidden 0 is what makes unchecking this stick: a browser posts
+		 * nothing at all for an unchecked box, and absence has to keep meaning
+		 * "exposed" for every group saved before this setting existed.
+		 */
+		printf(
+			'<p><input type="hidden" name="wpcmb[settings][show_in_rest]" value="0" />
+			<label class="wpcmb-checkbox"><input type="checkbox" name="wpcmb[settings][show_in_rest]" value="1"%s /> %s</label>
+			<span class="description">%s</span></p>',
+			checked( ! empty( $settings['show_in_rest'] ), true, false ),
+			esc_html__( 'Show in REST API', 'metafields-custom-fields' ),
+			esc_html__( 'Off hides this group\'s fields from the REST API and the block editor.', 'metafields-custom-fields' )
+		);
+
 		$hidden = (array) ( $settings['hide_on_screen'] ?? array() );
 
 		echo '<fieldset class="wpcmb-fieldset"><legend>' . esc_html__( 'Hide on screen', 'metafields-custom-fields' ) . '</legend>';
@@ -332,6 +362,8 @@ final class FieldGroupEditor extends Module {
 		}
 
 		echo '</fieldset>';
+
+		$this->render_options_page_settings( $settings );
 
 		/*
 		 * Two snippets, because there is no one honest snippet. A form takes
@@ -456,11 +488,82 @@ final class FieldGroupEditor extends Module {
 	 *
 	 * @return array<string, string>
 	 */
+	/**
+	 * Render the settings for the page an `options_page` rule creates.
+	 *
+	 * Shown on every group rather than only the ones with such a rule: the
+	 * rules live in another meta box and can change after this one is drawn,
+	 * and a setting that appears and disappears as rules are edited is worse
+	 * than one that is explained.
+	 *
+	 * @param array<string, mixed> $settings Current settings.
+	 */
+	private function render_options_page_settings( array $settings ): void {
+		echo '<fieldset class="wpcmb-fieldset"><legend>' . esc_html__( 'Options page', 'metafields-custom-fields' ) . '</legend>';
+
+		printf(
+			'<p class="description">%s</p>',
+			esc_html__( 'Used when a location rule points this group at an options page.', 'metafields-custom-fields' )
+		);
+
+		$parents = array(
+			''                    => __( 'Its own top-level menu', 'metafields-custom-fields' ),
+			Menu::SLUG            => __( 'Under Meta Boxes', 'metafields-custom-fields' ),
+			'options-general.php' => __( 'Under Settings', 'metafields-custom-fields' ),
+			'tools.php'           => __( 'Under Tools', 'metafields-custom-fields' ),
+			'themes.php'          => __( 'Under Appearance', 'metafields-custom-fields' ),
+			'edit.php'            => __( 'Under Posts', 'metafields-custom-fields' ),
+			'upload.php'          => __( 'Under Media', 'metafields-custom-fields' ),
+			'users.php'           => __( 'Under Users', 'metafields-custom-fields' ),
+		);
+
+		printf( '<p><label class="wpcmb-label" for="wpcmb-options-parent">%s</label>', esc_html__( 'Menu location', 'metafields-custom-fields' ) );
+		echo '<select class="widefat" id="wpcmb-options-parent" name="wpcmb[settings][options_parent]">';
+
+		foreach ( $parents as $value => $label ) {
+			printf(
+				'<option value="%s"%s>%s</option>',
+				esc_attr( $value ),
+				selected( (string) ( $settings['options_parent'] ?? '' ), $value, false ),
+				esc_html( $label )
+			);
+		}
+
+		echo '</select></p>';
+
+		printf(
+			'<p><label class="wpcmb-label" for="wpcmb-options-capability">%s</label>
+			<input class="widefat" type="text" id="wpcmb-options-capability" name="wpcmb[settings][options_capability]" value="%s" placeholder="manage_options" />
+			<span class="description">%s</span></p>',
+			esc_html__( 'Capability', 'metafields-custom-fields' ),
+			esc_attr( (string) ( $settings['options_capability'] ?? '' ) ),
+			esc_html__( 'Who may open and save the page. Defaults to manage_options.', 'metafields-custom-fields' )
+		);
+
+		printf(
+			'<p><label class="wpcmb-label" for="wpcmb-options-icon">%s</label>
+			<input class="widefat" type="text" id="wpcmb-options-icon" name="wpcmb[settings][options_icon]" value="%s" placeholder="dashicons-admin-generic" />
+			<span class="description">%s</span></p>',
+			esc_html__( 'Menu icon', 'metafields-custom-fields' ),
+			esc_attr( (string) ( $settings['options_icon'] ?? '' ) ),
+			esc_html__( 'A Dashicon name or an image URL. Only used for a top-level menu.', 'metafields-custom-fields' )
+		);
+
+		echo '</fieldset>';
+	}
+
+	/**
+	 * The edit-screen elements a group can hide, keyed by their setting value.
+	 *
+	 * @return array<string, string>
+	 */
 	private function hideable_elements(): array {
 		return array(
 			'permalink'       => __( 'Permalink', 'metafields-custom-fields' ),
 			'the_content'     => __( 'Content editor', 'metafields-custom-fields' ),
 			'excerpt'         => __( 'Excerpt', 'metafields-custom-fields' ),
+			'custom_fields'   => __( 'Custom fields', 'metafields-custom-fields' ),
+			'page_attributes' => __( 'Page attributes', 'metafields-custom-fields' ),
 			'discussion'      => __( 'Discussion', 'metafields-custom-fields' ),
 			'comments'        => __( 'Comments', 'metafields-custom-fields' ),
 			'revisions'       => __( 'Revisions', 'metafields-custom-fields' ),

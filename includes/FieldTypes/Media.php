@@ -79,11 +79,18 @@ final class Media extends FieldType {
 		$multiple = 'gallery' === $type;
 		$ids      = $this->ids( $value );
 
+		/*
+		 * The picker is told what to offer; the validator decides what is
+		 * allowed. Both read the same settings, because a filtered library
+		 * is a convenience and the check on save is the rule.
+		 */
 		printf(
-			'<div class="wpcmb-media" data-wpcmb-media="%s" data-wpcmb-multiple="%s" data-wpcmb-mime="%s">',
+			'<div class="wpcmb-media" data-wpcmb-media="%s" data-wpcmb-multiple="%s" data-wpcmb-mime="%s" data-wpcmb-library="%s" data-wpcmb-preview="%s">',
 			esc_attr( $type ),
 			esc_attr( $multiple ? '1' : '0' ),
-			esc_attr( $this->mime( $type ) )
+			esc_attr( $this->mime_filter( $field, $type ) ),
+			esc_attr( 'uploaded' === (string) $this->setting( $field, 'library', 'all' ) ? 'uploaded' : 'all' ),
+			esc_attr( (string) $this->setting( $field, 'preview_size', 'thumbnail' ) )
 		);
 
 		printf(
@@ -96,8 +103,10 @@ final class Media extends FieldType {
 
 		echo '<ul class="wpcmb-media__list">';
 
+		$preview = (string) $this->setting( $field, 'preview_size', 'thumbnail' );
+
 		foreach ( $ids as $id ) {
-			$this->render_item( $id );
+			$this->render_item( $id, $preview );
 		}
 
 		echo '</ul>';
@@ -116,11 +125,12 @@ final class Media extends FieldType {
 	/**
 	 * Render one attachment preview.
 	 *
-	 * @param int $id Attachment id.
+	 * @param int    $id   Attachment id.
+	 * @param string $size Registered image size for the preview.
 	 */
-	private function render_item( int $id ): void {
+	private function render_item( int $id, string $size = 'thumbnail' ): void {
 		$title = get_the_title( $id );
-		$thumb = wp_get_attachment_image( $id, 'thumbnail', true, array( 'loading' => 'lazy' ) );
+		$thumb = wp_get_attachment_image( $id, '' !== $size ? $size : 'thumbnail', true, array( 'loading' => 'lazy' ) );
 
 		printf(
 			'<li class="wpcmb-media__item" data-wpcmb-id="%s">%s<span class="wpcmb-media__title">%s</span>
@@ -215,6 +225,37 @@ final class Media extends FieldType {
 	 */
 	public function settings_schema( string $type ): array {
 		$schema = array(
+			'library'       => array(
+				'label'   => __( 'Library', 'metafields-custom-fields' ),
+				'type'    => 'select',
+				'choices' => array(
+					'all'      => __( 'Everything in the media library', 'metafields-custom-fields' ),
+					'uploaded' => __( 'Only what was uploaded to this item', 'metafields-custom-fields' ),
+				),
+			),
+			'mime_types'    => array(
+				'label' => __( 'Allowed file types', 'metafields-custom-fields' ),
+				'type'  => 'text',
+				'tab'   => 'validation',
+				'help'  => __( 'Comma separated extensions or mime types, e.g. pdf, docx or image/png. Leave empty for this field type\'s own.', 'metafields-custom-fields' ),
+			),
+			'min_size'      => array(
+				'label' => __( 'Minimum file size', 'metafields-custom-fields' ),
+				'type'  => 'text',
+				'tab'   => 'validation',
+				'help'  => __( 'Kilobytes when bare; 2MB and 500 KB also work.', 'metafields-custom-fields' ),
+			),
+			'max_size'      => array(
+				'label' => __( 'Maximum file size', 'metafields-custom-fields' ),
+				'type'  => 'text',
+				'tab'   => 'validation',
+			),
+			'preview_size'  => array(
+				'label' => __( 'Preview size', 'metafields-custom-fields' ),
+				'type'  => 'text',
+				'tab'   => 'appearance',
+				'help'  => __( 'A registered image size. Defaults to thumbnail.', 'metafields-custom-fields' ),
+			),
 			'return_format' => array(
 				'label'   => __( 'Return format', 'metafields-custom-fields' ),
 				'type'    => 'select',
@@ -238,6 +279,24 @@ final class Media extends FieldType {
 			);
 		}
 
+		// Dimensions only mean something for a type that holds an image.
+		if ( in_array( $type, array( 'image', 'gallery' ), true ) ) {
+			$dimensions = array(
+				'min_width'  => __( 'Minimum width (px)', 'metafields-custom-fields' ),
+				'max_width'  => __( 'Maximum width (px)', 'metafields-custom-fields' ),
+				'min_height' => __( 'Minimum height (px)', 'metafields-custom-fields' ),
+				'max_height' => __( 'Maximum height (px)', 'metafields-custom-fields' ),
+			);
+
+			foreach ( $dimensions as $name => $label ) {
+				$schema[ $name ] = array(
+					'label' => $label,
+					'type'  => 'number',
+					'tab'   => 'validation',
+				);
+			}
+		}
+
 		return $schema;
 	}
 
@@ -253,6 +312,201 @@ final class Media extends FieldType {
 			'audio'            => 'audio',
 			default            => '',
 		};
+	}
+
+	/**
+	 * What the picker should offer: the configured types, or the type's own.
+	 *
+	 * A file field restricted to `pdf,doc` is more useful than one restricted
+	 * to everything, and the type's own family is the right default — an image
+	 * field has no business offering a zip.
+	 *
+	 * @param array<string, mixed> $field Field definition.
+	 * @param string               $type  Field type.
+	 */
+	private function mime_filter( array $field, string $type ): string {
+		$configured = $this->mime_types( $field );
+
+		return array() === $configured ? $this->mime( $type ) : implode( ',', $configured );
+	}
+
+	/**
+	 * The configured extensions or mime types, cleaned.
+	 *
+	 * @param array<string, mixed> $field Field definition.
+	 *
+	 * @return array<int, string>
+	 */
+	private function mime_types( array $field ): array {
+		$raw = (string) $this->setting( $field, 'mime_types', '' );
+
+		if ( '' === $raw ) {
+			return array();
+		}
+
+		$types = array_map(
+			// `.PDF` and `pdf` and ` PDF ` are all the same answer.
+			static fn( string $part ): string => strtolower( ltrim( trim( $part ), '.' ) ),
+			explode( ',', $raw )
+		);
+
+		return array_values( array_filter( $types ) );
+	}
+
+	/**
+	 * Reject any attachment that breaks this field's limits.
+	 *
+	 * @param mixed                $value Submitted value.
+	 * @param array<string, mixed> $field Field definition.
+	 */
+	public function validate( mixed $value, array $field ): string {
+		foreach ( $this->ids( $value ) as $id ) {
+			$rejection = $this->rejection( $id, $field );
+
+			if ( '' !== $rejection ) {
+				return $rejection;
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * Why an attachment is not allowed in this field, or an empty string.
+	 *
+	 * Every limit is checked here rather than in the picker: the picker is a
+	 * convenience that can be bypassed by typing an id, and a gallery can be
+	 * filled by code that never opens one.
+	 *
+	 * @param int                  $id    Attachment id.
+	 * @param array<string, mixed> $field Field definition.
+	 */
+	public function rejection( int $id, array $field ): string {
+		$allowed = $this->mime_types( $field );
+
+		if ( array() !== $allowed ) {
+			$file      = (string) get_post_mime_type( $id );
+			$extension = strtolower( (string) pathinfo( (string) get_attached_file( $id ), PATHINFO_EXTENSION ) );
+
+			$matches = in_array( $extension, $allowed, true )
+				|| in_array( $file, $allowed, true )
+				// `image` matches `image/png`, the way the picker filters.
+				|| in_array( explode( '/', $file )[0], $allowed, true );
+
+			if ( ! $matches ) {
+				return sprintf(
+					/* translators: %s: comma-separated list of allowed file types. */
+					__( 'That file type is not allowed. Allowed: %s.', 'metafields-custom-fields' ),
+					implode( ', ', $allowed )
+				);
+			}
+		}
+
+		$path = (string) get_attached_file( $id );
+		$size = is_file( $path ) ? (int) filesize( $path ) : 0;
+
+		foreach ( array(
+			'min_size' => true,
+			'max_size' => false,
+		) as $setting => $is_min ) {
+			$limit = $this->kilobytes( (string) $this->setting( $field, $setting, '' ) );
+
+			if ( 0 === $limit || 0 === $size ) {
+				continue;
+			}
+
+			if ( $is_min ? $size < $limit : $size > $limit ) {
+				return sprintf(
+					$is_min
+						/* translators: 1: the file's size, 2: the smallest allowed size. */
+						? __( 'That file is %1$s; the smallest allowed is %2$s.', 'metafields-custom-fields' )
+						/* translators: 1: the file's size, 2: the largest allowed size. */
+						: __( 'That file is %1$s; the largest allowed is %2$s.', 'metafields-custom-fields' ),
+					size_format( $size ),
+					size_format( $limit )
+				);
+			}
+		}
+
+		return $this->dimension_rejection( $id, $field );
+	}
+
+	/**
+	 * Why an image's dimensions are not allowed, or an empty string.
+	 *
+	 * @param int                  $id    Attachment id.
+	 * @param array<string, mixed> $field Field definition.
+	 */
+	private function dimension_rejection( int $id, array $field ): string {
+		$meta = wp_get_attachment_metadata( $id );
+
+		// Not an image, or an image WordPress could not measure: there is
+		// nothing to compare, and refusing it would be a guess.
+		if ( ! is_array( $meta ) || empty( $meta['width'] ) || empty( $meta['height'] ) ) {
+			return '';
+		}
+
+		$actual = array(
+			'width'  => (int) $meta['width'],
+			'height' => (int) $meta['height'],
+		);
+
+		$limits = array(
+			/* translators: 1: the image's width in pixels, 2: the narrowest allowed width in pixels. */
+			'min_width'  => array( 'width', true, __( 'That image is %1$dpx wide; the narrowest allowed is %2$dpx.', 'metafields-custom-fields' ) ),
+			/* translators: 1: the image's width in pixels, 2: the widest allowed width in pixels. */
+			'max_width'  => array( 'width', false, __( 'That image is %1$dpx wide; the widest allowed is %2$dpx.', 'metafields-custom-fields' ) ),
+			/* translators: 1: the image's height in pixels, 2: the shortest allowed height in pixels. */
+			'min_height' => array( 'height', true, __( 'That image is %1$dpx tall; the shortest allowed is %2$dpx.', 'metafields-custom-fields' ) ),
+			/* translators: 1: the image's height in pixels, 2: the tallest allowed height in pixels. */
+			'max_height' => array( 'height', false, __( 'That image is %1$dpx tall; the tallest allowed is %2$dpx.', 'metafields-custom-fields' ) ),
+		);
+
+		foreach ( $limits as $setting => $rule ) {
+			list( $axis, $is_min, $message ) = $rule;
+
+			$limit = (int) $this->setting( $field, $setting, 0 );
+
+			if ( $limit <= 0 ) {
+				continue;
+			}
+
+			if ( $is_min ? $actual[ $axis ] < $limit : $actual[ $axis ] > $limit ) {
+				return sprintf( $message, $actual[ $axis ], $limit );
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * A size limit in bytes, from a number of kilobytes or a size with a unit.
+	 *
+	 * Kilobytes when bare, because that is what the media library's own
+	 * limits are written in; `2MB` and `500 KB` also work, because that is
+	 * what people type.
+	 *
+	 * @param string $value Configured limit.
+	 */
+	private function kilobytes( string $value ): int {
+		$value = strtolower( trim( $value ) );
+
+		if ( '' === $value ) {
+			return 0;
+		}
+
+		$number = (float) $value;
+		$unit   = 1024;
+
+		if ( str_contains( $value, 'mb' ) ) {
+			$unit = 1024 * 1024;
+		} elseif ( str_contains( $value, 'gb' ) ) {
+			$unit = 1024 * 1024 * 1024;
+		} elseif ( str_contains( $value, 'b' ) && ! str_contains( $value, 'kb' ) ) {
+			$unit = 1;
+		}
+
+		return (int) round( $number * $unit );
 	}
 
 	/**

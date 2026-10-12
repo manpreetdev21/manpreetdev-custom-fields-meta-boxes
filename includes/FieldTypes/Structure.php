@@ -31,6 +31,7 @@ final class Structure extends FieldType {
 	public function types(): array {
 		return array(
 			'message'   => __( 'Message', 'metafields-custom-fields' ),
+			'separator' => __( 'Separator', 'metafields-custom-fields' ),
 			'tab'       => __( 'Tab', 'metafields-custom-fields' ),
 			'accordion' => __( 'Accordion', 'metafields-custom-fields' ),
 			'group'     => __( 'Group', 'metafields-custom-fields' ),
@@ -54,6 +55,7 @@ final class Structure extends FieldType {
 			'accordion' => 'dashicons-editor-insertmore',
 			'group'     => 'dashicons-screenoptions',
 			'message'   => 'dashicons-info',
+			'separator' => 'dashicons-minus',
 			'tab'       => 'dashicons-index-card',
 		);
 
@@ -100,6 +102,19 @@ final class Structure extends FieldType {
 			printf(
 				'<div class="wpcmb-message">%s</div>',
 				wp_kses_post( (string) $this->setting( $field, 'message', '' ) )
+			);
+
+			return;
+		}
+
+		if ( 'separator' === $type ) {
+			// A labelled rule, or a plain one when there is no label. The label
+			// is a legend rather than a field label, so the renderer is told not
+			// to draw one: see Renderer::field().
+			printf(
+				'<div class="wpcmb-separator"%s>%s</div>',
+				'' === $label ? ' role="separator"' : '',
+				'' === $label ? '' : '<span class="wpcmb-separator__label">' . esc_html( $label ) . '</span>'
 			);
 
 			return;

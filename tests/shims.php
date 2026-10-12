@@ -635,3 +635,129 @@ function get_post_type( int $id = 0 ) {
 
 	return $post instanceof WP_Post ? $post->post_type : false;
 }
+
+/* -------------------------------------------------------------------------
+ * Attachments, for the media field's own limits.
+ *
+ * An attachment here is a row in a test store: a mime type, a file on disk
+ * and, for an image, the width and height WordPress would have recorded.
+ * ---------------------------------------------------------------------- */
+
+$GLOBALS['wpcmb_test_attachments'] = array();
+
+/**
+ * Register a test attachment.
+ *
+ * @param int                  $id   Attachment id.
+ * @param string               $mime Mime type.
+ * @param string               $file Path to a real file on disk.
+ * @param array<string, int>   $meta Image metadata, e.g. width and height.
+ */
+function wpcmb_test_attachment( int $id, string $mime, string $file, array $meta = array() ): void {
+	$GLOBALS['wpcmb_test_attachments'][ $id ] = array(
+		'mime' => $mime,
+		'file' => $file,
+		'meta' => $meta,
+	);
+}
+
+/**
+ * Mime type of a test attachment.
+ *
+ * @param int $id Attachment id.
+ *
+ * @return string|false
+ */
+function get_post_mime_type( int $id = 0 ) {
+	return $GLOBALS['wpcmb_test_attachments'][ $id ]['mime'] ?? false;
+}
+
+/**
+ * File path of a test attachment.
+ *
+ * @param int $id Attachment id.
+ *
+ * @return string|false
+ */
+function get_attached_file( int $id = 0 ) {
+	return $GLOBALS['wpcmb_test_attachments'][ $id ]['file'] ?? false;
+}
+
+/**
+ * Image metadata of a test attachment.
+ *
+ * @param int $id Attachment id.
+ *
+ * @return array<string, int>|false
+ */
+function wp_get_attachment_metadata( int $id = 0 ) {
+	$meta = $GLOBALS['wpcmb_test_attachments'][ $id ]['meta'] ?? array();
+
+	return array() === $meta ? false : $meta;
+}
+
+/**
+ * A byte count in the shape WordPress prints it.
+ *
+ * @param int $bytes    Byte count.
+ * @param int $decimals Decimal places.
+ */
+function size_format( $bytes, $decimals = 0 ): string {
+	$bytes = (int) $bytes;
+
+	foreach ( array( 'GB' => 1073741824, 'MB' => 1048576, 'KB' => 1024 ) as $unit => $size ) {
+		if ( $bytes >= $size ) {
+			return round( $bytes / $size, (int) $decimals ) . ' ' . $unit;
+		}
+	}
+
+	return $bytes . ' B';
+}
+
+/**
+ * Whether a taxonomy is registered. The checks register their own.
+ *
+ * @param string $taxonomy Taxonomy name.
+ */
+function taxonomy_exists( string $taxonomy ): bool {
+	return in_array( $taxonomy, (array) ( $GLOBALS['wpcmb_test_taxonomies'] ?? array() ), true );
+}
+
+/**
+ * Translate and escape for HTML, in one call.
+ *
+ * @param string $text   Text to translate.
+ * @param string $domain Text domain.
+ */
+function esc_html__( string $text, string $domain = 'default' ): string {
+	return esc_html( __( $text, $domain ) );
+}
+
+/**
+ * Translate and escape for an attribute, in one call.
+ *
+ * @param string $text   Text to translate.
+ * @param string $domain Text domain.
+ */
+function esc_attr__( string $text, string $domain = 'default' ): string {
+	return esc_attr( __( $text, $domain ) );
+}
+
+/**
+ * Echo translated, HTML-escaped text.
+ *
+ * @param string $text   Text to translate.
+ * @param string $domain Text domain.
+ */
+function esc_html_e( string $text, string $domain = 'default' ): void {
+	echo esc_html__( $text, $domain );
+}
+
+/**
+ * A non-negative integer.
+ *
+ * @param mixed $value Value to cast.
+ */
+function absint( $value ): int {
+	return abs( (int) $value );
+}

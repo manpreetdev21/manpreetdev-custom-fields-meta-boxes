@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace WPCMB\FieldTypes;
 
 use WPCMB\Abstracts\FieldType;
+use WPCMB\Fields\ObjectRef;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -99,7 +100,7 @@ final class Relationship extends FieldType {
 
 		printf( '<select %s>', $attributes ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- attributes() escapes every name and value.
 
-		if ( ! $multiple ) {
+		if ( ! $multiple && '0' !== (string) $this->setting( $field, 'allow_null', '1' ) ) {
 			printf( '<option value="">%s</option>', esc_html__( '— Select —', 'metafields-custom-fields' ) );
 		}
 
@@ -186,6 +187,83 @@ final class Relationship extends FieldType {
 	 *
 	 * @return array<string, array<string, mixed>>
 	 */
+	/**
+	 * Assign a taxonomy field's terms to the post it was saved on.
+	 *
+	 * Opt-in, because a taxonomy field is often a second, editorial list that
+	 * has nothing to do with the post's real terms — switching this on makes
+	 * the field authoritative over them, and it replaces whatever that
+	 * taxonomy held rather than adding to it.
+	 *
+	 * @param mixed                $value Stored value.
+	 * @param array<string, mixed> $field Field definition.
+	 * @param mixed                $ref   Object written to.
+	 */
+	public function on_save( mixed $value, array $field, mixed $ref ): void {
+		$taxonomy = $this->taxonomy_for( $field );
+
+		if ( '' === $taxonomy || empty( $this->setting( $field, 'save_terms', '' ) ) ) {
+			return;
+		}
+
+		// Terms live on posts. A field on a user or a comment has nothing to
+		// assign them to.
+		if ( ! $ref instanceof ObjectRef || ObjectRef::POST !== $ref->type ) {
+			return;
+		}
+
+		wp_set_object_terms( (int) $ref->id, array_map( 'intval', $this->as_list( $value ) ), $taxonomy );
+	}
+
+	/**
+	 * Show the post's own terms instead of the field's stored value.
+	 *
+	 * @param mixed                $value Stored value.
+	 * @param array<string, mixed> $field Field definition.
+	 * @param mixed                $ref   Object being read.
+	 *
+	 * @return mixed
+	 */
+	public function on_load( mixed $value, array $field, mixed $ref ): mixed {
+		$taxonomy = $this->taxonomy_for( $field );
+
+		if ( '' === $taxonomy || empty( $this->setting( $field, 'load_terms', '' ) ) ) {
+			return $value;
+		}
+
+		if ( ! $ref instanceof ObjectRef || ObjectRef::POST !== $ref->type ) {
+			return $value;
+		}
+
+		$terms = wp_get_object_terms( (int) $ref->id, $taxonomy, array( 'fields' => 'ids' ) );
+
+		// A taxonomy that is not registered on this post type returns an
+		// error, and the stored value is a better answer than none.
+		return is_wp_error( $terms ) ? $value : array_map( 'strval', $terms );
+	}
+
+	/**
+	 * The taxonomy a taxonomy field points at.
+	 *
+	 * @param array<string, mixed> $field Field definition.
+	 */
+	private function taxonomy_for( array $field ): string {
+		if ( 'taxonomy' !== (string) ( $field['type'] ?? '' ) ) {
+			return '';
+		}
+
+		$taxonomy = sanitize_key( (string) $this->setting( $field, 'taxonomy', '' ) );
+
+		return taxonomy_exists( $taxonomy ) ? $taxonomy : '';
+	}
+
+	/**
+	 * Extra settings for the field editor.
+	 *
+	 * @param string $type Type being configured.
+	 *
+	 * @return array<string, array<string, mixed>>
+	 */
 	public function settings_schema( string $type ): array {
 		$schema = array();
 
@@ -216,6 +294,38 @@ final class Relationship extends FieldType {
 			'label' => __( 'Allow multiple', 'metafields-custom-fields' ),
 			'type'  => 'toggle',
 		);
+
+		$schema['min'] = array(
+			'label' => __( 'Minimum selections', 'metafields-custom-fields' ),
+			'type'  => 'number',
+			'tab'   => 'validation',
+			'help'  => __( 'Applies when multiple selections are allowed.', 'metafields-custom-fields' ),
+		);
+
+		$schema['max'] = array(
+			'label' => __( 'Maximum selections', 'metafields-custom-fields' ),
+			'type'  => 'number',
+			'tab'   => 'validation',
+		);
+
+		$schema['allow_null'] = array(
+			'label' => __( 'Offer an empty choice', 'metafields-custom-fields' ),
+			'type'  => 'toggle',
+			'help'  => __( 'On by default. Off needs a default value, or the browser preselects the first item.', 'metafields-custom-fields' ),
+		);
+
+		if ( 'taxonomy' === $type ) {
+			$schema['save_terms'] = array(
+				'label' => __( 'Also assign the terms', 'metafields-custom-fields' ),
+				'type'  => 'toggle',
+				'help'  => __( 'Sets the chosen terms on the post as well as storing them in this field.', 'metafields-custom-fields' ),
+			);
+			$schema['load_terms'] = array(
+				'label' => __( 'Load from the post\'s terms', 'metafields-custom-fields' ),
+				'type'  => 'toggle',
+				'help'  => __( 'Shows the terms the post already has, rather than this field\'s stored value.', 'metafields-custom-fields' ),
+			);
+		}
 
 		if ( 'page_link' !== $type ) {
 			$schema['return_format'] = array(

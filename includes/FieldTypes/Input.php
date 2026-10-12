@@ -142,7 +142,33 @@ final class Input extends FieldType {
 			return;
 		}
 
+		$prepend = (string) $this->setting( $field, 'prepend', '' );
+		$append  = (string) $this->setting( $field, 'append', '' );
+		$affixed = '' !== $prepend || '' !== $append;
+
+		/*
+		 * An affix is decoration, not data: "$" beside a price field is there
+		 * so nobody types the dollar sign, and what gets stored is the number
+		 * on its own. It is marked aria-hidden because the label is where the
+		 * unit belongs for anyone not looking at the box.
+		 */
+		if ( $affixed ) {
+			echo '<div class="wpcmb-affix">';
+
+			if ( '' !== $prepend ) {
+				printf( '<span class="wpcmb-affix__text" aria-hidden="true">%s</span>', esc_html( $prepend ) );
+			}
+		}
+
 		printf( '<input %s />', $this->attributes( $attributes ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- attributes() escapes every name and value.
+
+		if ( $affixed ) {
+			if ( '' !== $append ) {
+				printf( '<span class="wpcmb-affix__text" aria-hidden="true">%s</span>', esc_html( $append ) );
+			}
+
+			echo '</div>';
+		}
 
 		if ( 'range' === $type ) {
 			printf(
@@ -297,6 +323,28 @@ final class Input extends FieldType {
 				'label' => __( 'Return format', 'metafields-custom-fields' ),
 				'type'  => 'text',
 				'help'  => __( 'A PHP date format. Leave empty to return the raw value.', 'metafields-custom-fields' ),
+			);
+		}
+
+		/*
+		 * Text beside the control: a currency symbol, a unit, a domain.
+		 *
+		 * Not offered for the types where there is no room for it or nothing
+		 * to say — a colour swatch, a range slider, a hidden input, and the
+		 * date and time controls, whose own browser-drawn pickers already fill
+		 * the box.
+		 */
+		if ( ! in_array( $type, array( 'color', 'range', 'hidden', 'date', 'time', 'datetime', 'uuid' ), true ) ) {
+			$schema['prepend'] = array(
+				'label' => __( 'Prepend', 'metafields-custom-fields' ),
+				'type'  => 'text',
+				'tab'   => 'appearance',
+				'help'  => __( 'Shown before the control. Decoration only: it is not saved with the value.', 'metafields-custom-fields' ),
+			);
+			$schema['append']  = array(
+				'label' => __( 'Append', 'metafields-custom-fields' ),
+				'type'  => 'text',
+				'tab'   => 'appearance',
 			);
 		}
 

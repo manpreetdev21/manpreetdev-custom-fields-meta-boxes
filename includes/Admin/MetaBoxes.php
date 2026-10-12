@@ -47,6 +47,25 @@ final class MetaBoxes extends Module {
 	private const BLOCKED_PREFIX = 'wpcmb_blocked_';
 
 	/**
+	 * Hideable elements core does not render as a meta box.
+	 *
+	 * The permalink row and the content editor are part of the edit form
+	 * itself, so there is nothing for remove_meta_box() to remove. They are
+	 * hidden by a class on the body instead.
+	 */
+	private const SCRIPTED_ELEMENTS = array( 'permalink', 'the_content' );
+
+	/**
+	 * Which of those elements this screen's groups ask to hide.
+	 *
+	 * Filled while meta boxes are registered, read when the body class is
+	 * filtered — which core does later, in the admin header.
+	 *
+	 * @var array<int, string>
+	 */
+	private array $scripted = array();
+
+	/**
 	 * Whether guard_publish() has already recorded this request's errors.
 	 *
 	 * It validates every field that applies, including ones the submission
@@ -86,6 +105,22 @@ final class MetaBoxes extends Module {
 		add_action( 'edit_comment', array( $this, 'save_comment' ) );
 
 		add_action( 'admin_notices', array( $this, 'render_errors' ) );
+		add_filter( 'admin_body_class', array( $this, 'body_class' ) );
+	}
+
+	/**
+	 * Carry the hide-on-screen elements core does not expose as meta boxes.
+	 *
+	 * @param string|string[] $classes Existing body classes.
+	 */
+	public function body_class( $classes ): string {
+		$classes = is_array( $classes ) ? implode( ' ', $classes ) : (string) $classes;
+
+		foreach ( $this->scripted as $element ) {
+			$classes .= 'permalink' === $element ? ' wpcmb-hide-permalink' : ' wpcmb-hide-content';
+		}
+
+		return $classes;
 	}
 
 	/**
@@ -133,9 +168,21 @@ final class MetaBoxes extends Module {
 	 * @param string     $screen Screen id.
 	 */
 	private function add_meta_box( FieldGroup $group, ObjectRef $ref, string $screen ): void {
+		/*
+		 * The display title is what the editor shows; the group title is what
+		 * the field group list shows. They are separate so a group can be
+		 * called "Product — pricing" where it is administered and "Pricing"
+		 * where it is filled in.
+		 */
+		$heading = (string) ( $group->settings['display_title'] ?? '' );
+
+		if ( '' === $heading ) {
+			$heading = '' !== $group->title ? $group->title : __( 'Fields', 'metafields-custom-fields' );
+		}
+
 		add_meta_box(
 			'wpcmb-' . $group->key,
-			'' !== $group->title ? $group->title : __( 'Fields', 'metafields-custom-fields' ),
+			$heading,
 			function () use ( $group, $ref ): void {
 				$this->render_group( $group, $ref );
 			},
@@ -805,9 +852,24 @@ final class MetaBoxes extends Module {
 			$hidden = array_merge( $hidden, (array) ( $group->settings['hide_on_screen'] ?? array() ) );
 		}
 
-		foreach ( array_unique( $hidden ) as $element ) {
-			remove_meta_box( $this->meta_box_id( (string) $element ), get_current_screen(), $this->meta_box_context( (string) $element ) );
+		$hidden = array_values( array_unique( array_map( 'strval', $hidden ) ) );
+
+		foreach ( $hidden as $element ) {
+			/*
+			 * The permalink row and the content editor are not meta boxes, so
+			 * remove_meta_box() was quietly doing nothing for them — the two
+			 * options have been in the list since the start and have never
+			 * hidden anything. They are passed to the script instead, which
+			 * hides the elements core does render.
+			 */
+			if ( in_array( $element, self::SCRIPTED_ELEMENTS, true ) ) {
+				continue;
+			}
+
+			remove_meta_box( $this->meta_box_id( $element ), get_current_screen(), $this->meta_box_context( $element ) );
 		}
+
+		$this->scripted = array_values( array_intersect( self::SCRIPTED_ELEMENTS, $hidden ) );
 	}
 
 	/**
@@ -818,6 +880,8 @@ final class MetaBoxes extends Module {
 	private function meta_box_id( string $element ): string {
 		return match ( $element ) {
 			'excerpt'         => 'postexcerpt',
+			'custom_fields'   => 'postcustom',
+			'page_attributes' => 'pageparentdiv',
 			'discussion'      => 'commentstatusdiv',
 			'comments'        => 'commentsdiv',
 			'revisions'       => 'revisionsdiv',
@@ -838,6 +902,6 @@ final class MetaBoxes extends Module {
 	 * @param string $element Element name.
 	 */
 	private function meta_box_context( string $element ): string {
-		return in_array( $element, array( 'categories', 'tags', 'featured_image', 'format', 'author' ), true ) ? 'side' : 'normal';
+		return in_array( $element, array( 'categories', 'tags', 'featured_image', 'format', 'author', 'page_attributes' ), true ) ? 'side' : 'normal';
 	}
 }

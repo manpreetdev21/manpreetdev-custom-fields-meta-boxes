@@ -53,6 +53,31 @@ final class Registry extends Module {
 		add_filter( 'wpcmb/value/load', array( $this, 'format_value' ), 10, 4 );
 		add_filter( 'wpcmb/value/save', array( $this, 'sanitize_value' ), 10, 4 );
 		add_filter( 'wpcmb/admin/field_types', array( $this, 'editor_labels' ) );
+		add_filter( 'wpcmb/validate', array( $this, 'validate_value' ), 10, 3 );
+	}
+
+	/**
+	 * Let a field type reject a value the generic checks allowed.
+	 *
+	 * Hooked rather than called from the Validator, because the Validator
+	 * holds no container — and because going through the filter means a
+	 * third-party type gets server-side validation the same way a built-in
+	 * one does.
+	 *
+	 * @param string               $error Error so far, empty when valid.
+	 * @param mixed                $value Submitted value.
+	 * @param array<string, mixed> $field Field definition.
+	 */
+	public function validate_value( $error, $value, $field ): string {
+		$error = (string) $error;
+
+		// The first failure already has a message; a second one would only
+		// replace it with a different complaint about the same value.
+		if ( '' !== $error || ! is_array( $field ) ) {
+			return $error;
+		}
+
+		return $this->get( (string) ( $field['type'] ?? '' ) )->validate( $value, $field );
 	}
 
 	/**
@@ -225,7 +250,11 @@ final class Registry extends Module {
 			return $value;
 		}
 
-		return $this->get( (string) $field['type'] )->format( $value, $field );
+		$handler = $this->get( (string) $field['type'] );
+
+		// on_load first: it decides *what* the value is, format() decides what
+		// shape it is handed over in.
+		return $handler->format( $handler->on_load( $value, $field, $ref ), $field );
 	}
 
 	/**
@@ -243,7 +272,18 @@ final class Registry extends Module {
 			return $value;
 		}
 
-		return $this->get( (string) $field['type'] )->sanitize( $value, $field );
+		$handler = $this->get( (string) $field['type'] );
+		$clean   = $handler->sanitize( $value, $field );
+
+		// The type gets one look at the object it is being written to. This
+		// runs on the way to storage rather than after it, because the filter
+		// is the only point that carries the value, the field and the object
+		// at once.
+		if ( $ref instanceof ObjectRef ) {
+			$handler->on_save( $clean, $field, $ref );
+		}
+
+		return $clean;
 	}
 
 	/**

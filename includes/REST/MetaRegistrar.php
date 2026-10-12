@@ -47,6 +47,12 @@ final class MetaRegistrar extends Module {
 	 */
 	public function register(): void {
 		foreach ( $this->container->get( Repository::class )->all() as $group ) {
+			// A group can be kept out of the REST API, and out of the block
+			// editor with it: register_meta() is what puts a field there.
+			if ( empty( $group->settings['show_in_rest'] ) ) {
+				continue;
+			}
+
 			foreach ( $this->targets( $group ) as $object_type => $subtypes ) {
 				foreach ( $subtypes as $subtype ) {
 					$this->register_group( $group, $object_type, $subtype );

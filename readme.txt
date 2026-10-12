@@ -4,17 +4,17 @@ Tags: custom fields, meta box, repeater, options page, custom post type
 Requires at least: 6.8
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.8.0
+Stable tag: 1.9.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Field groups, meta boxes and a developer-friendly field API: 50 field types, repeaters, options pages, blocks and public forms.
+Field groups, meta boxes and a developer-friendly field API: 51 field types, repeaters, options pages, blocks and public forms.
 
 == Description ==
 
 MetaFields adds custom fields to posts, pages, custom post types, terms, users, comments, options pages and public forms. Build a field group in the admin, choose where it appears, and read the values back with one function.
 
-**Fifty field types**, grouped by what they do rather than by name: text, number, email, URL, password, range, colour, date, time, phone, slug, UUID, currency, textarea, select, checkbox, radio, toggle, button group, rating, country, region, file, image, gallery, video, audio, post object, page link, relationship, taxonomy, user, link, rich text, code, JSON, HTML, repeater, flexible content, message, tab, accordion, group, icon picker, map, signature, QR code, barcode, embed and address.
+**Fifty-one field types**, grouped by what they do rather than by name: text, number, email, URL, password, range, colour, date, time, phone, slug, UUID, currency, textarea, select, checkbox, radio, toggle, button group, rating, country, region, file, image, gallery, video, audio, post object, page link, relationship, taxonomy, user, link, rich text, code, JSON, HTML, repeater, flexible content, message, separator, tab, accordion, group, icon picker, map, signature, QR code, barcode, embed and address.
 
 **Where a group appears is a rule, not code.** Twenty-five location parameters cover post type, template, status, format, category, taxonomy, a specific post or page, page type and parent, the current user, user role and profile form, terms, attachments, comments, menus, menu items, widgets, blocks, options pages, and WooCommerce product types and order statuses.
 
@@ -35,6 +35,14 @@ A required field stops a post or page reaching a public status — from either e
 = Options pages =
 
 Set a group's location to an options page and the screen is created, rendered and saved for you. No `add_menu_page`, no render callback, nothing in the theme.
+
+= Settings on every group and every field =
+
+A field group sets where it renders, how its labels and instructions are placed, which core elements to hide on the edit screen, whether its fields reach the REST API and the block editor, and — for a group that creates an options page — that page's menu location, capability and icon.
+
+Each field type adds its own: prepend and append text, minimum and maximum, a validation pattern and message, layout, an optional empty choice, free-typed values, return format, and for media fields the library to pick from, the allowed file types, minimum and maximum file size, and minimum and maximum image dimensions.
+
+File and image limits are checked when the value is saved, not only when the picker is open, so they hold for a public form, the REST API and code as well.
 
 = Public forms =
 
@@ -87,6 +95,23 @@ Yes. Every string is translatable under the `metafields-custom-fields` text doma
 5. The field group list, with each group's key, field count and location.
 
 == Changelog ==
+
+= 1.9.1 =
+* The plugin menu now keeps one order on every screen: Overview, Field Groups, Settings, Tools, then the forms and options pages a site has made. It used to rearrange itself, because post types register at a different moment from admin pages and a form's submissions type does not exist until its first submission.
+* A form's menu entry shows its post type under its name, the way an options page shows its slug.
+* An options page can be placed under the plugin's own Meta Boxes menu, alongside Settings and Tools.
+* Fixed: choices set to the horizontal layout still stacked in a column. The base rule is a flex column and the modifier did not reset the direction.
+
+= 1.9.0 =
+* New field type: separator, a rule with an optional legend.
+* Field groups: display title, instruction placement, show in REST API. Hide on screen now also covers the Custom Fields and Page Attributes boxes — and the Permalink and Content Editor options, which had never hidden anything.
+* Options pages built from a location rule can now set their menu location, capability and icon. The permission check follows the capability, so a page can be handed to a role below administrator.
+* Text fields take prepend and append text.
+* Choice fields: optional empty choice, horizontal layout, "Select all", and free-typed values on a checkbox list.
+* Media fields: restrict the library to what was uploaded to the item, restrict file types, set minimum and maximum file size, set minimum and maximum image width and height, and choose the preview size. Limits are enforced on save, not only in the picker.
+* Relationship fields: minimum and maximum selections, optional empty choice, and a taxonomy field can now assign its terms to the post or read them back from it.
+* Embed fields take a preferred width and height.
+* Field types can now reject a value and act on the object it was saved to, so a third-party type gets server-side validation the same way a built-in one does.
 
 = 1.8.0 =
 * Renamed to MetaFields - Custom Fields and Meta Boxes. The Plugin Directory does not allow "WordPress" in a plugin name, in any position. The slug, the text domain and every stored value are unchanged.

@@ -106,9 +106,9 @@ final class Choice extends FieldType {
 	 */
 	public function render( array $field, mixed $value, string $input_name, string $input_id ): void {
 		$type     = (string) ( $field['type'] ?? 'select' );
-		$choices  = $this->choices( $field );
 		$multiple = $this->is_multiple( $field );
 		$selected = $this->as_list( $value );
+		$choices  = $this->choices_with_custom( $field, $selected );
 
 		if ( in_array( $type, self::BOOLEAN_TYPES, true ) ) {
 			$this->render_toggle( $field, $type, $selected, $input_name, $input_id );
@@ -145,7 +145,13 @@ final class Choice extends FieldType {
 
 		printf( '<select %s>', $this->attributes( $attributes ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- attributes() escapes every name and value.
 
-		if ( ! $multiple ) {
+		/*
+		 * The empty option is what makes "nothing chosen" reachable. Turning
+		 * it off is for a field that must always hold one of the choices and
+		 * has a default to start from — without a default, the browser simply
+		 * preselects the first choice, which is a value nobody chose.
+		 */
+		if ( ! $multiple && '0' !== (string) $this->setting( $field, 'allow_null', '1' ) ) {
 			printf(
 				'<option value="">%s</option>',
 				esc_html( (string) $this->setting( $field, 'empty_label', __( '— Select —', 'metafields-custom-fields' ) ) )
@@ -188,9 +194,14 @@ final class Choice extends FieldType {
 			$choices = array_reverse( $choices, true );
 		}
 
+		// A rating already lays itself out in a row; the rest follow the
+		// setting, which defaults to the column they have always been in.
+		$layout = 'rating' === $type ? '' : (string) $this->setting( $field, 'layout', 'vertical' );
+
 		printf(
-			'<div class="wpcmb-choices wpcmb-choices--%s" role="group" aria-labelledby="%s-label">',
+			'<div class="wpcmb-choices wpcmb-choices--%s%s" role="group" aria-labelledby="%s-label">',
 			esc_attr( $type ),
+			'horizontal' === $layout ? ' wpcmb-choices--row' : '',
 			esc_attr( $input_id )
 		);
 
@@ -199,6 +210,14 @@ final class Choice extends FieldType {
 		// the save handler the field was present and deliberately cleared.
 		if ( 'checkbox' === $control ) {
 			printf( '<input type="hidden" name="%s" value="" />', esc_attr( $input_name ) );
+		}
+
+		// Select-all is only ever right for a multi-value list.
+		if ( 'checkbox' === $control && $multiple && ! empty( $this->setting( $field, 'toggle_all', '' ) ) ) {
+			printf(
+				'<label class="wpcmb-choice wpcmb-choice--toggle-all"><input type="checkbox" data-wpcmb-toggle-all="1" /> <span>%s</span></label>',
+				esc_html__( 'Select all', 'metafields-custom-fields' )
+			);
 		}
 
 		foreach ( $choices as $option => $label ) {
@@ -214,6 +233,35 @@ final class Choice extends FieldType {
 				in_array( (string) $option, $selected, true ) ? ' checked' : '',
 				! empty( $field['required'] ) && 'radio' === $control ? ' required' : '',
 				esc_html( $label )
+			);
+		}
+
+		/*
+		 * "Other": a box whose contents join the list of values.
+		 *
+		 * It posts into the same array as the checkboxes, so what is typed is
+		 * simply another value — there is no "other" marker to decode on the
+		 * way back, and a stored value reads the same whether it was ticked
+		 * or typed. A value typed once is offered as a normal ticked choice
+		 * next time, because choices() folds stored values into the list.
+		 *
+		 * Offered for checkbox lists only. On a radio or a dropdown the box
+		 * and the control fight over one value, which needs script to arbitrate
+		 * and leaves the field unusable if that script does not load.
+		 */
+		if ( $multiple && 'checkbox' === $control && ! empty( $this->setting( $field, 'allow_custom', '' ) ) ) {
+			$custom = array_values( array_diff( $selected, array_map( 'strval', array_keys( $choices ) ) ) );
+
+			printf(
+				'<div class="wpcmb-choice-other">
+					<label class="wpcmb-label wpcmb-choice-other__label" for="%1$s-other">%2$s</label>
+					<input type="text" class="wpcmb-input wpcmb-choice-other__text" id="%1$s-other" name="%3$s" value="%4$s" placeholder="%5$s" />
+				</div>',
+				esc_attr( $input_id ),
+				esc_html__( 'Other', 'metafields-custom-fields' ),
+				esc_attr( $input_name . '[]' ),
+				esc_attr( implode( ', ', $custom ) ),
+				esc_attr__( 'Separate several with a comma', 'metafields-custom-fields' )
 			);
 		}
 
@@ -276,9 +324,28 @@ final class Choice extends FieldType {
 			return ! empty( $value ) && '0' !== $value;
 		}
 
-		$allowed  = array_map( 'strval', array_keys( $this->choices( $field ) ) );
-		$multiple = $this->is_multiple( $field );
-		$values   = array_values( array_intersect( $this->as_list( $value ), $allowed ) );
+		$allowed   = array_map( 'strval', array_keys( $this->choices( $field ) ) );
+		$multiple  = $this->is_multiple( $field );
+		$submitted = $this->as_list( $value );
+		$values    = array_values( array_intersect( $submitted, $allowed ) );
+
+		/*
+		 * With "Other" on, a value that is not one of the choices is kept
+		 * rather than discarded — that is the whole point of the setting — but
+		 * it is the only place a choice field accepts free text, so it is
+		 * cleaned as text and the comma-separated box is split back out.
+		 */
+		if ( $multiple && ! empty( $this->setting( $field, 'allow_custom', '' ) ) ) {
+			foreach ( array_diff( $submitted, $allowed ) as $custom ) {
+				foreach ( explode( ',', (string) $custom ) as $part ) {
+					$part = sanitize_text_field( trim( $part ) );
+
+					if ( '' !== $part && ! in_array( $part, $values, true ) ) {
+						$values[] = $part;
+					}
+				}
+			}
+		}
 
 		if ( $multiple ) {
 			return $values;
@@ -377,6 +444,45 @@ final class Choice extends FieldType {
 			);
 		}
 
+		// The empty option only exists on a single-value dropdown; a checkbox
+		// list expresses "nothing" by having nothing ticked.
+		if ( in_array( $type, self::DROPDOWN_TYPES, true ) ) {
+			$schema['allow_null']  = array(
+				'label' => __( 'Offer an empty choice', 'metafields-custom-fields' ),
+				'type'  => 'toggle',
+				'help'  => __( 'On by default. Off needs a default value, or the browser preselects the first choice.', 'metafields-custom-fields' ),
+			);
+			$schema['empty_label'] = array(
+				'label' => __( 'Empty choice label', 'metafields-custom-fields' ),
+				'type'  => 'text',
+				'tab'   => 'appearance',
+			);
+		}
+
+		if ( in_array( $type, array( 'checkbox', 'radio', 'button_group' ), true ) ) {
+			$schema['layout'] = array(
+				'label'   => __( 'Layout', 'metafields-custom-fields' ),
+				'type'    => 'select',
+				'tab'     => 'appearance',
+				'choices' => array(
+					'vertical'   => __( 'One per line', 'metafields-custom-fields' ),
+					'horizontal' => __( 'In a row', 'metafields-custom-fields' ),
+				),
+			);
+		}
+
+		if ( 'checkbox' === $type ) {
+			$schema['toggle_all']   = array(
+				'label' => __( 'Offer "Select all"', 'metafields-custom-fields' ),
+				'type'  => 'toggle',
+			);
+			$schema['allow_custom'] = array(
+				'label' => __( 'Allow other values', 'metafields-custom-fields' ),
+				'type'  => 'toggle',
+				'help'  => __( 'Adds a box for values that are not in the list. Multi-value lists only.', 'metafields-custom-fields' ),
+			);
+		}
+
 		$schema['return_format'] = array(
 			'label'   => __( 'Return format', 'metafields-custom-fields' ),
 			'type'    => 'select',
@@ -439,6 +545,32 @@ final class Choice extends FieldType {
 		 * @param array<string, mixed>  $field   Field definition.
 		 */
 		return (array) apply_filters( 'wpcmb/field/choices', $choices, $field );
+	}
+
+	/**
+	 * The options to draw, including any custom value already stored.
+	 *
+	 * A value typed into the "Other" box is a real stored value but not a
+	 * declared choice. Leaving it out of the list would show the field as
+	 * empty while it holds something, and the next save would then drop it.
+	 *
+	 * @param array<string, mixed> $field    Field definition.
+	 * @param array<int, string>   $selected Values currently stored.
+	 *
+	 * @return array<string, string>
+	 */
+	private function choices_with_custom( array $field, array $selected ): array {
+		$choices = $this->choices( $field );
+
+		if ( empty( $this->setting( $field, 'allow_custom', '' ) ) ) {
+			return $choices;
+		}
+
+		foreach ( array_diff( $selected, array_map( 'strval', array_keys( $choices ) ) ) as $custom ) {
+			$choices[ (string) $custom ] = (string) $custom;
+		}
+
+		return $choices;
 	}
 
 	/**

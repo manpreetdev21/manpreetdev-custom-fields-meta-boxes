@@ -179,7 +179,14 @@ final class SubmissionPostType extends Module {
 			'name'          => sprintf( __( '%s submissions', 'metafields-custom-fields' ), $title ),
 			/* translators: %s: field group title. */
 			'singular_name' => sprintf( __( '%s submission', 'metafields-custom-fields' ), $title ),
-			'menu_name'     => $title,
+			// The post type name under the title, the way an options page
+			// shows its slug: two forms can be called the same thing, and the
+			// name is what tells them apart and what a query would use.
+			'menu_name'     => sprintf(
+				'%1$s<span style="display:block;font-size:11px;font-weight:400;line-height:1.5;opacity:0.65">(%2$s)</span>',
+				esc_html( $title ),
+				esc_html( $post_type )
+			),
 			/* translators: %s: field group title. */
 			'edit_item'     => sprintf( __( '%s submission', 'metafields-custom-fields' ), $title ),
 			'search_items'  => __( 'Search submissions', 'metafields-custom-fields' ),

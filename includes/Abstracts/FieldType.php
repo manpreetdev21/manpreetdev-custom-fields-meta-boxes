@@ -112,6 +112,58 @@ abstract class FieldType {
 	}
 
 	/**
+	 * Reject a value this type cannot accept.
+	 *
+	 * For the rules only the type knows: a file's type and size, an image's
+	 * dimensions. The generic checks — required, length, range, pattern — are
+	 * the Validator's, and run before this.
+	 *
+	 * Called for every value on its way to storage, wherever it came from, so
+	 * a limit holds for a form, the REST API and code alike.
+	 *
+	 * @param mixed                $value Submitted value.
+	 * @param array<string, mixed> $field Field definition.
+	 *
+	 * @return string Error message, or an empty string when acceptable.
+	 *
+	 * phpcs:disable Generic.CodeAnalysis.UnusedFunctionParameter -- Part of the contract subclasses implement.
+	 */
+	public function validate( mixed $value, array $field ): string {
+		return '';
+	}
+
+	/**
+	 * Act on the object a value was just written to.
+	 *
+	 * The one place a type gets the object as well as the value, for a type
+	 * whose value means something elsewhere in WordPress — a taxonomy field
+	 * that also assigns its terms. Side effects only: the stored value is
+	 * already decided by sanitize().
+	 *
+	 * @param mixed                $value Stored value.
+	 * @param array<string, mixed> $field Field definition.
+	 * @param mixed                $ref   ObjectRef for the object written to.
+	 */
+	public function on_save( mixed $value, array $field, mixed $ref ): void {
+	}
+
+	/**
+	 * Replace a stored value with one read from somewhere else.
+	 *
+	 * The mirror of on_save(), for a field configured to show what WordPress
+	 * holds rather than what the field stored.
+	 *
+	 * @param mixed                $value Stored value.
+	 * @param array<string, mixed> $field Field definition.
+	 * @param mixed                $ref   ObjectRef for the object being read.
+	 *
+	 * @return mixed
+	 */
+	public function on_load( mixed $value, array $field, mixed $ref ): mixed {
+		return $value;
+	}
+
+	/**
 	 * Extra per-type settings the field editor should offer.
 	 *
 	 * Each entry is `setting_name => array( 'label' => …, 'type' => …, 'choices' => … )`

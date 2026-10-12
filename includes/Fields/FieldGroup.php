@@ -95,22 +95,32 @@ final class FieldGroup {
 	 */
 	public static function default_settings(): array {
 		return array(
-			'active'             => true,
-			'position'           => 'normal',
-			'style'              => 'default',
-			'label_placement'    => 'top',
-			'menu_order'         => 0,
-			'description'        => '',
-			'hide_on_screen'     => array(),
-			'block_enabled'      => false,
-			'block_name'         => '',
-			'block_icon'         => '',
-			'block_category'     => '',
-			'block_description'  => '',
-			'block_keywords'     => '',
-			'block_mode'         => 'auto',
-			'block_supports'     => array(),
-			'block_inner_blocks' => false,
+			'active'                => true,
+			'position'              => 'normal',
+			'style'                 => 'default',
+			'label_placement'       => 'top',
+			'instruction_placement' => 'field',
+			'menu_order'            => 0,
+			'description'           => '',
+			'display_title'         => '',
+			'show_in_rest'          => true,
+			'hide_on_screen'        => array(),
+
+			// Only read when a location rule names an options page. Kept with
+			// the group rather than in a separate store because the group is
+			// what asks for the page to exist in the first place.
+			'options_capability'    => 'manage_options',
+			'options_icon'          => '',
+			'options_parent'        => '',
+			'block_enabled'         => false,
+			'block_name'            => '',
+			'block_icon'            => '',
+			'block_category'        => '',
+			'block_description'     => '',
+			'block_keywords'        => '',
+			'block_mode'            => 'auto',
+			'block_supports'        => array(),
+			'block_inner_blocks'    => false,
 		);
 	}
 
@@ -465,30 +475,59 @@ final class FieldGroup {
 			// Absent means active. Stored groups have this overwritten from
 			// their post status; groups registered in code do not, and one
 			// that defaulted to inactive would silently never appear.
-			'active'             => (bool) ( $raw['active'] ?? true ),
+			'active'                => (bool) ( $raw['active'] ?? true ),
 
 			// Block settings. A group is a block only when it says so and
 			// names itself: a block name is part of a site's saved content,
 			// so it must be chosen deliberately rather than derived from a
 			// title that someone may later rename.
-			'block_enabled'      => ! empty( $raw['block_enabled'] ),
-			'block_name'         => self::sanitize_field_name( (string) ( $raw['block_name'] ?? '' ) ),
-			'block_icon'         => sanitize_text_field( (string) ( $raw['block_icon'] ?? '' ) ),
+			'block_enabled'         => ! empty( $raw['block_enabled'] ),
+			'block_name'            => self::sanitize_field_name( (string) ( $raw['block_name'] ?? '' ) ),
+			'block_icon'            => sanitize_text_field( (string) ( $raw['block_icon'] ?? '' ) ),
 			// Same normalisation as a field name: "Layout Things" becomes
 			// layout_things rather than layoutthings, which is what a person
 			// typing a category with a space in it means.
-			'block_category'     => self::sanitize_field_name( (string) ( $raw['block_category'] ?? '' ) ),
-			'block_description'  => sanitize_text_field( (string) ( $raw['block_description'] ?? '' ) ),
-			'block_keywords'     => sanitize_text_field( (string) ( $raw['block_keywords'] ?? '' ) ),
-			'block_mode'         => self::one_of( $raw['block_mode'] ?? null, array( 'auto', 'preview', 'edit' ) ),
-			'block_supports'     => $supports,
-			'block_inner_blocks' => ! empty( $raw['block_inner_blocks'] ),
-			'position'           => self::one_of( $raw['position'] ?? null, array( 'normal', 'side', 'advanced' ) ),
-			'style'              => self::one_of( $raw['style'] ?? null, array( 'default', 'seamless' ) ),
-			'label_placement'    => self::one_of( $raw['label_placement'] ?? null, array( 'top', 'left' ) ),
-			'menu_order'         => (int) ( $raw['menu_order'] ?? 0 ),
-			'description'        => sanitize_text_field( (string) ( $raw['description'] ?? '' ) ),
-			'hide_on_screen'     => $hide,
+			'block_category'        => self::sanitize_field_name( (string) ( $raw['block_category'] ?? '' ) ),
+			'block_description'     => sanitize_text_field( (string) ( $raw['block_description'] ?? '' ) ),
+			'block_keywords'        => sanitize_text_field( (string) ( $raw['block_keywords'] ?? '' ) ),
+			'block_mode'            => self::one_of( $raw['block_mode'] ?? null, array( 'auto', 'preview', 'edit' ) ),
+			'block_supports'        => $supports,
+			'block_inner_blocks'    => ! empty( $raw['block_inner_blocks'] ),
+			'position'              => self::one_of( $raw['position'] ?? null, array( 'normal', 'side', 'advanced' ) ),
+			'style'                 => self::one_of( $raw['style'] ?? null, array( 'default', 'seamless' ) ),
+			'label_placement'       => self::one_of( $raw['label_placement'] ?? null, array( 'top', 'left' ) ),
+			'instruction_placement' => self::one_of( $raw['instruction_placement'] ?? null, array( 'field', 'label' ) ),
+			'menu_order'            => (int) ( $raw['menu_order'] ?? 0 ),
+			'description'           => sanitize_text_field( (string) ( $raw['description'] ?? '' ) ),
+			'display_title'         => sanitize_text_field( (string) ( $raw['display_title'] ?? '' ) ),
+
+			/*
+			 * Absent means on: a group saved before this setting existed was
+			 * exposed, and reading absence as off would silently drop its
+			 * fields out of every REST response. The editor posts an explicit
+			 * 0 from a hidden input, so an unchecked box is still off.
+			 */
+			'show_in_rest'          => ! isset( $raw['show_in_rest'] ) || ! empty( $raw['show_in_rest'] ),
+			'hide_on_screen'        => $hide,
+
+			/*
+			 * A capability nobody holds would make the page unreachable, so an
+			 * empty one falls back to the default rather than being honoured.
+			 */
+			'options_capability'    => '' !== (string) ( $raw['options_capability'] ?? '' )
+				? sanitize_key( (string) $raw['options_capability'] )
+				: 'manage_options',
+			'options_icon'          => sanitize_text_field( (string) ( $raw['options_icon'] ?? '' ) ),
+
+			/*
+			 * `wpcmb` is this plugin's own menu. It is in the list because an
+			 * options page built by the plugin belongs next to the field
+			 * groups that built it as readily as it belongs under Settings.
+			 */
+			'options_parent'        => self::one_of(
+				$raw['options_parent'] ?? null,
+				array( '', 'wpcmb', 'options-general.php', 'tools.php', 'themes.php', 'edit.php', 'upload.php', 'users.php' )
+			),
 		);
 	}
 

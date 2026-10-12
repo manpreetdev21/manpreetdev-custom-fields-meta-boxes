@@ -310,6 +310,9 @@ final class Assets extends Module {
 				'ajaxUrl'   => admin_url( 'admin-ajax.php' ),
 				'nonce'     => wp_create_nonce( Ajax::NONCE ),
 				'dashicons' => Enhanced::dashicons(),
+				// What "uploaded to this item" means, when the screen is a
+				// post. Zero everywhere else, where the filter has no subject.
+				'postId'    => ObjectRef::POST === $ref->type ? (int) $ref->id : 0,
 				'i18n'      => array(
 					'remove'             => __( 'Remove', 'metafields-custom-fields' ),
 					'searchOptions'      => __( 'Search options', 'metafields-custom-fields' ),

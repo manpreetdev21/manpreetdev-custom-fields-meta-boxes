@@ -932,6 +932,220 @@ wpcmb_group(
 	}
 );
 
+wpcmb_group(
+	'a group kept out of the REST API registers no meta',
+	static function (): void {
+		$exposed = wpcmb_group_fixture(
+			array(
+				'title'    => 'REST exposed',
+				'location' => array( array( array( 'param' => 'post_type', 'operator' => '==', 'value' => 'post' ) ) ),
+				'fields'   => array( array( 'name' => 'irest_shown', 'label' => 'Shown', 'type' => 'text' ) ),
+			)
+		);
+
+		$private = wpcmb_group_fixture(
+			array(
+				'title'    => 'REST private',
+				'location' => array( array( array( 'param' => 'post_type', 'operator' => '==', 'value' => 'post' ) ) ),
+				'fields'   => array( array( 'name' => 'irest_hidden', 'label' => 'Hidden', 'type' => 'text' ) ),
+				'settings' => array( 'show_in_rest' => '0' ),
+			)
+		);
+
+		wpcmb_is( true === $exposed->settings['show_in_rest'], 'a group is exposed unless told otherwise' );
+		wpcmb_is( false === $private->settings['show_in_rest'], 'and hidden when it is' );
+
+		/*
+		 * register_meta() is what puts a field in the REST API and in the
+		 * block editor both, so the check is whether the registration
+		 * happened — not what a request returns.
+		 */
+		$registrar = new WPCMB\REST\MetaRegistrar( wpcmb()->container() );
+
+		$registrar->register();
+
+		$registered = get_registered_meta_keys( 'post', 'post' );
+
+		wpcmb_is( isset( $registered['irest_shown'] ), 'an exposed field is registered' );
+		wpcmb_is( ! isset( $registered['irest_hidden'] ), 'a hidden field is not' );
+
+		unregister_meta_key( 'post', 'irest_shown', 'post' );
+	}
+);
+
+wpcmb_group(
+	'an options page honours its own capability and menu parent',
+	static function (): void {
+		$slug = 'icap-' . strtolower( wp_generate_password( 6, false, false ) );
+
+		wpcmb_group_fixture(
+			array(
+				'title'    => 'Capability page',
+				'location' => array( array( array( 'param' => 'options_page', 'operator' => '==', 'value' => $slug ) ) ),
+				'fields'   => array( array( 'name' => 'icap_text', 'label' => 'Text', 'type' => 'text' ) ),
+				'settings' => array(
+					'options_capability' => 'edit_pages',
+					'options_parent'     => 'tools.php',
+					'options_icon'       => 'dashicons-cart',
+				),
+			)
+		);
+
+		$pages = ( new WPCMB\Admin\OptionsPages( wpcmb()->container() ) )->pages();
+
+		wpcmb_is( isset( $pages[ $slug ] ), 'the page is discovered' );
+		wpcmb_is( 'edit_pages' === ( $pages[ $slug ]['capability'] ?? '' ), 'with its capability' );
+		wpcmb_is( 'tools.php' === ( $pages[ $slug ]['parent'] ?? '' ), 'and its menu parent' );
+
+		/*
+		 * The gate has to agree with the menu. While the capability lived in
+		 * Permissions as a constant, lowering it here would have shown the
+		 * item to an editor and then refused them at the door.
+		 */
+		$module = new WPCMB\Admin\OptionsPages( wpcmb()->container() );
+
+		$module->boot();
+
+		$ref = new WPCMB\Fields\ObjectRef( WPCMB\Fields\ObjectRef::OPTION, $slug );
+
+		$editor = wp_insert_user(
+			array(
+				'user_login' => 'wpcmb_editor_' . wp_generate_password( 6, false, false ),
+				'user_pass'  => wp_generate_password( 20 ),
+				'role'       => 'editor',
+			)
+		);
+
+		if ( is_wp_error( $editor ) ) {
+			wpcmb_is( false, 'could not create an editor to test with' );
+
+			return;
+		}
+
+		$was = get_current_user_id();
+
+		wp_set_current_user( (int) $editor );
+
+		wpcmb_is( WPCMB\Fields\Permissions::can_edit( $ref ), 'an editor may open a page set to edit_pages' );
+
+		$other = new WPCMB\Fields\ObjectRef( WPCMB\Fields\ObjectRef::OPTION, 'not-one-of-ours' );
+
+		wpcmb_is( ! WPCMB\Fields\Permissions::can_edit( $other ), 'an options object we did not create keeps the default rule' );
+
+		wp_set_current_user( $was );
+		require_once ABSPATH . 'wp-admin/includes/user.php';
+
+		wp_delete_user( (int) $editor );
+
+		remove_filter( 'wpcmb/permissions/read', array( $module, 'allow' ), 10 );
+		remove_filter( 'wpcmb/permissions/edit', array( $module, 'allow' ), 10 );
+	}
+);
+
+wpcmb_group(
+	'instruction placement moves the instructions, and nothing else',
+	static function (): void {
+		$render = static function ( string $placement ): string {
+			$group = wpcmb_group_fixture(
+				array(
+					'title'    => 'Instructions ' . $placement,
+					'location' => array( array( array( 'param' => 'post_type', 'operator' => '==', 'value' => 'post' ) ) ),
+					'fields'   => array(
+						array(
+							'name'         => 'iinstr_text',
+							'label'        => 'Text',
+							'type'         => 'text',
+							'instructions' => 'Say something here.',
+						),
+					),
+					'settings' => array( 'instruction_placement' => $placement ),
+				)
+			);
+
+			$renderer = wpcmb()->container()->get( WPCMB\Fields\Renderer::class );
+			$ref      = new WPCMB\Fields\ObjectRef( WPCMB\Fields\ObjectRef::POST, wpcmb_post_fixture( 'post' ) );
+
+			ob_start();
+			$renderer->group( $group, $ref );
+
+			return (string) ob_get_clean();
+		};
+
+		$below = $render( 'field' );
+		$above = $render( 'label' );
+
+		$position = static fn( string $html ): int => (int) strpos( $html, 'wpcmb-field__instructions' );
+		$control  = static fn( string $html ): int => (int) strpos( $html, 'wpcmb-field__control' );
+
+		wpcmb_is( str_contains( $below, 'Say something here.' ), 'the instructions render' );
+		wpcmb_is( $position( $below ) > $control( $below ), 'below the control by default' );
+		wpcmb_is( $position( $above ) < $control( $above ), 'and above it when asked' );
+		wpcmb_is( 1 === substr_count( $above, 'Say something here.' ), 'in one place, not both' );
+	}
+);
+
+wpcmb_group(
+	'the plugin menu keeps one order, whatever registered first',
+	static function (): void {
+		$menu = new WPCMB\Admin\Menu( wpcmb()->container() );
+
+		/*
+		 * Deliberately in the worst order: this is what the live menu looked
+		 * like, because post types register on `init` and pages on
+		 * `admin_menu`, and a submissions type does not exist at all until
+		 * its first submission arrives.
+		 */
+		$GLOBALS['submenu']['wpcmb'] = array(
+			array( 'Field Groups', 'edit_posts', 'edit.php?post_type=wpcmb_field_group' ),
+			array( 'A form', 'edit_posts', 'edit.php?post_type=wpcmb_a_form_0001' ),
+			array( 'Overview', 'edit_posts', 'wpcmb' ),
+			array( 'An options page', 'manage_options', 'wpcmb-options-site' ),
+			array( 'Settings', 'manage_options', 'wpcmb-settings' ),
+			array( 'Tools', 'manage_options', 'wpcmb-tools' ),
+			array( 'Another form', 'edit_posts', 'edit.php?post_type=wpcmb_b_form_0002' ),
+		);
+
+		$menu->order_submenu();
+
+		$slugs = array_map( static fn( array $item ): string => $item[2], $GLOBALS['submenu']['wpcmb'] );
+
+		wpcmb_is(
+			array(
+				'wpcmb',
+				'edit.php?post_type=wpcmb_field_group',
+				'wpcmb-settings',
+				'wpcmb-tools',
+				'edit.php?post_type=wpcmb_a_form_0001',
+				'edit.php?post_type=wpcmb_b_form_0002',
+				'wpcmb-options-site',
+			) === $slugs,
+			'Overview first, then the fixed screens, then forms and options pages'
+		);
+
+		// Two forms keep the order they registered in rather than swapping
+		// places between page loads.
+		wpcmb_is(
+			array_search( 'edit.php?post_type=wpcmb_a_form_0001', $slugs, true )
+				< array_search( 'edit.php?post_type=wpcmb_b_form_0002', $slugs, true ),
+			'and entries of the same kind keep their relative order'
+		);
+
+		// Nothing is lost or invented on the way through.
+		wpcmb_is( 7 === count( $GLOBALS['submenu']['wpcmb'] ), 'every entry survives the sort' );
+
+		$menu->order_submenu();
+
+		wpcmb_is( $slugs === array_map( static fn( array $item ): string => $item[2], $GLOBALS['submenu']['wpcmb'] ), 'sorting twice changes nothing' );
+
+		unset( $GLOBALS['submenu']['wpcmb'] );
+
+		// An empty menu is the normal state on a screen the plugin is not on.
+		$menu->order_submenu();
+
+		wpcmb_is( ! isset( $GLOBALS['submenu']['wpcmb'] ), 'a menu that is not there is left alone' );
+	}
+);
+
 /* -------------------------------------------------------------------------
  * Clean up everything this run created.
  * ---------------------------------------------------------------------- */

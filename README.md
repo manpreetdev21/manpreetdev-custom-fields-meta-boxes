@@ -2,7 +2,7 @@
 
 Field groups, meta boxes and a developer-friendly field API for WordPress.
 
-- **Version:** 1.8.0
+- **Version:** 1.9.1
 - **Author:** Manpreet Singh
 - **Requires PHP:** 8.1
 - **Requires WordPress:** 6.8
@@ -140,6 +140,30 @@ add_action( 'wpcmb/register_field_groups', function () {
 
 Registered groups are never written to the database, so they can live in version control. A **stored** group with the same key wins — which is what makes "export to PHP, keep editing in the admin" work. The hook fires lazily on the first group read, not on `init`, so a field read before `init` still sees them and a request that reads nothing pays nothing.
 
+## Field group settings
+
+| Setting | What it does |
+|---|---|
+| Position | Which meta box context the group renders in: after the content, in the side column, or in the advanced area. |
+| Style | A standard meta box, or seamless — no box, just the fields. |
+| Label placement | Labels above the fields, or beside them. |
+| Instruction placement | A field's instructions below its control, or above it. Below is the default, because that is where they have always been. |
+| Order | Sorts the group against others on the same screen, and names the page when two groups share one options page. |
+| Description | A sentence above the fields. |
+| Display title | The heading on the edit screen, when it should differ from the group's own title. A group can be *Product — pricing* where it is administered and *Pricing* where it is filled in. |
+| Show in REST API | Off keeps the group's fields out of the REST API, and out of the block editor with it — `register_meta()` is what puts them in both. On for every group saved before this setting existed, so nothing disappeared from an API somebody was already calling. |
+| Hide on screen | Removes core elements from the edit screen: permalink, content editor, excerpt, custom fields, discussion, comments, revisions, slug, author, format, page attributes, featured image, categories, tags, trackbacks. |
+| Options page | Menu location, capability and icon for the page an `options_page` rule creates. See [Options pages](#options-pages). |
+
+**Hide on screen is two mechanisms.** Most of those elements are meta boxes,
+and are removed with `remove_meta_box()`. The permalink row and the content
+editor are part of the edit form itself, so they are hidden by a class this
+plugin puts on the body — which is why those two work in the classic editor
+and not in the block editor, where the equivalents are core's own panels.
+Those two options had been in the list since the beginning and had never
+hidden anything: `remove_meta_box()` was being called with an id that does not
+exist, and failing silently.
+
 ## Location rules
 
 Rules are an OR list of AND groups: the group shows when every rule in at least one rule group matches. Three deliberate behaviours:
@@ -193,7 +217,7 @@ rule naming something else does not.
 | `Editor` | wysiwyg, code, json, html |
 | `Link` | link |
 | `Enhanced` | icon, map, signature, qr, barcode, embed, address |
-| `Structure` | message, tab, accordion, group |
+| `Structure` | message, separator, tab, accordion, group |
 
 Add one with `wpcmb/register_field_types`; a custom type gets the wrapper, conditional logic, validation display, layout and a settings UI for free, because field types own only their control.
 
@@ -209,6 +233,91 @@ Date, time, colour and number pickers are the browser's. Rich text is `wp_editor
 - **Structural fields store nothing.** Tabs, accordions and messages never create an empty meta row and are never validated.
 - **Only native controls' formats are accepted.** A date field stores an ISO date or nothing — never free text from a crafted request. A signature stores a PNG data URI or nothing, so it cannot smuggle a scriptable SVG into a `src`.
 - **Escaping differs by type, on purpose.** `wysiwyg` is `wp_kses_post()`; `html` is verbatim only for users with `unfiltered_html`; `code` and `json` are stored raw because this plugin never renders them as markup.
+
+### Per-type settings
+
+Each type declares its own settings and the field editor builds the UI from
+that declaration, so adding a setting is a PHP change and nothing else. Which
+tab a setting appears under is part of the declaration.
+
+| Type | Settings |
+|---|---|
+| text, password, phone, slug | maxlength, minlength, pattern, prepend, append |
+| number, range, currency | min, max, step, prepend, append |
+| date, time, datetime | return format |
+| textarea | rows, maxlength, new lines |
+| select, country, state | choices, multiple, min, max, empty choice on/off, empty label, return format |
+| checkbox | choices, multiple, min, max, layout, select all, other values, return format |
+| radio, button_group | choices, layout, return format |
+| rating | maximum rating |
+| toggle, true_false | toggle label, on label, off label |
+| file, video, audio | library, file types, min size, max size, preview size, return format |
+| image, gallery | the above, plus min and max width and height |
+| gallery | the above, plus min and max items |
+| post_object, page_link, relationship | post types, multiple, min, max, empty choice, return format |
+| taxonomy | taxonomy, assign the terms, load from the post's terms, and the above |
+| user | roles, multiple, min, max, empty choice, return format |
+| wysiwyg | rows, toolbar, tabs, media buttons, return format |
+| code, json, html | rows, return format, decoded array |
+| link | return format |
+| embed | return format, width, height |
+| icon | icon set |
+| repeater | min, max, layout, button label, row label, collapse after, CSV |
+| flexible | min, max, button label, collapse after, per-layout min and max |
+| message | message |
+| accordion | open by default |
+
+**File and image limits are rules, not hints.** The media picker is filtered by
+them as a convenience, and every one is checked again on save — because a value
+can also arrive from a public form, from the REST API, or from code, none of
+which open a picker. A size written bare is kilobytes, which is how the media
+library writes its own limits; `2MB` and `500 KB` work too.
+
+**"Other values"** is offered on a checkbox list only. What is typed joins the
+list of values, so a stored value reads the same whether it was ticked or
+typed, and it comes back as a normal ticked choice next time. On a radio or a
+dropdown the box and the control would fight over one value, which needs
+script to arbitrate and leaves the field unusable if that script does not load.
+
+**A taxonomy field can own the post's terms.** With *assign the terms* on, a
+save calls `wp_set_object_terms()` as well as storing the value, replacing
+whatever that taxonomy held. With *load from the post's terms* on, the field
+shows what the post actually has rather than what the field last stored. Both
+are off by default, because a taxonomy field is often a second, editorial list
+that has nothing to do with the post's real terms.
+
+### Settings this plugin does not offer, and why
+
+- **A date display format, and a first day of the week.** The date, time and
+  colour pickers are the browser's own, and a browser draws them in the
+  viewer's locale. There is no format to set without bundling a picker.
+- **A relationship filter bar, and featured-image thumbnails in it.** Both
+  belong to a two-column relationship UI this plugin does not have; its
+  relationship field is a select, and the searchable multiple select already
+  covers finding one item among many.
+- **A map centre, zoom and height.** The map field is a coordinate pair, an
+  address and a link out — deliberately not a tile canvas — so there is
+  nothing to centre, zoom or resize.
+
+### Extending a type's rules
+
+Two hooks on `FieldType` carry what a sanitizer cannot see:
+
+```php
+// Reject a value this type cannot accept. Runs after the generic checks —
+// required, length, range, pattern — and for every value on its way to
+// storage, whatever it arrived from.
+public function validate( mixed $value, array $field ): string;
+
+// Act on the object a value was just written to, or read one from it.
+public function on_save( mixed $value, array $field, mixed $ref ): void;
+public function on_load( mixed $value, array $field, mixed $ref ): mixed;
+```
+
+The media field's file limits use the first; the taxonomy field's term
+assignment uses the other two. A registered third-party type gets all three,
+because they are reached through `wpcmb/validate` and the value pipeline
+rather than from any one caller.
 
 ## Repeater
 
@@ -264,6 +373,38 @@ Layouts carry an **icon**, a **category** (both used to group the picker) and an
 
 The layout picker is a keyboard-reachable menu grouped by category, closing on Escape and on outside click. Collapsed rows show a live preview — the first non-empty text value — because a column of rows all saying "Row 3" is unnavigable.
 
+## The admin menu
+
+```
+Meta Boxes
+├── Overview
+├── Field Groups
+├── Settings
+├── Tools
+├── Contact form            ← a form's submissions, one entry per form
+│   (wpcmb_contact_f_8a21)
+└── Site Options            ← an options page placed in this menu
+    (site-settings)
+```
+
+**The order is fixed, and sorted once after everything has registered.** It
+has to be: a post type registers on `init`, an admin page on `admin_menu`, and
+a form's submissions type does not exist at all until its first submission
+arrives — so left alone, this menu rearranged itself as a site was used, and
+the entry somebody clicked yesterday was somewhere else today. The fixed
+screens come first and the things a site makes come last, so the menu grows at
+the bottom rather than in the middle.
+
+Core has no filter for the order of items *inside* a menu — `custom_menu_order`
+and `menu_order` reorder top-level menus only — so `Menu::order_submenu()`
+sorts `$submenu['wpcmb']` directly. It only ever reorders entries already
+there.
+
+**Forms and options pages name themselves twice**: the title, and underneath
+it the identifier — a form's post type, an options page's slug. Two forms can
+be called the same thing, and the identifier is both what tells them apart and
+what a query or a `wpcmb_get_field()` call would use.
+
 ## Options pages
 
 Set a group's location to **Options Page is `site-settings`** and the screen
@@ -280,11 +421,27 @@ The rule is the only place the page is configured, so there is no second list
 to keep in step: delete the rule and the page goes with it. Two groups naming
 the same slug share one screen, each as its own panel.
 
-**Where it appears.** A top-level menu entry directly below Settings, labelled
-with the group's title and the slug underneath it — a site can have several of
-these, built from whatever somebody typed into a rule, and "Site Options"
-alone says neither which plugin made it nor which slug it stores against. The
-page title carries the plugin's name for the same reason.
+**Where it appears.** By default a top-level menu entry directly below
+Settings, labelled with the group's title and the slug underneath it — a site
+can have several of these, built from whatever somebody typed into a rule, and
+"Site Options" alone says neither which plugin made it nor which slug it
+stores against. The page title carries the plugin's name for the same reason.
+
+**The group's Options Page settings change all three.** Menu location moves the
+page under the plugin's own Meta Boxes menu, or under Settings, Tools,
+Appearance, Posts, Media or Users, instead of giving it a menu of its own; Capability decides who may open and save it; Menu icon
+takes a Dashicon name or an image URL, for a top-level entry.
+
+The capability is one setting, not two. Lowering it would otherwise put the
+menu item in front of an editor and then refuse them at the door, because the
+default rule for an options object is `manage_options` — so the permission
+check consults the page's own capability for the pages this plugin created,
+and leaves every other options object on the default rule. A page set to
+`edit_pages` is a page an editor can actually use.
+
+The group that names the page decides its menu. A second group sharing the
+same slug contributes its fields, not its menu — one page cannot sit in two
+places.
 
 **Reading the values** needs no new API. An options page is an object like any
 other, addressed by `options_` plus the slug:
@@ -296,8 +453,8 @@ wpcmb_get_fields( 'options_site-settings' );
 
 Values are stored as options named `wpcmb_{slug}_{field}`, autoloaded off, so a
 field called `siteurl` cannot collide with anything of WordPress's. They are
-also available over REST at `/wpcmb/v1/values/option/{slug}`, behind
-`manage_options`.
+also available over REST at `/wpcmb/v1/values/option/{slug}`, behind the
+page's own capability.
 
 **Everything else the plugin does still applies**, because the page renders
 through the same renderer as a meta box: conditional logic, repeaters,
@@ -305,7 +462,7 @@ flexible content, validation and the save gate all work here without knowing
 this screen exists. A required field on an options page blocks the save the
 same way it blocks a publish.
 
-Two filters, for sites that want something different:
+The two filters are still there, for whatever the settings do not cover:
 
 ```php
 // Move one page under Settings, or anywhere else.
@@ -908,7 +1065,7 @@ Deleting the plugin removes nothing unless `wpcmb_delete_data_on_uninstall` is s
 ## Checks
 
 ```bash
-composer test        # all 16 PHP checks, one process each
+composer test        # all 17 PHP checks, one process each
 npm test             # 156 browser tests against the real scripts
 php tests/integration.php   # real WordPress, non-destructive
 composer lint        # WordPress Coding Standards
@@ -938,6 +1095,7 @@ php tests/blocks-check.php      # block settings and naming
 php tests/integrations-check.php # integrations stay dormant without their hosts
 php tests/security-check.php     # nonces, capabilities and storage boundaries
 php tests/validation-check.php   # required fields, including inside repeaters
+php tests/settings-check.php     # every group and field setting, where it takes effect
 ```
 
 None of these need WordPress.

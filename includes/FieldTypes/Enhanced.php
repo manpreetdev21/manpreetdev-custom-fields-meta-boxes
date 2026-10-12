@@ -147,7 +147,7 @@ final class Enhanced extends FieldType {
 		if ( 'embed' === $type && '' !== $stored ) {
 			// oEmbed is already in WordPress, already caches its lookups and
 			// already restricts itself to the allowed provider list.
-			$oembed = wp_oembed_get( $stored );
+			$oembed = wp_oembed_get( $stored, $this->embed_size( $field ) );
 
 			if ( is_string( $oembed ) ) {
 				echo wp_kses_post( $oembed );
@@ -443,12 +443,32 @@ final class Enhanced extends FieldType {
 		if ( 'embed' === $type && is_string( $value ) && '' !== $value
 			&& 'html' === $this->setting( $field, 'return_format', 'html' )
 		) {
-			$html = wp_oembed_get( $value );
+			$html = wp_oembed_get( $value, $this->embed_size( $field ) );
 
 			return false === $html ? $value : $html;
 		}
 
 		return $value;
+	}
+
+	/**
+	 * The size arguments for an oEmbed lookup, if the field sets any.
+	 *
+	 * Zero means "not set" rather than "zero pixels", so an unset dimension
+	 * is left out entirely and oEmbed falls back to the theme's own content
+	 * width — which is the right answer when nobody has said otherwise.
+	 *
+	 * @param array<string, mixed> $field Field definition.
+	 *
+	 * @return array<string, int>
+	 */
+	private function embed_size( array $field ): array {
+		return array_filter(
+			array(
+				'width'  => (int) $this->setting( $field, 'width', 0 ),
+				'height' => (int) $this->setting( $field, 'height', 0 ),
+			)
+		);
 	}
 
 	/**
@@ -468,6 +488,17 @@ final class Enhanced extends FieldType {
 						'html' => __( 'Embed HTML', 'metafields-custom-fields' ),
 						'url'  => __( 'URL', 'metafields-custom-fields' ),
 					),
+				),
+				'width'         => array(
+					'label' => __( 'Embed width', 'metafields-custom-fields' ),
+					'type'  => 'number',
+					'tab'   => 'appearance',
+					'help'  => __( 'Asked of the provider as a preferred size. Most treat it as a maximum and keep their own aspect ratio.', 'metafields-custom-fields' ),
+				),
+				'height'        => array(
+					'label' => __( 'Embed height', 'metafields-custom-fields' ),
+					'type'  => 'number',
+					'tab'   => 'appearance',
 				),
 			);
 		}

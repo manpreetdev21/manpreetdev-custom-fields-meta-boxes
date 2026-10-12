@@ -76,6 +76,37 @@ final class OptionsPages extends Module {
 	 */
 	public function boot(): void {
 		add_action( 'admin_menu', array( $this, 'register' ) );
+
+		/*
+		 * A page with a capability of its own has to be reachable by whoever
+		 * holds it. Without this, lowering the capability would put the menu
+		 * item in front of a user who is then refused at the door, because
+		 * the default rule for an options object is manage_options.
+		 */
+		add_filter( 'wpcmb/permissions/read', array( $this, 'allow' ), 10, 2 );
+		add_filter( 'wpcmb/permissions/edit', array( $this, 'allow' ), 10, 2 );
+	}
+
+	/**
+	 * Judge an options object by its own page's capability.
+	 *
+	 * @param bool  $allowed Decision so far.
+	 * @param mixed $ref     Object being judged.
+	 */
+	public function allow( $allowed, $ref ): bool {
+		if ( ! $ref instanceof ObjectRef || ObjectRef::OPTION !== $ref->type ) {
+			return (bool) $allowed;
+		}
+
+		$page = $this->pages()[ (string) $ref->id ] ?? null;
+
+		// Not one of ours: an options object can come from anywhere, and the
+		// default rule is the right answer for the ones we did not create.
+		if ( null === $page ) {
+			return (bool) $allowed;
+		}
+
+		return current_user_can( '' !== (string) ( $page['capability'] ?? '' ) ? (string) $page['capability'] : 'manage_options' );
 	}
 
 	/**
@@ -85,7 +116,7 @@ final class OptionsPages extends Module {
 	 * options page describes where it does not go, which is no reason to
 	 * build anything.
 	 *
-	 * @return array<string, array{title: string, order: int}>
+	 * @return array<string, array{title: string, order: int, capability?: string, icon?: string, parent?: string}>
 	 */
 	public function pages(): array {
 		$pages = array();
@@ -101,8 +132,15 @@ final class OptionsPages extends Module {
 				}
 
 				$pages[ $slug ] = array(
-					'title' => '' !== $group->title ? $group->title : $this->humanise( $slug ),
-					'order' => $order,
+					'title'      => '' !== $group->title ? $group->title : $this->humanise( $slug ),
+					'order'      => $order,
+
+					// The group that names the page also decides who may open
+					// it and where it sits. A second group sharing the page
+					// contributes its fields, not its menu.
+					'capability' => (string) ( $group->settings['options_capability'] ?? 'manage_options' ),
+					'icon'       => (string) ( $group->settings['options_icon'] ?? '' ),
+					'parent'     => (string) ( $group->settings['options_parent'] ?? '' ),
 				);
 			}
 		}
@@ -118,7 +156,7 @@ final class OptionsPages extends Module {
 		 *
 		 * @since 1.3.0
 		 *
-		 * @param array<string, array{title: string, order: int}> $pages Keyed by slug.
+		 * @param array<string, array{title: string, order: int, capability?: string, icon?: string, parent?: string}> $pages Keyed by slug.
 		 */
 		return (array) apply_filters( 'wpcmb/options_pages', $pages );
 	}
@@ -176,7 +214,10 @@ final class OptionsPages extends Module {
 
 		foreach ( $this->pages() as $slug => $page ) {
 			$args = array(
-				'parent'     => null,
+				// An empty parent still means a top-level menu; the filter
+				// below takes null for the same thing, which is what it has
+				// always taken.
+				'parent'     => '' !== (string) ( $page['parent'] ?? '' ) ? (string) $page['parent'] : null,
 				'page_title' => sprintf(
 					/* translators: 1: plugin name, 2: page title, 3: options page slug. */
 					__( '%1$s: %2$s (%3$s)', 'metafields-custom-fields' ),
@@ -185,8 +226,8 @@ final class OptionsPages extends Module {
 					$slug
 				),
 				'menu_title' => self::menu_label( $page['title'], $slug ),
-				'capability' => 'manage_options',
-				'icon'       => 'dashicons-admin-generic',
+				'capability' => '' !== (string) ( $page['capability'] ?? '' ) ? (string) $page['capability'] : 'manage_options',
+				'icon'       => '' !== (string) ( $page['icon'] ?? '' ) ? (string) $page['icon'] : 'dashicons-admin-generic',
 
 				// Fractional, so several of these keep their order among
 				// themselves without displacing anything already at 81.
