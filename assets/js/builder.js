@@ -1901,6 +1901,15 @@
 			} else {
 				new LocationBuilder( root );
 			}
+
+			// The fallback says the builder is unavailable, and it is not.
+			// Hidden here rather than wrapped in <noscript> on the server,
+			// because a script that fails to load and a script that is turned
+			// off look the same to the person reading the screen — and only
+			// this line proves the builder actually started.
+			root.querySelectorAll( '.wpcmb-builder__fallback' ).forEach( function ( note ) {
+				note.hidden = true;
+			} );
 		} );
 	} );
 }( window.jQuery ) );

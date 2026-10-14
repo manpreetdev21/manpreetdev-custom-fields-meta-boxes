@@ -1738,3 +1738,10 @@ input.wpcmb-input[type="datetime-local"] {
 	display: block;
 	font-size: 12px;
 }
+
+/* `hidden` has to beat a display — see the note in admin.css. */
+
+.wpcmb-btn[hidden],
+.wpcmb-affix__text[hidden] {
+	display: none;
+}

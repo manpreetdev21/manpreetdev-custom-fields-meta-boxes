@@ -175,6 +175,7 @@ final class Plugin {
 		return array(
 			PostTypes\FieldGroupPostType::class,
 			PostTypes\SubmissionPostType::class,
+			PostTypes\CustomPostTypes::class,
 			Fields\Registry::class,
 			Fields\Renderer::class,
 			Database\Revisions::class,
@@ -182,6 +183,8 @@ final class Plugin {
 			Admin\Assets::class,
 			Admin\FieldGroupList::class,
 			Admin\FieldGroupEditor::class,
+			Admin\PostTypeList::class,
+			Admin\PostTypeEditor::class,
 			Admin\MetaBoxes::class,
 			Admin\Ajax::class,
 			Admin\OptionsPages::class,

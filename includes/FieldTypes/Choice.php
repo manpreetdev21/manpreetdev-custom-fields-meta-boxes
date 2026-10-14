@@ -336,8 +336,27 @@ final class Choice extends FieldType {
 		 * cleaned as text and the comma-separated box is split back out.
 		 */
 		if ( $multiple && ! empty( $this->setting( $field, 'allow_custom', '' ) ) ) {
+			/**
+			 * Filters how many values one field may hold.
+			 *
+			 * "Other" is the one place a choice field takes free text, so it
+			 * is the one place a single request can decide how much goes into
+			 * a meta row. A thousand is far more than a list anybody reads and
+			 * far less than a row anybody would notice growing.
+			 *
+			 * @since 1.9.2
+			 *
+			 * @param int                  $limit Maximum number of values.
+			 * @param array<string, mixed> $field Field definition.
+			 */
+			$limit = (int) apply_filters( 'wpcmb/field/max_choices', 1000, $field );
+
 			foreach ( array_diff( $submitted, $allowed ) as $custom ) {
 				foreach ( explode( ',', (string) $custom ) as $part ) {
+					if ( count( $values ) >= $limit ) {
+						break 2;
+					}
+
 					$part = sanitize_text_field( trim( $part ) );
 
 					if ( '' !== $part && ! in_array( $part, $values, true ) ) {

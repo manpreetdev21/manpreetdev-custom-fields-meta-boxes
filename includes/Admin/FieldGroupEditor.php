@@ -79,12 +79,28 @@ final class FieldGroupEditor extends Module {
 			'default'
 		);
 
+		/*
+		 * Block and Form sit in the main column, below the fields and the
+		 * rules, because each is a thing the group *becomes* rather than a
+		 * detail of how it looks. In the side column, under Display Settings,
+		 * the form's shortcodes were below the fold on most screens and the
+		 * block settings read as an afterthought.
+		 */
 		add_meta_box(
 			'wpcmb-block',
 			__( 'Block', 'metafields-custom-fields' ),
 			array( $this, 'render_block_settings' ),
 			FieldGroupPostType::POST_TYPE,
-			'side',
+			'normal',
+			'low'
+		);
+
+		add_meta_box(
+			'wpcmb-form',
+			__( 'Front-end Form', 'metafields-custom-fields' ),
+			array( $this, 'render_form_settings' ),
+			FieldGroupPostType::POST_TYPE,
+			'normal',
 			'low'
 		);
 	}
@@ -364,31 +380,6 @@ final class FieldGroupEditor extends Module {
 		echo '</fieldset>';
 
 		$this->render_options_page_settings( $settings );
-
-		/*
-		 * Two snippets, because there is no one honest snippet. A form takes
-		 * submissions from signed-in visitors only unless it is told
-		 * otherwise, and the earlier wording here promised "a public form"
-		 * while handing over the shortcode that refuses one — so the first
-		 * thing anybody saw after pasting it was "You need to sign in".
-		 */
-		$key = $this->group( $post )->key;
-
-		printf(
-			'<p><label class="wpcmb-label" for="wpcmb-shortcode">%1$s</label>
-			<input class="widefat code" type="text" id="wpcmb-shortcode" value="%2$s" readonly onfocus="this.select()" />
-			<span class="description">%3$s</span></p>
-
-			<p><label class="wpcmb-label" for="wpcmb-shortcode-guests">%4$s</label>
-			<input class="widefat code" type="text" id="wpcmb-shortcode-guests" value="%5$s" readonly onfocus="this.select()" />
-			<span class="description">%6$s</span></p>',
-			esc_html__( 'Front-end form — signed-in visitors', 'metafields-custom-fields' ),
-			esc_attr( wpcmb_form_shortcode( $key ) ),
-			esc_html__( 'Paste into any post or page. Visitors who are not signed in are asked to sign in.', 'metafields-custom-fields' ),
-			esc_html__( 'Front-end form — anyone', 'metafields-custom-fields' ),
-			esc_attr( wpcmb_form_shortcode( $key, array( 'guests' => '1' ) ) ),
-			esc_html__( 'Accepts submissions from anyone, signed in or not. Uploads still need an account.', 'metafields-custom-fields' )
-		);
 	}
 
 	/**
@@ -488,6 +479,43 @@ final class FieldGroupEditor extends Module {
 	 *
 	 * @return array<string, string>
 	 */
+	/**
+	 * Render the front-end form section.
+	 *
+	 * Its own section rather than a line in Display Settings: a group
+	 * that renders as a public form is doing something different from a
+	 * group that renders on an edit screen, and the shortcode is the
+	 * only thing anybody needs from this screen to use it.
+	 *
+	 * @param \WP_Post $post Current post.
+	 */
+	public function render_form_settings( \WP_Post $post ): void {
+		/*
+		 * Two snippets, because there is no one honest snippet. A form takes
+		 * submissions from signed-in visitors only unless it is told
+		 * otherwise, and the earlier wording here promised "a public form"
+		 * while handing over the shortcode that refuses one — so the first
+		 * thing anybody saw after pasting it was "You need to sign in".
+		 */
+		$key = $this->group( $post )->key;
+
+		printf(
+			'<p><label class="wpcmb-label" for="wpcmb-shortcode">%1$s</label>
+			<input class="widefat code" type="text" id="wpcmb-shortcode" value="%2$s" readonly onfocus="this.select()" />
+			<span class="description">%3$s</span></p>
+
+			<p><label class="wpcmb-label" for="wpcmb-shortcode-guests">%4$s</label>
+			<input class="widefat code" type="text" id="wpcmb-shortcode-guests" value="%5$s" readonly onfocus="this.select()" />
+			<span class="description">%6$s</span></p>',
+			esc_html__( 'Front-end form — signed-in visitors', 'metafields-custom-fields' ),
+			esc_attr( wpcmb_form_shortcode( $key ) ),
+			esc_html__( 'Paste into any post or page. Visitors who are not signed in are asked to sign in.', 'metafields-custom-fields' ),
+			esc_html__( 'Front-end form — anyone', 'metafields-custom-fields' ),
+			esc_attr( wpcmb_form_shortcode( $key, array( 'guests' => '1' ) ) ),
+			esc_html__( 'Accepts submissions from anyone, signed in or not. Uploads still need an account.', 'metafields-custom-fields' )
+		);
+	}
+
 	/**
 	 * Render the settings for the page an `options_page` rule creates.
 	 *

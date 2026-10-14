@@ -1639,3 +1639,50 @@
 		transition-duration: 0.01ms !important;
 	}
 }
+
+/*
+ * `hidden` has to beat a display.
+ *
+ * The attribute's own `display: none` comes from the browser's stylesheet, so
+ * any class of ours that sets a display silently outranks it — and an element
+ * the markup or a script marked hidden then sits there, usually empty. The
+ * builder's error line was a 16px red bar on every field group because of it.
+ *
+ * Listed rather than written as `[class*="wpcmb-"][hidden]`, which would say
+ * this once: the isolation check wants every selector anchored to a prefixed
+ * class, and an attribute selector is not that. The list is kept honest by
+ * the check that fails when a display-setting class of ours can be hidden
+ * without an override here.
+ */
+
+.wpcmb-btn[hidden],
+.wpcmb-builder__notice[hidden] {
+	display: none;
+}
+
+/*
+ * Two settings side by side, collapsing to one on a narrow screen.
+ *
+ * Used by the record editors, where a label and its slug, or a singular and a
+ * plural, belong next to each other rather than stacked down the page.
+ */
+
+.wpcmb-grid-2 {
+	display: grid;
+	gap: 0 20px;
+	grid-template-columns: repeat( auto-fit, minmax( 240px, 1fr ) );
+}
+
+/*
+ * Help text under a control rather than trailing off the end of its label.
+ *
+ * Core's `.description` is inline, which reads fine after an input and badly
+ * after a checkbox label — "PublicVisible on the front of the site" was one
+ * run-on sentence. Only ours is changed; core's own description text is left
+ * exactly as it is everywhere else.
+ */
+
+.wpcmb-help {
+	display: block;
+	margin-block-start: 2px;
+}

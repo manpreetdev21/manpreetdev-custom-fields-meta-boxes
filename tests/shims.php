@@ -761,3 +761,27 @@ function esc_html_e( string $text, string $domain = 'default' ): void {
 function absint( $value ): int {
 	return abs( (int) $value );
 }
+
+/* -------------------------------------------------------------------------
+ * Registered post types, for the record checks.
+ * ---------------------------------------------------------------------- */
+
+$GLOBALS['wpcmb_test_post_types'] = array();
+
+/**
+ * Pretend a post type is registered.
+ *
+ * @param string $post_type Post type name.
+ */
+function wpcmb_test_post_type( string $post_type ): void {
+	$GLOBALS['wpcmb_test_post_types'][] = $post_type;
+}
+
+/**
+ * Whether a post type is registered. The checks register their own.
+ *
+ * @param string $post_type Post type name.
+ */
+function post_type_exists( string $post_type ): bool {
+	return in_array( $post_type, (array) ( $GLOBALS['wpcmb_test_post_types'] ?? array() ), true );
+}

@@ -11,6 +11,7 @@ namespace WPCMB\Admin;
 
 use WPCMB\Abstracts\Module;
 use WPCMB\Fields\Repository;
+use WPCMB\PostTypes\CustomPostTypes;
 use WPCMB\PostTypes\FieldGroupPostType;
 
 defined( 'ABSPATH' ) || exit;
@@ -69,22 +70,43 @@ final class Menu extends Module {
 			return;
 		}
 
+		/*
+		 * What is built here comes first, in the order somebody builds it:
+		 * fields, then the post types and taxonomies they go on. The plugin's
+		 * own screens follow. What a site accumulates — a form's submissions,
+		 * an options page, and there can be any number of either — goes last,
+		 * so the menu grows at the bottom rather than in the middle.
+		 */
+		$order = array(
+			self::SLUG                          => 0,
+			'edit.php?post_type=' . FieldGroupPostType::POST_TYPE => 1,
+			'edit.php?post_type=' . CustomPostTypes::POST_TYPE => 2,
+			'edit.php?post_type=wpcmb_taxonomy' => 3,
+			'wpcmb-settings'                    => 4,
+			'wpcmb-tools'                       => 5,
+		);
+
 		/**
 		 * Rank one submenu entry. Lower sorts higher.
 		 *
 		 * @param array<int, string> $item Submenu entry; index 2 is its slug.
 		 */
-		$rank = static function ( array $item ): int {
+		/**
+		 * Rank one submenu entry. Lower sorts higher.
+		 *
+		 * @param array<int, string> $item Submenu entry; index 2 is its slug.
+		 */
+		$rank = static function ( array $item ) use ( $order ): int {
 			$slug = (string) ( $item[2] ?? '' );
 
+			if ( isset( $order[ $slug ] ) ) {
+				return $order[ $slug ];
+			}
+
 			return match ( true ) {
-				self::SLUG === $slug                                         => 0,
-				'edit.php?post_type=' . FieldGroupPostType::POST_TYPE === $slug => 1,
-				str_starts_with( $slug, 'wpcmb-options-' )                   => 5,
-				str_starts_with( $slug, 'edit.php?post_type=wpcmb_' )        => 4,
-				'wpcmb-settings' === $slug                                   => 2,
-				'wpcmb-tools' === $slug                                      => 3,
-				default                                                      => 4,
+				str_starts_with( $slug, 'wpcmb-options-' )            => 7,
+				str_starts_with( $slug, 'edit.php?post_type=wpcmb_' ) => 6,
+				default                                               => 6,
 			};
 		};
 

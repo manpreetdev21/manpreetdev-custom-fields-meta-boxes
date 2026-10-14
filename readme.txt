@@ -4,7 +4,7 @@ Tags: custom fields, meta box, repeater, options page, custom post type
 Requires at least: 6.8
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.9.1
+Stable tag: 1.10.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -95,6 +95,26 @@ Yes. Every string is translatable under the `metafields-custom-fields` text doma
 5. The field group list, with each group's key, field count and location.
 
 == Changelog ==
+
+= 1.10.0 =
+* New: Post Types. Register custom post types from a screen of their own, with labels, features, taxonomies, permalinks, capabilities, menu icon and position. The list screen says whether each one is actually registered, and how many items exist under it.
+* Records are stored as posts like field groups are, so search, trash, revisions, capabilities and WXR export all work on them without anything new being written.
+* Fixed: the plugin stylesheet did not load on any admin screen except field groups, so a new record screen rendered with none of the design tokens. Any wpcmb_ post type screen now counts as one of ours.
+* The admin menu order now puts what you build first: Overview, Field Groups, Post Types, then Settings and Tools, then the forms and options pages a site accumulates.
+
+= 1.9.3 =
+* Block and Front-end Form are now sections of their own in the field group editor, in the main column, instead of being tucked into the side. The form shortcodes had no heading at all before this.
+* Fixed: the "fields builder needs JavaScript" notice stayed on screen after the builder had loaded. It is now hidden by the builder itself, so it still shows when the script genuinely does not run.
+* Fixed: an empty red bar under the fields builder on every field group. The hidden attribute gets its display:none from the browser, and any class of ours that sets a display silently outranked it. Added an isolation check that fails when a display-setting class can be hidden without an override in the same stylesheet.
+* The build now removes the previous version's zip, so there is only ever one package in the plugin root to upload.
+
+= 1.9.2 =
+* Security - A file, image, gallery, video or audio field now accepts only its own kind of file even when no file types are configured. The media picker was already filtered this way; the check on save was not, so a value arriving from a crafted request, the REST API or code could put a PDF in an image field.
+* Security - A relationship, post object or page link field now offers and returns only what the reader is allowed to see. Drafts and private posts are still offered on an edit screen, where they are being chosen deliberately, and no longer on a public form, where every option is a title handed to whoever asked for the page.
+* Security - A user field no longer returns the whole WP_User object — with its email address, login name and registration date — to a reader without the `list_users` capability. They get the user ID instead.
+* Security - An attachment attached to a non-public post is no longer returned with its caption, description and parent id to a reader who cannot see that post. Files in the media library with no parent read as published and are unaffected.
+* Security - "Other values" on a checkbox list is capped at 1000 values per field, filterable with `wpcmb/field/max_choices`. It is the one place a choice field takes free text, and so the one place a single request decided how much went into a meta row.
+* New - Settings now carries a Media upload types list: the file types a media field can be restricted to, written once rather than retyped into every field. Each line becomes a choice in the new Upload type setting on file, image, gallery, video and audio fields.
 
 = 1.9.1 =
 * The plugin menu now keeps one order on every screen: Overview, Field Groups, Settings, Tools, then the forms and options pages a site has made. It used to rearrange itself, because post types register at a different moment from admin pages and a form's submissions type does not exist until its first submission.

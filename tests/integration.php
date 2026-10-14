@@ -1103,6 +1103,7 @@ wpcmb_group(
 			array( 'Settings', 'manage_options', 'wpcmb-settings' ),
 			array( 'Tools', 'manage_options', 'wpcmb-tools' ),
 			array( 'Another form', 'edit_posts', 'edit.php?post_type=wpcmb_b_form_0002' ),
+			array( 'Post Types', 'edit_posts', 'edit.php?post_type=wpcmb_post_type' ),
 		);
 
 		$menu->order_submenu();
@@ -1113,13 +1114,14 @@ wpcmb_group(
 			array(
 				'wpcmb',
 				'edit.php?post_type=wpcmb_field_group',
+				'edit.php?post_type=wpcmb_post_type',
 				'wpcmb-settings',
 				'wpcmb-tools',
 				'edit.php?post_type=wpcmb_a_form_0001',
 				'edit.php?post_type=wpcmb_b_form_0002',
 				'wpcmb-options-site',
 			) === $slugs,
-			'Overview first, then the fixed screens, then forms and options pages'
+			'Overview, what is built here, the plugin screens, then forms and options pages'
 		);
 
 		// Two forms keep the order they registered in rather than swapping
@@ -1131,7 +1133,7 @@ wpcmb_group(
 		);
 
 		// Nothing is lost or invented on the way through.
-		wpcmb_is( 7 === count( $GLOBALS['submenu']['wpcmb'] ), 'every entry survives the sort' );
+		wpcmb_is( 8 === count( $GLOBALS['submenu']['wpcmb'] ), 'every entry survives the sort' );
 
 		$menu->order_submenu();
 
@@ -1143,6 +1145,70 @@ wpcmb_group(
 		$menu->order_submenu();
 
 		wpcmb_is( ! isset( $GLOBALS['submenu']['wpcmb'] ), 'a menu that is not there is left alone' );
+	}
+);
+
+wpcmb_group(
+	'a relationship field offers and returns only what the reader may see',
+	static function (): void {
+		$draft = wp_insert_post(
+			array(
+				'post_type'   => 'post',
+				'post_status' => 'draft',
+				'post_title'  => 'Integration draft ' . wp_generate_password( 6, false, false ),
+			)
+		);
+
+		$GLOBALS['wpcmb_created'][] = array( 'type' => 'post', 'id' => (int) $draft );
+
+		$published = wpcmb_post_fixture( 'post', 'Integration published' );
+
+		$registry = wpcmb()->container()->get( WPCMB\Fields\Registry::class );
+		$handler  = $registry->get( 'post_object' );
+		$field    = array( 'type' => 'post_object', 'name' => 'r', 'label' => 'Related', 'settings' => array( 'post_type' => 'post' ) );
+
+		$render = static function () use ( $handler, $field ): string {
+			ob_start();
+			$handler->render( $field, '', 'wpcmb_values[r]', 'wpcmb-r' );
+
+			return (string) ob_get_clean();
+		};
+
+		$title = get_post( (int) $draft )->post_title;
+
+		// An editor is choosing what to relate, and should see the draft they
+		// are about to publish.
+		wpcmb_is( str_contains( $render(), esc_html( $title ) ), 'an administrator is offered a draft' );
+
+		$was = get_current_user_id();
+
+		wp_set_current_user( 0 );
+
+		/*
+		 * The same control renders on a public form, where every option is a
+		 * title handed to whoever asked for the page.
+		 */
+		$public = $render();
+
+		wpcmb_is( ! str_contains( $public, esc_html( $title ) ), 'a logged-out visitor is not' );
+		wpcmb_is( str_contains( $public, esc_html( 'Integration published' ) ), 'and is still offered published posts' );
+
+		// A stored id outlives the status of what it points at.
+		$object = array( 'type' => 'post_object', 'name' => 'r', 'settings' => array( 'return_format' => 'object' ) );
+
+		wpcmb_is( null === $handler->format( $draft, $object ), 'a draft is not returned to a logged-out reader' );
+		wpcmb_is( get_post( $published ) == $handler->format( $published, $object ), 'a published post still is' );
+
+		// A WP_User carries the email address and the login name.
+		$user = array( 'type' => 'user', 'name' => 'u', 'settings' => array( 'return_format' => 'object' ) );
+		$id   = $registry->get( 'user' )->format( 1, $user );
+
+		wpcmb_is( ! $id instanceof WP_User, 'a user is not returned whole without list_users' );
+		wpcmb_is( 1 === $id, 'only the id the reader could have guessed' );
+
+		wp_set_current_user( $was );
+
+		wpcmb_is( $registry->get( 'user' )->format( 1, $user ) instanceof WP_User, 'and an administrator still gets the object' );
 	}
 );
 

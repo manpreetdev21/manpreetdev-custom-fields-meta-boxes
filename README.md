@@ -2,7 +2,7 @@
 
 Field groups, meta boxes and a developer-friendly field API for WordPress.
 
-- **Version:** 1.9.1
+- **Version:** 1.10.0
 - **Author:** Manpreet Singh
 - **Requires PHP:** 8.1
 - **Requires WordPress:** 6.8
@@ -251,7 +251,7 @@ tab a setting appears under is part of the declaration.
 | radio, button_group | choices, layout, return format |
 | rating | maximum rating |
 | toggle, true_false | toggle label, on label, off label |
-| file, video, audio | library, file types, min size, max size, preview size, return format |
+| file, video, audio | library, **upload type**, file types, min size, max size, preview size, return format |
 | image, gallery | the above, plus min and max width and height |
 | gallery | the above, plus min and max items |
 | post_object, page_link, relationship | post types, multiple, min, max, empty choice, return format |
@@ -272,6 +272,12 @@ them as a convenience, and every one is checked again on save — because a valu
 can also arrive from a public form, from the REST API, or from code, none of
 which open a picker. A size written bare is kilobytes, which is how the media
 library writes its own limits; `2MB` and `500 KB` work too.
+
+**Upload type** is picked from a list the site keeps in Settings, so "what this
+site accepts" is answered once rather than retyped into every field. *Allowed
+file types* is still there as the escape hatch for anything the list does not
+cover, and overrides it. Either way a field accepts its own kind of file: an
+image field takes images whether or not anybody filled the setting in.
 
 **"Other values"** is offered on a checkbox list only. What is typed joins the
 list of values, so a stored value reads the same whether it was ticked or
@@ -820,6 +826,46 @@ mirror automatically under `dir="rtl"`.
 **Colour** comes from `--wp-admin-theme-color`, so the plugin adopts whichever
 admin colour scheme the user picked rather than imposing its own.
 ## Security
+
+### What a field hands back depends on who is reading
+
+A stored id outlives the status of the thing it points at. A post related while
+it was published can be unpublished a month later, and the template printing
+that relationship has no idea — so the check is made at read time, against the
+current reader, not at write time against the person who chose it.
+
+| Field | A reader who may not see it gets |
+|---|---|
+| post_object, relationship | nothing for that id |
+| user | the user ID, never the `WP_User` object |
+| file, image, gallery, video, audio | nothing for that attachment |
+
+`read_post` is true for anyone on a published post, so an editor's screens are
+unchanged and a visitor's page holds nothing they could not already load. An
+attachment with no parent reads as published, which is every file uploaded
+straight to the media library.
+
+The same rule applies to the options a relationship field *offers*. Drafts and
+private posts are offered on an edit screen, because the person choosing is
+about to publish one. They are not offered on a public form, where every
+option is a title handed to whoever asked for the page.
+
+The user field is the sharpest of these: a `WP_User` carries the email address,
+the login name and the registration date. A theme printing `->display_name` is
+the common case and is harmless; it is the rest of the object that has no
+business on a public page.
+
+### Limits are checked where the value arrives, not where it was picked
+
+The media picker is filtered by a field's allowed types as a convenience. The
+same rules are checked again on save, because a value can also arrive from a
+public form, from the REST API, or from `wpcmb_update_field()` — none of which
+open a picker.
+
+A field accepts its own kind of file whether or not anybody filled the setting
+in: an image field takes images, a video field takes video. A `file` field has
+no family and takes anything, which is what a file field is for.
+
 
 Authorisation is the part of a plugin that holds until the day somebody adds
 one more handler in a hurry, so `tests/security-check.php` enforces it with the

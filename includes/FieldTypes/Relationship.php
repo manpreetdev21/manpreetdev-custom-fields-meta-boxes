@@ -167,10 +167,10 @@ final class Relationship extends FieldType {
 		}
 
 		$mapped = array_map(
-			static fn( $id ) => match ( $type ) {
+			fn( $id ) => match ( $type ) {
 				'taxonomy' => get_term( (int) $id ),
-				'user'     => get_userdata( (int) $id ),
-				default    => get_post( (int) $id ),
+				'user'     => $this->user_for_reader( (int) $id ),
+				default    => $this->post_for_reader( (int) $id ),
 			},
 			$this->as_list( $value )
 		);
@@ -178,6 +178,49 @@ final class Relationship extends FieldType {
 		$mapped = array_values( array_filter( $mapped ) );
 
 		return $this->is_multiple( $field ) ? $mapped : ( $mapped[0] ?? null );
+	}
+
+	/**
+	 * A post, or nothing when the reader may not see it.
+	 *
+	 * A stored id outlives the status of what it points at: a post related
+	 * while it was published can be unpublished later, and the template that
+	 * prints the relationship has no idea. Returning the object anyway put a
+	 * draft's title and content in front of whoever loaded the page.
+	 *
+	 * @param int $id Post id.
+	 */
+	private function post_for_reader( int $id ): ?\WP_Post {
+		$post = get_post( $id );
+
+		if ( ! $post instanceof \WP_Post ) {
+			return null;
+		}
+
+		return 'publish' === $post->post_status || current_user_can( 'read_post', $id ) ? $post : null;
+	}
+
+	/**
+	 * A user, or just their id when the reader may not see the rest.
+	 *
+	 * A WP_User carries the email address, the login name and the registration
+	 * date. A theme printing `->display_name` is the common case and is
+	 * harmless; it is the rest of the object that has no business being on a
+	 * public page, so a reader without `list_users` gets the id they could
+	 * have worked out anyway and nothing more.
+	 *
+	 * @param int $id User id.
+	 *
+	 * @return \WP_User|int|null
+	 */
+	private function user_for_reader( int $id ) {
+		if ( ! current_user_can( 'list_users' ) ) {
+			return $id > 0 ? $id : null;
+		}
+
+		$user = get_userdata( $id );
+
+		return $user instanceof \WP_User ? $user : null;
 	}
 
 	/**
@@ -424,7 +467,7 @@ final class Relationship extends FieldType {
 	private function query_posts( array $field ): array {
 		$post_types = $this->list_setting( $field, 'post_type' );
 
-		return get_posts(
+		$posts = get_posts(
 			array(
 				'post_type'              => array() !== $post_types ? $post_types : 'any',
 				'post_status'            => array( 'publish', 'draft', 'pending', 'private' ),
@@ -434,6 +477,25 @@ final class Relationship extends FieldType {
 				'no_found_rows'          => true,
 				'update_post_meta_cache' => false,
 				'update_post_term_cache' => false,
+			)
+		);
+
+		/*
+		 * Drafts and private posts are offered because the person choosing a
+		 * related post on an edit screen should see the one they are about to
+		 * publish. The same control renders on a public form, though, where
+		 * every option is a title handed to whoever asked for the page — so
+		 * each one is checked against the reader rather than the query.
+		 *
+		 * `read_post` is true for anyone on a published post, so an editor's
+		 * list is unchanged and a visitor's holds nothing they could not
+		 * already see.
+		 */
+		return array_values(
+			array_filter(
+				$posts,
+				static fn( \WP_Post $post ): bool => 'publish' === $post->post_status
+					|| current_user_can( 'read_post', $post->ID )
 			)
 		);
 	}

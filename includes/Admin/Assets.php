@@ -493,8 +493,18 @@ final class Assets extends Module {
 			return true;
 		}
 
+		/*
+		 * Any post type of ours, not just field groups.
+		 *
+		 * Field groups, post types, taxonomies and a form's submissions are
+		 * all stored as `wpcmb_`-prefixed post types, and every one of them
+		 * is a screen this plugin drew. Naming them one at a time meant each
+		 * new record type shipped with no stylesheet, no body class, and
+		 * every design token unresolved — which is how the Post Types screen
+		 * first appeared.
+		 */
 		return $screen instanceof \WP_Screen
-			&& ( FieldGroupPostType::POST_TYPE === $screen->post_type || str_starts_with( $screen->id, 'toplevel_page_' . Menu::SLUG ) );
+			&& ( str_starts_with( (string) $screen->post_type, 'wpcmb_' ) || str_starts_with( $screen->id, 'toplevel_page_' . Menu::SLUG ) );
 	}
 
 	/**

@@ -11,6 +11,7 @@ namespace WPCMB\Admin;
 
 use WPCMB\Abstracts\Module;
 use WPCMB\FieldTypes\Choice;
+use WPCMB\FieldTypes\Media;
 use WPCMB\PostTypes\FieldGroupPostType;
 
 defined( 'ABSPATH' ) || exit;
@@ -159,6 +160,60 @@ final class SettingsPage extends Module {
 			self::SLUG,
 			'wpcmb_lists',
 			array( 'label_for' => Choice::STATES_OPTION )
+		);
+
+		register_setting(
+			self::OPTION_GROUP,
+			Media::TYPES_OPTION,
+			array(
+				'type'              => 'string',
+				'default'           => '',
+				'sanitize_callback' => array( $this, 'sanitize_list' ),
+			)
+		);
+
+		add_settings_section(
+			'wpcmb_uploads',
+			__( 'Media upload types', 'metafields-custom-fields' ),
+			array( $this, 'render_uploads_intro' ),
+			self::SLUG
+		);
+
+		add_settings_field(
+			Media::TYPES_OPTION,
+			__( 'Upload types', 'metafields-custom-fields' ),
+			array( $this, 'render_upload_types_field' ),
+			self::SLUG,
+			'wpcmb_uploads',
+			array( 'label_for' => Media::TYPES_OPTION )
+		);
+	}
+
+	/**
+	 * Explain what the upload type list is for.
+	 */
+	public function render_uploads_intro(): void {
+		printf(
+			'<p class="description">%s</p>',
+			esc_html__(
+				'What a file, image, gallery, video or audio field can be restricted to. Each line becomes a choice in the field editor, so "what this site accepts" is answered once here rather than retyped into every field.',
+				'metafields-custom-fields'
+			)
+		);
+	}
+
+	/**
+	 * Render the upload types control.
+	 */
+	public function render_upload_types_field(): void {
+		$this->render_list_field(
+			Media::TYPES_OPTION,
+			"image : Any image\npdf, docx : Documents",
+			sprintf(
+				/* translators: %s: comma-separated list of the built-in upload type labels. */
+				__( 'One per line, as "extensions : Label". A family like image, video or audio works as a value too. Leave empty for the built-in list: %s.', 'metafields-custom-fields' ),
+				implode( ', ', Media::default_upload_types() )
+			)
 		);
 	}
 

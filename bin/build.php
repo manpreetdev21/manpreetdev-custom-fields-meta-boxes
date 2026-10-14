@@ -192,3 +192,25 @@ $wpcmb_archive->close();
 
 printf( "\n%d files, %s uncompressed\n", count( $wpcmb_files ), wpcmb_size( $wpcmb_bytes ) );
 printf( "zip: %s (%s)\n", basename( $wpcmb_zip_path ), wpcmb_size( (int) filesize( $wpcmb_zip_path ) ) );
+
+/*
+ * One zip in the root, and it is this one.
+ *
+ * Two packages side by side is how the wrong version gets uploaded: they
+ * differ by three characters in the middle of a long filename. Only this
+ * plugin's own packages are removed, and only after the new one is on disk.
+ */
+foreach ( (array) glob( $wpcmb_root . '/' . $wpcmb_slug . '.*.zip' ) as $wpcmb_old ) {
+	$wpcmb_old = (string) $wpcmb_old;
+
+	if ( realpath( $wpcmb_old ) === realpath( $wpcmb_zip_path ) ) {
+		continue;
+	}
+
+	if ( unlink( $wpcmb_old ) ) {
+		printf( "removed: %s\n", basename( $wpcmb_old ) );
+		continue;
+	}
+
+	printf( "could not remove: %s\n", basename( $wpcmb_old ) );
+}

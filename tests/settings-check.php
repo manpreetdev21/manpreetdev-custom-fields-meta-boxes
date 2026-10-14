@@ -155,6 +155,24 @@ assert( array( 'Pear', 'Plum' ) === $choice->sanitize( array( 'Pear, Plum' ), $l
 assert( array( 'a' ) === $choice->sanitize( array( 'a', '' ), $loose ), 'an empty box adds nothing' );
 
 /*
+ * "Other" is the one place a choice field takes free text, so it is the one
+ * place one request decides how much goes into a meta row. Capped, and the cap
+ * is filterable for the field that genuinely needs more.
+ */
+$flood = array( implode( ',', array_map( static fn( int $i ): string => 'v' . $i, range( 1, 5000 ) ) ) );
+
+assert( 1000 === count( (array) $choice->sanitize( $flood, $loose ) ), 'free-typed values are capped at a thousand' );
+
+wpcmb_test_filter( 'wpcmb/field/max_choices', static fn(): int => 5 );
+
+assert( 5 === count( (array) $choice->sanitize( $flood, $loose ) ), 'and the cap is filterable' );
+
+$GLOBALS['wpcmb_test_filters']['wpcmb/field/max_choices'] = array();
+
+// Nothing changes for a field that is not taking free text.
+assert( array( 'a' ) === $choice->sanitize( array_merge( array( 'a' ), $flood ), $strict ), 'a strict field is unaffected by the cap' );
+
+/*
  * Free text reaches storage only here, so it is the one place a choice field
  * has to clean rather than compare. A script element is removed whole — tag
  * and contents — which leaves nothing, and nothing is not stored.
@@ -209,8 +227,64 @@ rename( (string) $small, (string) $small . '.png' );
 copy( (string) $small . '.png', (string) $small . '.pdf' );
 rename( (string) $large, (string) $large . '.png' );
 
+/*
+ * A field accepts its own kind of file whether or not anybody filled in the
+ * setting. The picker was always filtered this way; the check on save was not,
+ * so an image field accepted a PDF from anything that bypassed the picker — a
+ * crafted request, a REST write, or wpcmb_update_field().
+ */
 $any = wpcmb_setting_field( 'image' );
-assert( '' === $media->validate( 11, $any ), 'with no limits, anything is allowed' );
+assert( '' === $media->validate( 11, $any ), 'an image field accepts an image with no settings at all' );
+assert( '' !== $media->validate( 12, $any ), 'and refuses a PDF with no settings at all' );
+
+foreach ( array( 'image', 'gallery', 'video', 'audio' ) as $kind ) {
+	$value = 'gallery' === $kind ? array( 12 ) : 12;
+
+	assert( '' !== $media->validate( $value, wpcmb_setting_field( $kind ) ), $kind . ' refuses a file of the wrong kind' );
+}
+
+// A file field has no family of its own, and a file field means any file.
+assert( '' === $media->validate( 12, wpcmb_setting_field( 'file' ) ), 'a file field still takes anything' );
+
+// An explicit setting overrules the family, in both directions.
+assert( '' === $media->validate( 12, wpcmb_setting_field( 'image', array( 'mime_types' => 'pdf' ) ) ), 'an explicit type overrules the family' );
+assert( '' !== $media->validate( 11, wpcmb_setting_field( 'file', array( 'mime_types' => 'pdf' ) ) ), 'and narrows an open field' );
+
+/* -------------------------------------------------------------------------
+ * The site's upload type list, and picking from it.
+ * ---------------------------------------------------------------------- */
+
+assert( array() !== Media::default_upload_types(), 'there is a built-in list' );
+assert( Media::default_upload_types() === Media::upload_types(), 'which is what an empty setting means' );
+
+update_option( Media::TYPES_OPTION, "image : Any image\njpg, png : Web images\n\npdf : PDF\n  : nonsense\ntxt" );
+
+$types = Media::upload_types();
+
+assert( 'Web images' === ( $types['jpg, png'] ?? '' ), 'a line is read as "extensions : Label"' );
+assert( 'txt' === ( $types['txt'] ?? '' ), 'a line with no label labels itself' );
+assert( ! isset( $types[''] ), 'a line with no value is dropped' );
+assert( 4 === count( $types ), 'and the rest are kept' );
+
+// The list is what the editor offers, with "no restriction" in front of it.
+$offered = $media->settings_schema( 'image' )['mime_preset']['choices'] ?? array();
+
+assert( isset( $offered[''] ), 'the editor offers an unrestricted choice' );
+assert( isset( $offered['jpg, png'] ), 'and every type on the site list' );
+
+// Picking one narrows the field the same way typing it would.
+$picked = wpcmb_setting_field( 'image', array( 'mime_preset' => 'pdf' ) );
+
+assert( '' !== $media->validate( 11, $picked ), 'a chosen type is enforced' );
+assert( '' === $media->validate( 12, $picked ), 'and lets its own kind through' );
+
+// Two controls, one answer: the typed one wins, because it is the escape
+// hatch for whatever the list does not cover.
+$both = wpcmb_setting_field( 'image', array( 'mime_preset' => 'pdf', 'mime_types' => 'png' ) );
+
+assert( '' === $media->validate( 11, $both ), 'a typed list overrides a chosen type' );
+
+delete_option( Media::TYPES_OPTION );
 
 $pdf_only = wpcmb_setting_field( 'file', array( 'mime_types' => 'pdf' ) );
 assert( '' === $media->validate( 12, $pdf_only ), 'an allowed extension passes' );
@@ -244,9 +318,14 @@ $short = wpcmb_setting_field( 'image', array( 'max_height' => 500 ) );
 assert( '' === $media->validate( 11, $short ), 'an image within the height cap passes' );
 assert( '' !== $media->validate( 13, $short ), 'and one above it is refused' );
 
-// Dimensions are only knowable for an image. Refusing a PDF for being the
-// wrong shape would be refusing it for a measurement nobody has.
-assert( '' === $media->validate( 12, $narrow ), 'a non-image is not judged on dimensions' );
+/*
+ * Dimensions are only knowable for an image. Refusing a file for being the
+ * wrong shape would be refusing it for a measurement nobody has — checked on
+ * a file field, because an image field now refuses a PDF before it ever gets
+ * as far as measuring it.
+ */
+$unmeasurable = wpcmb_setting_field( 'file', array( 'min_width' => 800 ) );
+assert( '' === $media->validate( 12, $unmeasurable ), 'a non-image is not judged on dimensions' );
 
 // Several ids, one verdict: the first file that breaks a rule is the one
 // reported, so a gallery cannot sneak a bad file in behind a good one.

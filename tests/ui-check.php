@@ -313,6 +313,88 @@ foreach ( $wpcmb_css_files as $wpcmb_file ) {
 
 wpcmb_rule( 'layout uses logical properties, so RTL needs no second stylesheet', $wpcmb_physical );
 
+/*
+ * Rule 8: anything that can be hidden stays hidden.
+ *
+ * `hidden` gets its `display: none` from the browser's own stylesheet, so a
+ * class of ours that sets a display outranks it and the element sits there
+ * regardless — usually empty, which is how the builder's error line became a
+ * red bar on every field group for months.
+ *
+ * Any class that both sets a display and is rendered with the attribute needs
+ * a `.class[hidden]` rule to put it back.
+ */
+$wpcmb_displayed = array();
+
+foreach ( $wpcmb_css_files as $wpcmb_file ) {
+	$contents = (string) file_get_contents( $wpcmb_file );
+
+	// `.wpcmb-thing {` … `display: flex;` — the class and what it sets.
+	if ( preg_match_all( '/\.(wpcmb-[a-z0-9_-]+)\s*\{([^}]*)\}/s', $contents, $wpcmb_blocks, PREG_SET_ORDER ) ) {
+		foreach ( $wpcmb_blocks as $wpcmb_block ) {
+			if ( 1 === preg_match( '/display\s*:\s*(flex|grid|inline-flex|inline-grid|block|inline-block|table)/', $wpcmb_block[2] ) ) {
+				$wpcmb_displayed[ $wpcmb_block[1] ][] = basename( $wpcmb_file );
+			}
+		}
+	}
+}
+
+/* Which of those the markup or a script can mark hidden. */
+$wpcmb_hideable = array();
+
+$wpcmb_sources = array_merge(
+	(array) glob( $wpcmb_root . '/includes/{,*/,*/*/}*.php', GLOB_BRACE ),
+	(array) glob( $wpcmb_root . '/templates/*.php' ),
+	(array) glob( $wpcmb_root . '/assets/js/*.js' )
+);
+
+foreach ( $wpcmb_sources as $wpcmb_source ) {
+	$code = (string) file_get_contents( (string) $wpcmb_source );
+
+	foreach ( array_keys( $wpcmb_displayed ) as $wpcmb_class ) {
+		// Rendered with the attribute in the same tag, or hidden by a script
+		// through a class of that name. Matched whole: `wpcmb-icon` must not
+		// answer for what `wpcmb-icon__picker` does.
+		// `[^>\n]` so a match cannot run from one tag into the next, or out of
+		// a sentence in a docblock and into the markup below it.
+		$inline = sprintf( '/class="[^"]*%1$s(?![\w-])[^"]*"[^>\n]*\shidden|\shidden[^>\n]*class="[^"]*%1$s(?![\w-])/', preg_quote( $wpcmb_class, '/' ) );
+		$script = sprintf( '/%1$s(?![\w-])[^;\n]{0,80}\.hidden\s*=|querySelector[^;\n]*%1$s(?![\w-])[^;\n]*\)\.hidden/', preg_quote( $wpcmb_class, '/' ) );
+
+		if ( 1 === preg_match( $inline, $code ) || 1 === preg_match( $script, $code ) ) {
+			$wpcmb_hideable[ $wpcmb_class ] = true;
+		}
+	}
+}
+
+$wpcmb_unhidden = array();
+
+/*
+ * Checked per stylesheet, not across all of them.
+ *
+ * admin.css and fields.css load on different screens — the field styles have
+ * to stand on their own on a post, term, user or comment screen, and on the
+ * front end. An override in the other file is not loaded and does nothing, so
+ * the fix has to sit in the same file as the display that needs overriding.
+ */
+foreach ( array_keys( $wpcmb_hideable ) as $wpcmb_class ) {
+	foreach ( array_unique( $wpcmb_displayed[ $wpcmb_class ] ) as $wpcmb_in ) {
+		$wpcmb_sheet = $wpcmb_root . '/assets/css/' . $wpcmb_in;
+
+		if ( str_contains( (string) file_get_contents( $wpcmb_sheet ), '.' . $wpcmb_class . '[hidden]' ) ) {
+			continue;
+		}
+
+		$wpcmb_unhidden[] = sprintf(
+			'%s: .%s sets a display and can be hidden; add .%s[hidden] { display: none } to this file',
+			$wpcmb_in,
+			$wpcmb_class,
+			$wpcmb_class
+		);
+	}
+}
+
+wpcmb_rule( 'hidden beats display, for everything that can be hidden', $wpcmb_unhidden );
+
 printf( "\n%d of %d rules passed.\n", $wpcmb_passed, $wpcmb_passed + $wpcmb_failed );
 
 exit( $wpcmb_failed > 0 ? 1 : 0 );

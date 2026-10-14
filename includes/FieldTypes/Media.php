@@ -28,6 +28,11 @@ defined( 'ABSPATH' ) || exit;
 final class Media extends FieldType {
 
 	/**
+	 * Option holding the upload types the field editor offers.
+	 */
+	public const TYPES_OPTION = 'wpcmb_upload_types';
+
+	/**
 	 * Types this class handles.
 	 *
 	 * @return array<string, string>
@@ -177,8 +182,25 @@ final class Media extends FieldType {
 	 */
 	public function format( mixed $value, array $field ): mixed {
 		$multiple = 'gallery' === ( $field['type'] ?? '' );
-		$ids      = $this->ids( $value );
 		$format   = (string) $this->setting( $field, 'return_format', 'id' );
+
+		/*
+		 * An attachment inherits the status of whatever it is attached to, so
+		 * one uploaded to a draft is not public — and the object carries its
+		 * caption, description and parent id. A file in the library with no
+		 * parent reads as published, which is the ordinary case and is
+		 * unaffected.
+		 *
+		 * This is not a seal on the file itself: a web server hands that over
+		 * by URL whatever WordPress thinks. It keeps the metadata off a page
+		 * the reader should not be seeing.
+		 */
+		$ids = array_values(
+			array_filter(
+				$this->ids( $value ),
+				static fn( int $id ): bool => current_user_can( 'read_post', $id )
+			)
+		);
 
 		$mapped = array_map(
 			fn( int $id ) => match ( $format ) {
@@ -233,11 +255,18 @@ final class Media extends FieldType {
 					'uploaded' => __( 'Only what was uploaded to this item', 'metafields-custom-fields' ),
 				),
 			),
+			'mime_preset'   => array(
+				'label'   => __( 'Upload type', 'metafields-custom-fields' ),
+				'type'    => 'select',
+				'tab'     => 'validation',
+				'choices' => array( '' => __( 'Whatever this field is for', 'metafields-custom-fields' ) ) + self::upload_types(),
+				'help'    => __( 'Chosen from the list on the plugin\'s Settings screen. An image field only ever accepts images; this narrows it further.', 'metafields-custom-fields' ),
+			),
 			'mime_types'    => array(
 				'label' => __( 'Allowed file types', 'metafields-custom-fields' ),
 				'type'  => 'text',
 				'tab'   => 'validation',
-				'help'  => __( 'Comma separated extensions or mime types, e.g. pdf, docx or image/png. Leave empty for this field type\'s own.', 'metafields-custom-fields' ),
+				'help'  => __( 'For something the list above does not cover. Comma separated extensions or mime types, e.g. pdf, docx or image/png. Overrides the upload type.', 'metafields-custom-fields' ),
 			),
 			'min_size'      => array(
 				'label' => __( 'Minimum file size', 'metafields-custom-fields' ),
@@ -331,6 +360,42 @@ final class Media extends FieldType {
 	}
 
 	/**
+	 * The file types this field will actually accept.
+	 *
+	 * The configured list, or — when there is none — the type's own family,
+	 * because an image field means an image whether or not anybody filled in
+	 * the setting. The picker was already filtered this way; the check on save
+	 * was not, so an image field accepted a PDF from anything that did not go
+	 * through the picker: a crafted request, a REST write, or
+	 * `wpcmb_update_field()`.
+	 *
+	 * A file field has no family and stays open, which is what a file field is.
+	 *
+	 * @param array<string, mixed> $field Field definition.
+	 *
+	 * @return array<int, string>
+	 */
+	private function allowed_types( array $field ): array {
+		$configured = $this->mime_types( $field );
+
+		if ( array() !== $configured ) {
+			return $configured;
+		}
+
+		// A preset chosen from the site's list, which is the same thing said
+		// by picking rather than typing.
+		$preset = $this->split_types( (string) $this->setting( $field, 'mime_preset', '' ) );
+
+		if ( array() !== $preset ) {
+			return $preset;
+		}
+
+		$family = $this->mime( (string) ( $field['type'] ?? '' ) );
+
+		return '' === $family ? array() : array( $family );
+	}
+
+	/**
 	 * The configured extensions or mime types, cleaned.
 	 *
 	 * @param array<string, mixed> $field Field definition.
@@ -338,8 +403,17 @@ final class Media extends FieldType {
 	 * @return array<int, string>
 	 */
 	private function mime_types( array $field ): array {
-		$raw = (string) $this->setting( $field, 'mime_types', '' );
+		return $this->split_types( (string) $this->setting( $field, 'mime_types', '' ) );
+	}
 
+	/**
+	 * Split a comma-separated list of extensions or mime types.
+	 *
+	 * @param string $raw Configured list.
+	 *
+	 * @return array<int, string>
+	 */
+	private function split_types( string $raw ): array {
 		if ( '' === $raw ) {
 			return array();
 		}
@@ -351,6 +425,75 @@ final class Media extends FieldType {
 		);
 
 		return array_values( array_filter( $types ) );
+	}
+
+	/**
+	 * The upload types a field may be restricted to, as the editor offers them.
+	 *
+	 * Site-wide, because "what this site accepts" is one answer, not one per
+	 * field: a site that takes PDFs and web images wants that list in front of
+	 * whoever builds the next field group, not retyped from memory.
+	 *
+	 * @return array<string, string> Comma-separated extensions, keyed to their label.
+	 */
+	public static function upload_types(): array {
+		$configured = (string) get_option( self::TYPES_OPTION, '' );
+
+		$presets = array();
+
+		foreach ( explode( "\n", $configured ) as $line ) {
+			$line = trim( $line );
+
+			if ( '' === $line ) {
+				continue;
+			}
+
+			// `jpg, png : Web images` — the same `value : Label` the choices
+			// field already uses, so there is one syntax to learn.
+			$parts = explode( ':', $line, 2 );
+			$value = trim( $parts[0] );
+
+			if ( '' === $value ) {
+				continue;
+			}
+
+			$presets[ $value ] = '' !== trim( $parts[1] ?? '' ) ? trim( $parts[1] ) : $value;
+		}
+
+		if ( array() === $presets ) {
+			$presets = self::default_upload_types();
+		}
+
+		/**
+		 * Filters the upload types the field editor offers.
+		 *
+		 * @since 1.9.2
+		 *
+		 * @param array<string, string> $presets Comma-separated extensions, keyed to their label.
+		 */
+		return (array) apply_filters( 'wpcmb/media/upload_types', $presets );
+	}
+
+	/**
+	 * The list a site gets before anybody edits it.
+	 *
+	 * Families first, because "any image" is the common answer, then the
+	 * groupings people actually ask for.
+	 *
+	 * @return array<string, string>
+	 */
+	public static function default_upload_types(): array {
+		return array(
+			'image'                     => __( 'Any image', 'metafields-custom-fields' ),
+			'jpg, jpeg, png, webp, gif' => __( 'Web images (JPG, PNG, WebP, GIF)', 'metafields-custom-fields' ),
+			'svg'                       => __( 'SVG', 'metafields-custom-fields' ),
+			'video'                     => __( 'Any video', 'metafields-custom-fields' ),
+			'audio'                     => __( 'Any audio', 'metafields-custom-fields' ),
+			'pdf'                       => __( 'PDF', 'metafields-custom-fields' ),
+			'pdf, doc, docx, odt, rtf'  => __( 'Documents', 'metafields-custom-fields' ),
+			'csv, xls, xlsx, ods'       => __( 'Spreadsheets', 'metafields-custom-fields' ),
+			'zip, gz, rar'              => __( 'Archives', 'metafields-custom-fields' ),
+		);
 	}
 
 	/**
@@ -382,7 +525,7 @@ final class Media extends FieldType {
 	 * @param array<string, mixed> $field Field definition.
 	 */
 	public function rejection( int $id, array $field ): string {
-		$allowed = $this->mime_types( $field );
+		$allowed = $this->allowed_types( $field );
 
 		if ( array() !== $allowed ) {
 			$file      = (string) get_post_mime_type( $id );
