@@ -7,7 +7,7 @@
  * Requires at least: 6.8
  * Requires PHP:      8.1
  * Author:            Manpreet Singh
- * Author URI:        https://github.com/manpreetdev21/metafields-custom-fields
+ * Author URI:        https://github.com/manpreetdev21/
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       metafields-custom-fields
