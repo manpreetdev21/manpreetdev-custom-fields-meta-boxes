@@ -187,6 +187,26 @@
 
 				var grid = el( 'div', { class: 'wpcmb-icon__grid', role: 'group' } );
 
+				// Three hundred and fifty icons is a wall. The filter narrows
+				// the grid as you type and is the first thing focused when the
+				// picker opens, so the keyboard path is type-then-pick.
+				var search = el( 'input', {
+					type: 'search',
+					class: 'wpcmb-input wpcmb-icon__search',
+					placeholder: i18n.searchOptions || 'Search',
+					'aria-label': i18n.searchOptions || 'Search',
+				} );
+
+				search.addEventListener( 'input', function () {
+					var term = search.value.trim().toLowerCase();
+
+					Array.prototype.forEach.call( grid.children, function ( option ) {
+						var name = option.getAttribute( 'aria-label' ) || '';
+
+						option.hidden = '' !== term && name.indexOf( term ) === -1;
+					} );
+				} );
+
 				( config.dashicons || [] ).forEach( function ( name ) {
 					var button = el( 'button', {
 						type: 'button',
@@ -205,7 +225,7 @@
 					grid.appendChild( button );
 				} );
 
-				addTab( i18n.iconDashicons || 'Dashicons', grid );
+				addTab( i18n.iconDashicons || 'Dashicons', el( 'div', { class: 'wpcmb-icon__dashicons' }, [ search, grid ] ) );
 
 				var mediaButton = el( 'button', {
 					type: 'button',

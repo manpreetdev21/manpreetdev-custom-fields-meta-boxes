@@ -15,6 +15,7 @@ use WPCMB\Fields\FieldGroup;
 use WPCMB\Fields\ObjectRef;
 use WPCMB\Fields\Renderer;
 use WPCMB\Fields\Repository;
+use WPCMB\PostTypes\CustomBlocks;
 use WPCMB\REST\Schema;
 
 defined( 'ABSPATH' ) || exit;
@@ -82,10 +83,33 @@ final class BlockRegistry extends Module {
 	public function blocks(): array {
 		$blocks = array();
 
+		$records = $this->container->get( CustomBlocks::class );
+
+		// Records first: a block defined on the Block Types screen is the
+		// authoritative description of it.
+		foreach ( $records->as_groups() as $name => $group ) {
+			$blocks[ self::NAMESPACE . '/' . str_replace( '_', '-', $name ) ] = $group;
+		}
+
+		/*
+		 * Then the block settings that used to live on the field group.
+		 *
+		 * Still read, for any group a record has not claimed: a site that
+		 * upgrades keeps every block it already had, in content already
+		 * published, whether or not the migration has run — and if somebody
+		 * deletes a record, the group it came from starts working again
+		 * rather than the block disappearing from their pages.
+		 */
+		$claimed = $records->claimed_groups();
+
 		foreach ( $this->container->get( Repository::class )->all() as $group ) {
 			$name = (string) ( $group->settings['block_name'] ?? '' );
 
 			if ( empty( $group->settings['block_enabled'] ) || '' === $name ) {
+				continue;
+			}
+
+			if ( in_array( $group->key, $claimed, true ) ) {
 				continue;
 			}
 

@@ -4,7 +4,7 @@ Tags: custom fields, meta box, repeater, options page, custom post type
 Requires at least: 6.8
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.10.0
+Stable tag: 1.12.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -95,6 +95,23 @@ Yes. Every string is translatable under the `metafields-custom-fields` text doma
 5. The field group list, with each group's key, field count and location.
 
 == Changelog ==
+
+= 1.12.0 =
+* New: Block Types, Forms and Options Pages each have a screen of their own. A block, a form or an options page is now a record you create and name, pointing at the field group whose fields it shows.
+* Forms are configured once instead of being described by shortcode attributes on every page that uses them. Paste [wpcmb_form id="123"] and every setting travels with it; an attribute written alongside it still overrides that one setting in that one place.
+* An options page can now be a sub-page of another options page, and can carry its own page title — neither of which a location rule could express.
+* Existing configuration is migrated automatically on upgrade, and nothing is deleted or rewritten. Block settings on a field group are still read for any group no record has claimed, [wpcmb_form group="..."] still means exactly what it did, and a page named only by a location rule is still built.
+* Fixed: a list table refusing to publish something was announced on the plugin's own list screens too, where it read as a complaint about the records on them.
+* The plugin menu now reads: Overview, Field Groups, Post Types, Taxonomies, Block Types, Forms, Options Pages, Settings, Tools — then the submissions and options pages a site has accumulated.
+
+= 1.11.0 =
+* New: Taxonomies. Register custom taxonomies from a screen of their own — nested like categories or flat like tags — with labels, the post types they attach to, permalinks and visibility. The list screen says what each registers, how many terms it holds, and whether it is attached to anything.
+* The Taxonomies box on a post type now lists the taxonomies you have defined yourself, not just categories and tags, and it includes ones you have saved but not published yet.
+* The join works from either screen. A post type naming a taxonomy used to attach nothing, because both halves register at the same moment and the taxonomy did not exist yet when the post type asked for it.
+* The Taxonomies box is a searchable dropdown instead of a column of checkboxes, and degrades to a plain multiple select without JavaScript.
+* Menu icon on a post type is now the plugin's own icon picker: a searchable grid of every Dashicon the installed WordPress ships, a Media Library tab and a URL box.
+* The icon picker gained a search box, which it needed at 350 icons. Every icon field benefits.
+* Both record screens list only real content types and taxonomies. Other plugins keep their configuration in non-public post types with a UI, and those were burying the handful anybody classifies.
 
 = 1.10.0 =
 * New: Post Types. Register custom post types from a screen of their own, with labels, features, taxonomies, permalinks, capabilities, menu icon and position. The list screen says whether each one is actually registered, and how many items exist under it.

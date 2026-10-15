@@ -212,6 +212,18 @@ final class CustomPostTypes extends RecordType {
 			return $icon;
 		}
 
+		/*
+		 * The picker's Media Library tab hands back an attachment id, and
+		 * `menu_icon` takes a URL. Resolved here rather than at registration,
+		 * so the stored value is the thing WordPress will be given and a
+		 * deleted attachment does not leave a menu with a broken image.
+		 */
+		if ( ctype_digit( $icon ) ) {
+			$url = wp_get_attachment_url( (int) $icon );
+
+			return is_string( $url ) ? $url : '';
+		}
+
 		if ( str_starts_with( $icon, 'data:image/svg+xml;base64,' ) ) {
 			// Core supports this, but an SVG from a form field is markup
 			// nobody checked going into a style attribute. Refused.
@@ -325,14 +337,58 @@ final class CustomPostTypes extends RecordType {
 				continue;
 			}
 
-			foreach ( (array) ( $record['taxonomies'] ?? array() ) as $taxonomy ) {
-				// Only an existing taxonomy can be attached; one defined by a
-				// record of its own registers later and attaches itself.
-				if ( taxonomy_exists( (string) $taxonomy ) ) {
-					register_taxonomy_for_object_type( (string) $taxonomy, $name );
-				}
+			$this->attach_taxonomies( $name, (array) ( $record['taxonomies'] ?? array() ) );
+		}
+	}
+
+	/**
+	 * Attach the taxonomies a record names, once they exist.
+	 *
+	 * Run a second time, later, because the two halves of the join register at
+	 * the same moment and one of them has to be second. A post type naming a
+	 * taxonomy that a record defines would otherwise attach nothing — the
+	 * taxonomy did not exist yet — and the customer would be left ticking a
+	 * box that silently did nothing unless they also ticked the matching box
+	 * on the other screen.
+	 */
+	public function attach_late(): void {
+		foreach ( $this->records() as $record ) {
+			$name = (string) ( $record['name'] ?? '' );
+
+			if ( '' === $name || ! post_type_exists( $name ) ) {
+				continue;
+			}
+
+			$this->attach_taxonomies( $name, (array) ( $record['taxonomies'] ?? array() ) );
+		}
+	}
+
+	/**
+	 * Attach a list of taxonomies to one post type.
+	 *
+	 * @param string            $post_type  Post type name.
+	 * @param array<int, mixed> $taxonomies Taxonomy names.
+	 */
+	private function attach_taxonomies( string $post_type, array $taxonomies ): void {
+		foreach ( $taxonomies as $taxonomy ) {
+			$taxonomy = (string) $taxonomy;
+
+			// Registering a taxonomy that is not there yet would register an
+			// empty one under that name and shadow the real record.
+			if ( '' !== $taxonomy && taxonomy_exists( $taxonomy ) ) {
+				register_taxonomy_for_object_type( $taxonomy, $post_type );
 			}
 		}
+	}
+
+	/**
+	 * Register hooks, plus the late pass that completes the join.
+	 */
+	public function boot(): void {
+		parent::boot();
+
+		// After both record types have registered on priority 6.
+		add_action( 'init', array( $this, 'attach_late' ), 8 );
 	}
 
 	/**

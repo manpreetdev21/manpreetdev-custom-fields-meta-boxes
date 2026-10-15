@@ -17,6 +17,7 @@ use WPCMB\Fields\ObjectRef;
 use WPCMB\Fields\Permissions;
 use WPCMB\Fields\Renderer;
 use WPCMB\Fields\Repository;
+use WPCMB\PostTypes\CustomForms;
 use WPCMB\PostTypes\SubmissionPostType;
 
 defined( 'ABSPATH' ) || exit;
@@ -80,7 +81,30 @@ final class Form extends Module {
 	 * @return string
 	 */
 	public function shortcode( $atts ): string {
-		return $this->render( is_array( $atts ) ? $atts : array() );
+		$atts = is_array( $atts ) ? $atts : array();
+
+		/*
+		 * `id` names a form record, whose stored configuration becomes the
+		 * attributes. Anything written alongside it in the shortcode still
+		 * wins, so a record can be reused on two pages with one thing
+		 * different without needing a second record.
+		 *
+		 * `group` on its own is what shortcodes in published content say, and
+		 * means exactly what it always did.
+		 */
+		if ( isset( $atts['id'] ) ) {
+			$record = $this->container->get( CustomForms::class )->by_id( (int) $atts['id'] );
+
+			if ( null === $record ) {
+				return $this->notice( __( 'That form no longer exists.', 'metafields-custom-fields' ) );
+			}
+
+			unset( $atts['id'] );
+
+			$atts = array_merge( $this->container->get( CustomForms::class )->attributes( $record ), $atts );
+		}
+
+		return $this->render( $atts );
 	}
 
 	/**

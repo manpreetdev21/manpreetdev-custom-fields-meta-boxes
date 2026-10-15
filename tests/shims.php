@@ -785,3 +785,14 @@ function wpcmb_test_post_type( string $post_type ): void {
 function post_type_exists( string $post_type ): bool {
 	return in_array( $post_type, (array) ( $GLOBALS['wpcmb_test_post_types'] ?? array() ), true );
 }
+
+$GLOBALS['wpcmb_test_taxonomies'] = array();
+
+/**
+ * Pretend a taxonomy is registered.
+ *
+ * @param string $taxonomy Taxonomy name.
+ */
+function wpcmb_test_taxonomy( string $taxonomy ): void {
+	$GLOBALS['wpcmb_test_taxonomies'][] = $taxonomy;
+}

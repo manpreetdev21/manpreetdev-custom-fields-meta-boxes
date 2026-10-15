@@ -1104,6 +1104,10 @@ wpcmb_group(
 			array( 'Tools', 'manage_options', 'wpcmb-tools' ),
 			array( 'Another form', 'edit_posts', 'edit.php?post_type=wpcmb_b_form_0002' ),
 			array( 'Post Types', 'edit_posts', 'edit.php?post_type=wpcmb_post_type' ),
+			array( 'Options Pages', 'manage_options', 'edit.php?post_type=wpcmb_options_page' ),
+			array( 'Taxonomies', 'edit_posts', 'edit.php?post_type=wpcmb_taxonomy' ),
+			array( 'Forms', 'edit_posts', 'edit.php?post_type=wpcmb_form' ),
+			array( 'Block Types', 'edit_posts', 'edit.php?post_type=wpcmb_block' ),
 		);
 
 		$menu->order_submenu();
@@ -1115,13 +1119,32 @@ wpcmb_group(
 				'wpcmb',
 				'edit.php?post_type=wpcmb_field_group',
 				'edit.php?post_type=wpcmb_post_type',
+				'edit.php?post_type=wpcmb_taxonomy',
+				'edit.php?post_type=wpcmb_block',
+				'edit.php?post_type=wpcmb_form',
+				'edit.php?post_type=wpcmb_options_page',
 				'wpcmb-settings',
 				'wpcmb-tools',
 				'edit.php?post_type=wpcmb_a_form_0001',
 				'edit.php?post_type=wpcmb_b_form_0002',
 				'wpcmb-options-site',
 			) === $slugs,
-			'Overview, what is built here, the plugin screens, then forms and options pages'
+			'the six builders, then Settings and Tools, then what a site accumulates'
+		);
+
+		/*
+		 * A form's submissions type and a generated options page both match
+		 * the same loose patterns as the record screens, and both must still
+		 * land below Settings and Tools rather than among the builders.
+		 */
+		wpcmb_is(
+			array_search( 'wpcmb-tools', $slugs, true ) < array_search( 'edit.php?post_type=wpcmb_a_form_0001', $slugs, true ),
+			'a submissions screen sorts below Tools'
+		);
+
+		wpcmb_is(
+			array_search( 'wpcmb-tools', $slugs, true ) < array_search( 'wpcmb-options-site', $slugs, true ),
+			'and so does a generated options page'
 		);
 
 		// Two forms keep the order they registered in rather than swapping
@@ -1133,7 +1156,7 @@ wpcmb_group(
 		);
 
 		// Nothing is lost or invented on the way through.
-		wpcmb_is( 8 === count( $GLOBALS['submenu']['wpcmb'] ), 'every entry survives the sort' );
+		wpcmb_is( 12 === count( $GLOBALS['submenu']['wpcmb'] ), 'every entry survives the sort' );
 
 		$menu->order_submenu();
 
@@ -1209,6 +1232,223 @@ wpcmb_group(
 		wp_set_current_user( $was );
 
 		wpcmb_is( $registry->get( 'user' )->format( 1, $user ) instanceof WP_User, 'and an administrator still gets the object' );
+	}
+);
+
+wpcmb_group(
+	'a post type and a taxonomy join up from either side',
+	static function (): void {
+		$types = wpcmb()->container()->get( WPCMB\PostTypes\CustomPostTypes::class );
+		$taxes = wpcmb()->container()->get( WPCMB\PostTypes\CustomTaxonomies::class );
+
+		$suffix    = strtolower( wp_generate_password( 4, false, false ) );
+		$post_type = 'ipt_' . $suffix;
+		$taxonomy  = 'itax_' . $suffix;
+
+		/**
+		 * Store one record of either kind.
+		 *
+		 * @param WPCMB\Abstracts\RecordType $type   Record type.
+		 * @param string                     $title  Record title.
+		 * @param array<string, mixed>       $config Configuration.
+		 */
+		$record = static function ( $type, string $title, array $config ): int {
+			$post_id = (int) wp_insert_post(
+				array(
+					'post_type'   => $type->post_type(),
+					'post_status' => 'publish',
+					'post_title'  => $title,
+				)
+			);
+
+			$GLOBALS['wpcmb_created'][] = array( 'type' => 'post', 'id' => $post_id );
+
+			$type->save( $post_id, $type->sanitize( $config ) );
+
+			return $post_id;
+		};
+
+		/*
+		 * The join written only on the post type — the case that silently did
+		 * nothing, because both halves register at the same moment and the
+		 * taxonomy did not exist yet when the post type asked for it.
+		 */
+		$record( $types, 'Integration type', array( 'name' => $post_type, 'taxonomies' => array( $taxonomy ) ) );
+		$record( $taxes, 'Integration taxonomy', array( 'name' => $taxonomy, 'post_types' => array() ) );
+
+		// A fresh pass in the order `init` runs them: post types, taxonomies,
+		// then the late attachment.
+		$types->apply_records();
+		$taxes->apply_records();
+		$types->attach_late();
+
+		wpcmb_is( post_type_exists( $post_type ), 'the post type is registered' );
+		wpcmb_is( taxonomy_exists( $taxonomy ), 'the taxonomy is registered' );
+		wpcmb_is( in_array( $taxonomy, get_object_taxonomies( $post_type ), true ), 'and the join declared on the post type holds' );
+
+		// The other direction: a taxonomy naming its own post types.
+		$other = 'itax2_' . $suffix;
+
+		$record( $taxes, 'Integration taxonomy two', array( 'name' => $other, 'post_types' => array( $post_type ) ) );
+
+		$taxes->apply_records();
+
+		wpcmb_is( in_array( $other, get_object_taxonomies( $post_type ), true ), 'and so does one declared on the taxonomy' );
+
+		/*
+		 * A taxonomy that is not registered must not be conjured into
+		 * existence by a post type naming it — that would shadow the real
+		 * record with an empty one under the same key.
+		 */
+		$record( $types, 'Integration ghost', array( 'name' => 'ipt_ghost_' . $suffix, 'taxonomies' => array( 'itax_nothing_' . $suffix ) ) );
+
+		$types->apply_records();
+		$types->attach_late();
+
+		wpcmb_is( ! taxonomy_exists( 'itax_nothing_' . $suffix ), 'a named but undefined taxonomy is not invented' );
+
+		// The editor needs what records define, registered or not.
+		$defined = $taxes->defined();
+
+		wpcmb_is( isset( $defined[ $taxonomy ] ), 'the post type editor is offered record-defined taxonomies' );
+	}
+);
+
+wpcmb_group(
+	'a block record registers a block, and the old group settings still do',
+	static function (): void {
+		$records  = wpcmb()->container()->get( WPCMB\PostTypes\CustomBlocks::class );
+		$registry = wpcmb()->container()->get( WPCMB\Blocks\BlockRegistry::class );
+		$suffix   = strtolower( wp_generate_password( 4, false, false ) );
+
+		$group = wpcmb_group_fixture(
+			array(
+				'title'    => 'Integration block group',
+				'location' => array( array( array( 'param' => 'post_type', 'operator' => '==', 'value' => 'post' ) ) ),
+				'fields'   => array( array( 'name' => 'iblk_text', 'label' => 'Text', 'type' => 'text' ) ),
+			)
+		);
+
+		$record_id = (int) wp_insert_post(
+			array(
+				'post_type'   => WPCMB\PostTypes\CustomBlocks::POST_TYPE,
+				'post_status' => 'publish',
+				'post_title'  => 'Integration block',
+			)
+		);
+
+		$GLOBALS['wpcmb_created'][] = array( 'type' => 'post', 'id' => $record_id );
+
+		$records->save(
+			$record_id,
+			$records->sanitize(
+				array(
+					'field_group' => $group->key,
+					'name'        => 'iblk_' . $suffix,
+					'description' => 'From a record.',
+					'supports'    => array( 'align' ),
+				)
+			)
+		);
+
+		$blocks = $registry->blocks();
+		$name   = 'wpcmb/iblk-' . $suffix;
+
+		wpcmb_is( isset( $blocks[ $name ] ), 'the record produces a block' );
+
+		/*
+		 * The record hands the registry a field group with its settings
+		 * written over the top, so everything downstream — attributes,
+		 * templates, the editor form — reads what it always read.
+		 */
+		$as_group = $blocks[ $name ] ?? null;
+
+		wpcmb_is( null !== $as_group && 'Integration block' === $as_group->title, 'with the record title, not the group title' );
+		wpcmb_is( null !== $as_group && 'From a record.' === ( $as_group->settings['block_description'] ?? '' ), 'and the record description' );
+		wpcmb_is( null !== $as_group && ! empty( $as_group->settings['block_enabled'] ), 'and marked as a block however the group was saved' );
+
+		/*
+		 * A group with the old `block_*` settings and no record is still
+		 * registered. Those blocks are in published content; an upgrade that
+		 * dropped them would empty somebody's pages.
+		 */
+		$legacy = wpcmb_group_fixture(
+			array(
+				'title'    => 'Integration legacy block',
+				'location' => array( array( array( 'param' => 'post_type', 'operator' => '==', 'value' => 'post' ) ) ),
+				'fields'   => array( array( 'name' => 'ileg_text', 'label' => 'Text', 'type' => 'text' ) ),
+				'settings' => array( 'block_enabled' => '1', 'block_name' => 'ileg_' . $suffix ),
+			)
+		);
+
+		$blocks = $registry->blocks();
+
+		wpcmb_is( isset( $blocks[ 'wpcmb/ileg-' . $suffix ] ), 'a group with the old settings and no record still registers' );
+
+		// And once a record claims that group, it is not registered twice
+		// from two descriptions of the same thing.
+		$claim_id = (int) wp_insert_post(
+			array(
+				'post_type'   => WPCMB\PostTypes\CustomBlocks::POST_TYPE,
+				'post_status' => 'publish',
+				'post_title'  => 'Integration claim',
+			)
+		);
+
+		$GLOBALS['wpcmb_created'][] = array( 'type' => 'post', 'id' => $claim_id );
+
+		$records->save( $claim_id, $records->sanitize( array( 'field_group' => $legacy->key, 'name' => 'iclaim_' . $suffix ) ) );
+
+		$blocks = $registry->blocks();
+
+		wpcmb_is( ! isset( $blocks[ 'wpcmb/ileg-' . $suffix ] ), 'and the old settings stand down once a record claims the group' );
+		wpcmb_is( isset( $blocks[ 'wpcmb/iclaim-' . $suffix ] ), 'in favour of what the record says' );
+	}
+);
+
+wpcmb_group(
+	'a form record renders the same form its shortcode did',
+	static function (): void {
+		$records = wpcmb()->container()->get( WPCMB\PostTypes\CustomForms::class );
+
+		$group = wpcmb_group_fixture(
+			array(
+				'title'    => 'Integration form group',
+				'location' => array( array( array( 'param' => 'post_type', 'operator' => '==', 'value' => 'wpcmb_nothing' ) ) ),
+				'fields'   => array( array( 'name' => 'ifrm_name', 'label' => 'Name', 'type' => 'text', 'required' => true ) ),
+			)
+		);
+
+		$record_id = (int) wp_insert_post(
+			array(
+				'post_type'   => WPCMB\PostTypes\CustomForms::POST_TYPE,
+				'post_status' => 'publish',
+				'post_title'  => 'Integration form',
+			)
+		);
+
+		$GLOBALS['wpcmb_created'][] = array( 'type' => 'post', 'id' => $record_id );
+
+		$records->save( $record_id, $records->sanitize( array( 'field_group' => $group->key, 'guests' => '1', 'submit_label' => 'Send' ) ) );
+
+		$html = do_shortcode( sprintf( '[wpcmb_form id="%d"]', $record_id ) );
+
+		wpcmb_is( str_contains( $html, '<form' ), 'the record renders a form' );
+		wpcmb_is( str_contains( $html, 'ifrm_name' ), 'with the group\'s fields' );
+		wpcmb_is( str_contains( $html, 'Send' ), 'and the record\'s submit label' );
+
+		// An attribute on the shortcode still wins, so one record can be
+		// reused with one thing different.
+		$override = do_shortcode( sprintf( '[wpcmb_form id="%d" submit_label="Other"]', $record_id ) );
+
+		wpcmb_is( str_contains( $override, 'Other' ), 'a shortcode attribute overrides the record' );
+
+		// A record that has been deleted says so rather than rendering
+		// nothing at all, which looks like a broken page.
+		$gone = do_shortcode( '[wpcmb_form id="99999999"]' );
+
+		wpcmb_is( '' !== trim( wp_strip_all_tags( $gone ) ), 'a missing record explains itself' );
+		wpcmb_is( ! str_contains( $gone, '<form' ), 'and renders no form' );
 	}
 );
 

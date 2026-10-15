@@ -763,7 +763,17 @@ final class MetaBoxes extends Module {
 		}
 
 		if ( 'edit' === $screen->base ) {
-			$this->render_list_notice();
+			/*
+			 * Not on the plugin's own list screens.
+			 *
+			 * The notice is about content a list table refused to publish, and
+			 * the transient is one per user rather than one per post type — so
+			 * a refusal on Pages was being announced on Block Types, where it
+			 * reads as a complaint about the blocks.
+			 */
+			if ( ! str_starts_with( (string) $screen->post_type, 'wpcmb_' ) ) {
+				$this->render_list_notice();
+			}
 
 			return;
 		}

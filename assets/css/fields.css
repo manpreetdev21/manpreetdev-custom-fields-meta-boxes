@@ -1745,3 +1745,10 @@ input.wpcmb-input[type="datetime-local"] {
 .wpcmb-affix__text[hidden] {
 	display: none;
 }
+
+/* The icon picker's filter sits above its grid, inside the Dashicons tab. */
+
+.wpcmb-icon__search {
+	margin-block-end: 8px;
+	width: 100%;
+}

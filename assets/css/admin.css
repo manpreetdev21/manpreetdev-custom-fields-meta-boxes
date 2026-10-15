@@ -1686,3 +1686,13 @@
 	display: block;
 	margin-block-start: 2px;
 }
+
+/* The list of field groups shown on an options page record. */
+
+.wpcmb-record-list {
+	margin: 8px 0 0;
+}
+
+.wpcmb-record-list li {
+	margin-block-end: 4px;
+}

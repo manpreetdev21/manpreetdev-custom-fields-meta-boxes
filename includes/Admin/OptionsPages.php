@@ -19,6 +19,7 @@ use WPCMB\Fields\Repository;
 use WPCMB\Fields\Resolver;
 use WPCMB\Fields\Validator;
 use WPCMB\Fields\Values;
+use WPCMB\PostTypes\CustomOptionsPages;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -145,6 +146,17 @@ final class OptionsPages extends Module {
 			}
 		}
 
+		/*
+		 * Records override rules.
+		 *
+		 * A page described on the Options Pages screen has settings a rule
+		 * cannot express — a page title of its own, a position, a parent that
+		 * is another options page — so where both exist for one slug, the
+		 * record is the description and the rule is left to do what it still
+		 * does well: decide which groups appear on the page.
+		 */
+		$pages = array_merge( $pages, $this->container->get( CustomOptionsPages::class )->pages() );
+
 		ksort( $pages );
 
 		/**
@@ -218,13 +230,23 @@ final class OptionsPages extends Module {
 				// below takes null for the same thing, which is what it has
 				// always taken.
 				'parent'     => '' !== (string) ( $page['parent'] ?? '' ) ? (string) $page['parent'] : null,
-				'page_title' => sprintf(
-					/* translators: 1: plugin name, 2: page title, 3: options page slug. */
-					__( '%1$s: %2$s (%3$s)', 'metafields-custom-fields' ),
-					self::plugin_name(),
-					$page['title'],
-					$slug
-				),
+
+				/*
+				 * A record can name the page title outright. The generated one
+				 * says which plugin made the page and which slug it stores
+				 * against, which is the right default for a page that appeared
+				 * because of a rule and the wrong one for a page somebody sat
+				 * down and named.
+				 */
+				'page_title' => '' !== (string) ( $page['page_title'] ?? '' )
+					? (string) $page['page_title']
+					: sprintf(
+						/* translators: 1: plugin name, 2: page title, 3: options page slug. */
+						__( '%1$s: %2$s (%3$s)', 'metafields-custom-fields' ),
+						self::plugin_name(),
+						$page['title'],
+						$slug
+					),
 				'menu_title' => self::menu_label( $page['title'], $slug ),
 				'capability' => '' !== (string) ( $page['capability'] ?? '' ) ? (string) $page['capability'] : 'manage_options',
 				'icon'       => '' !== (string) ( $page['icon'] ?? '' ) ? (string) $page['icon'] : 'dashicons-admin-generic',

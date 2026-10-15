@@ -11,7 +11,9 @@ namespace WPCMB\Admin;
 
 use WPCMB\Abstracts\Module;
 use WPCMB\Abstracts\RecordType;
+use WPCMB\Fields\Registry;
 use WPCMB\PostTypes\CustomPostTypes;
+use WPCMB\PostTypes\CustomTaxonomies;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -210,17 +212,102 @@ final class PostTypeEditor extends Module {
 
 		echo '<fieldset class="wpcmb-fieldset"><legend>' . esc_html__( 'Taxonomies', 'metafields-custom-fields' ) . '</legend>';
 
-		foreach ( get_taxonomies( array( 'show_ui' => true ), 'objects' ) as $taxonomy ) {
+		printf(
+			'<p class="description">%s</p>',
+			sprintf(
+				/* translators: %s: link to the Taxonomies screen. */
+				esc_html__( 'Categories and tags are WordPress\'s own. Anything you have defined yourself appears here too — make one on the %s screen.', 'metafields-custom-fields' ),
+				sprintf(
+					'<a href="%s">%s</a>',
+					esc_url( admin_url( 'edit.php?post_type=' . CustomTaxonomies::POST_TYPE ) ),
+					esc_html__( 'Taxonomies', 'metafields-custom-fields' )
+				)
+			)
+		);
+
+		/*
+		 * A searchable multiple select, not a column of checkboxes.
+		 *
+		 * The same control the choice and relationship fields use, upgraded by
+		 * the plugin's own script into a dropdown with a search box, a
+		 * checkbox beside each option and the chosen ones listed at the top.
+		 * A site with a dozen taxonomies had a dozen checkboxes to scroll
+		 * past; and with the script blocked this degrades to a native
+		 * multiple select, which still submits exactly the same thing.
+		 */
+		echo '<select class="wpcmb-input" id="wpcmb-pt-taxonomies" name="wpcmb_post_type[taxonomies][]" multiple size="6">';
+
+		foreach ( $this->available_taxonomies() as $name => $taxonomy ) {
 			printf(
-				'<label class="wpcmb-checkbox"><input type="checkbox" name="wpcmb_post_type[taxonomies][]" value="%s"%s /> %s <code>%s</code></label>',
-				esc_attr( $taxonomy->name ),
-				checked( in_array( $taxonomy->name, $taxonomies, true ), true, false ),
-				esc_html( $taxonomy->labels->name ),
-				esc_html( $taxonomy->name )
+				'<option value="%s"%s>%s</option>',
+				esc_attr( $name ),
+				in_array( $name, $taxonomies, true ) ? ' selected' : '',
+				esc_html(
+					$taxonomy['registered']
+						? sprintf( '%s (%s)', $taxonomy['label'], $name )
+						/* translators: 1: taxonomy label, 2: taxonomy key. */
+						: sprintf( __( '%1$s (%2$s) — not registered yet', 'metafields-custom-fields' ), $taxonomy['label'], $name )
+				)
 			);
 		}
 
-		echo '</fieldset>';
+		/*
+		 * No hidden fallback for "nothing chosen".
+		 *
+		 * A multiple select with no selection posts nothing at all, which here
+		 * means none rather than unchanged: save() rebuilds the whole record
+		 * from the request instead of merging into the stored one, so an
+		 * absent key is already an empty list.
+		 */
+		echo '</select></fieldset>';
+	}
+
+	/**
+	 * Every taxonomy this post type could be given.
+	 *
+	 * Registered ones, plus any a record defines — including drafts. A
+	 * customer makes a taxonomy and a post type in whichever order suits
+	 * them, and a list of only what is registered right now cannot express
+	 * "attach the one I just made but have not published".
+	 *
+	 * @return array<string, array{label: string, registered: bool}>
+	 */
+	private function available_taxonomies(): array {
+		$available = array();
+
+		/*
+		 * Public taxonomies only, for the same reason the taxonomy editor
+		 * lists public post types: other plugins register non-public ones
+		 * with a UI to hold their own configuration, and those are not
+		 * classifications anybody wants on their content.
+		 */
+		foreach ( get_taxonomies(
+			array(
+				'public'  => true,
+				'show_ui' => true,
+			),
+			'objects'
+		) as $taxonomy ) {
+			$available[ $taxonomy->name ] = array(
+				'label'      => $taxonomy->labels->name,
+				'registered' => true,
+			);
+		}
+
+		foreach ( $this->container->get( CustomTaxonomies::class )->defined() as $name => $label ) {
+			if ( isset( $available[ $name ] ) ) {
+				continue;
+			}
+
+			$available[ $name ] = array(
+				'label'      => $label,
+				'registered' => false,
+			);
+		}
+
+		ksort( $available );
+
+		return $available;
 	}
 
 	/**
@@ -271,8 +358,40 @@ final class PostTypeEditor extends Module {
 		$this->toggle( 'show_in_menu', __( 'Show in the admin menu', 'metafields-custom-fields' ), (bool) $config['show_in_menu'] );
 		$this->toggle( 'show_in_rest', __( 'Show in the REST API', 'metafields-custom-fields' ), (bool) $config['show_in_rest'], __( 'Required for the block editor.', 'metafields-custom-fields' ) );
 
-		$this->text( 'menu_icon', __( 'Menu icon', 'metafields-custom-fields' ), (string) $config['menu_icon'], __( 'A Dashicon name or an image URL.', 'metafields-custom-fields' ), array( 'placeholder' => 'dashicons-admin-post' ) );
+		$this->render_icon( (string) $config['menu_icon'] );
 		$this->text( 'menu_position', __( 'Menu position', 'metafields-custom-fields' ), (string) $config['menu_position'], __( '0 lets WordPress decide. 5 is below Posts, 20 is below Pages.', 'metafields-custom-fields' ), array( 'type' => 'number' ) );
+	}
+
+	/**
+	 * Render the menu icon control.
+	 *
+	 * The plugin's own icon field, not a second picker: it already draws a
+	 * searchable grid of every Dashicon the installed WordPress ships, a
+	 * Media Library tab and a URL box, and it already knows how to keep a
+	 * value that lands in a class or a src attribute safe. A text box here
+	 * meant memorising Dashicon names.
+	 *
+	 * @param string $value Stored icon.
+	 */
+	private function render_icon( string $value ): void {
+		printf( '<p><span class="wpcmb-label">%s</span>', esc_html__( 'Menu icon', 'metafields-custom-fields' ) );
+
+		$this->container->get( Registry::class )->get( 'icon' )->render(
+			array(
+				'key'      => 'field_wpcmb_menu_icon',
+				'name'     => 'menu_icon',
+				'type'     => 'icon',
+				'settings' => array(),
+			),
+			$value,
+			'wpcmb_post_type[menu_icon]',
+			'wpcmb-pt-menu-icon'
+		);
+
+		printf(
+			'<span class="description wpcmb-help">%s</span></p>',
+			esc_html__( 'A Dashicon, an image from the library, or a URL. Left empty, WordPress uses the pin.', 'metafields-custom-fields' )
+		);
 	}
 
 	/**

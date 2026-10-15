@@ -16,6 +16,8 @@ use WPCMB\Fields\Locations;
 use WPCMB\Fields\ObjectRef;
 use WPCMB\Fields\Registry;
 use WPCMB\Fields\Resolver;
+use WPCMB\PostTypes\CustomPostTypes;
+use WPCMB\PostTypes\CustomTaxonomies;
 use WPCMB\PostTypes\FieldGroupPostType;
 
 defined( 'ABSPATH' ) || exit;
@@ -282,7 +284,13 @@ final class Assets extends Module {
 	private function enqueue_fields(): void {
 		$ref = $this->current_object();
 
-		if ( null === $ref || ! $this->container->get( Resolver::class )->has_groups( new Context( $ref ) ) ) {
+		/*
+		 * A record editor has no field groups on it and still needs these: the
+		 * post type screen draws its menu icon with the plugin's own icon
+		 * field, which is a grid, a media frame and a URL box behind one
+		 * button — and without the script, a button that does nothing.
+		 */
+		if ( ! $this->is_record_editor() && ( null === $ref || ! $this->container->get( Resolver::class )->has_groups( new Context( $ref ) ) ) ) {
 			return;
 		}
 
@@ -505,6 +513,26 @@ final class Assets extends Module {
 		 */
 		return $screen instanceof \WP_Screen
 			&& ( str_starts_with( (string) $screen->post_type, 'wpcmb_' ) || str_starts_with( $screen->id, 'toplevel_page_' . Menu::SLUG ) );
+	}
+
+	/**
+	 * Whether the current screen edits one of the plugin's record types.
+	 *
+	 * The post type and taxonomy editors, not the field group one — that has
+	 * its own builder and its own assets.
+	 */
+	private function is_record_editor(): bool {
+		$screen = get_current_screen();
+
+		if ( ! $screen instanceof \WP_Screen || 'post' !== $screen->base ) {
+			return false;
+		}
+
+		return in_array(
+			(string) $screen->post_type,
+			array( CustomPostTypes::POST_TYPE, CustomTaxonomies::POST_TYPE ),
+			true
+		);
 	}
 
 	/**
