@@ -1752,3 +1752,18 @@ input.wpcmb-input[type="datetime-local"] {
 	margin-block-end: 8px;
 	width: 100%;
 }
+
+/*
+ * Field groups on the Add New Term form.
+ *
+ * That form is a stack of `.form-field` divs rather than the table the edit
+ * form uses, so a group gets its own div and a heading to separate it from
+ * the Name, Slug and Description above it.
+ */
+
+.wpcmb-term-field__title {
+	font-size: 13px;
+	font-weight: 600;
+	margin: 0 0 6px;
+	padding: 0;
+}

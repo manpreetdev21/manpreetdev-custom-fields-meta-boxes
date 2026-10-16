@@ -4,7 +4,7 @@ Tags: custom fields, meta box, repeater, options page, custom post type
 Requires at least: 6.8
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.12.0
+Stable tag: 1.12.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -95,6 +95,10 @@ Yes. Every string is translatable under the `metafields-custom-fields` text doma
 5. The field group list, with each group's key, field count and location.
 
 == Changelog ==
+
+= 1.12.1 =
+* Fixed: a field group located on a taxonomy appeared when editing a term but not on the Add New Term form. Only the edit hook was ever registered, and the location rule could not match on that form anyway because it works out the taxonomy from the term — of which there is none yet. The screen now supplies the taxonomy, the same way it already supplies which user form or widget it is.
+* Fixed: the field stylesheet and scripts did not load on a taxonomy screen at all, so even once the fields rendered there they would have been unstyled, with no media picker or repeater.
 
 = 1.12.0 =
 * New: Block Types, Forms and Options Pages each have a screen of their own. A block, a form or an options page is now a record you create and name, pointing at the field group whose fields it shows.

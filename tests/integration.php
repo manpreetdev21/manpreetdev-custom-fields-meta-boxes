@@ -1452,6 +1452,109 @@ wpcmb_group(
 	}
 );
 
+wpcmb_group(
+	'a group located on a taxonomy renders when adding a term, not only when editing one',
+	static function (): void {
+		$taxonomy = 'itax_add_' . strtolower( wp_generate_password( 4, false, false ) );
+
+		register_taxonomy( $taxonomy, 'post', array( 'show_ui' => true, 'public' => true ) );
+
+		$GLOBALS['wpcmb_created_taxonomies'][] = $taxonomy;
+
+		wpcmb_group_fixture(
+			array(
+				'title'    => 'Integration term group',
+				'location' => array( array( array( 'param' => 'taxonomy', 'operator' => '==', 'value' => $taxonomy ) ) ),
+				'fields'   => array( array( 'name' => 'iterm_text', 'label' => 'Note', 'type' => 'text' ) ),
+			)
+		);
+
+		$resolver = wpcmb()->container()->get( WPCMB\Fields\Resolver::class );
+
+		/*
+		 * The edit form has a term, so the taxonomy comes from it. This always
+		 * worked.
+		 */
+		$term = wp_insert_term( 'Integration term', $taxonomy );
+
+		wpcmb_is( ! is_wp_error( $term ), 'the fixture term was created' );
+
+		if ( is_wp_error( $term ) ) {
+			return;
+		}
+
+		$editing = $resolver->groups(
+			new WPCMB\Fields\Context( new WPCMB\Fields\ObjectRef( WPCMB\Fields\ObjectRef::TERM, (int) $term['term_id'] ) )
+		);
+
+		wpcmb_is( array() !== $editing, 'the group resolves when editing a term' );
+
+		/*
+		 * The Add New Term form has no term, so the taxonomy cannot be derived
+		 * from one. Without the screen saying which taxonomy it is, the rule
+		 * matched nothing and the fields appeared only on the edit screen —
+		 * which is exactly what was reported.
+		 */
+		$bare = $resolver->groups(
+			new WPCMB\Fields\Context( new WPCMB\Fields\ObjectRef( WPCMB\Fields\ObjectRef::TERM, 0 ) )
+		);
+
+		wpcmb_is( array() === $bare, 'term 0 alone resolves nothing, since no taxonomy can be derived' );
+
+		$adding = $resolver->groups(
+			new WPCMB\Fields\Context(
+				new WPCMB\Fields\ObjectRef( WPCMB\Fields\ObjectRef::TERM, 0 ),
+				array( 'taxonomy' => $taxonomy )
+			)
+		);
+
+		wpcmb_is( array() !== $adding, 'and resolves when the screen supplies the taxonomy' );
+		wpcmb_is( count( $adding ) === count( $editing ), 'to the same groups the edit form shows' );
+
+		// The add form renders through its own hook, with its own markup.
+		$boxes = new WPCMB\Admin\MetaBoxes( wpcmb()->container() );
+
+		ob_start();
+		$boxes->render_new_term( $taxonomy );
+		$html = (string) ob_get_clean();
+
+		wpcmb_is( str_contains( $html, 'iterm_text' ), 'the add form renders the fields' );
+		wpcmb_is( str_contains( $html, 'wpcmb_values_nonce' ), 'with the nonce the save path checks' );
+		wpcmb_is( str_contains( $html, 'form-field' ), 'in the markup that form uses' );
+
+		// A taxonomy no group points at renders nothing at all.
+		ob_start();
+		$boxes->render_new_term( 'post_tag' );
+		$other = (string) ob_get_clean();
+
+		wpcmb_is( ! str_contains( $other, 'iterm_text' ), 'and nothing on a taxonomy it was not located on' );
+
+		/*
+		 * And the renderer is actually hooked up.
+		 *
+		 * Calling it directly proves it works and not that anything calls it —
+		 * the bug being fixed here was a missing hook, not a broken renderer,
+		 * so the hook is what has to be asserted.
+		 */
+		$boxes->add_taxonomy_hooks();
+
+		wpcmb_is(
+			false !== has_action( $taxonomy . '_add_form_fields', array( $boxes, 'render_new_term' ) ),
+			'the add form hook is registered for every taxonomy with a UI'
+		);
+
+		wpcmb_is(
+			false !== has_action( $taxonomy . '_edit_form_fields', array( $boxes, 'render_term' ) ),
+			'and so is the edit form hook'
+		);
+
+		remove_action( $taxonomy . '_add_form_fields', array( $boxes, 'render_new_term' ) );
+		remove_action( $taxonomy . '_edit_form_fields', array( $boxes, 'render_term' ) );
+
+		wp_delete_term( (int) $term['term_id'], $taxonomy );
+	}
+);
+
 /* -------------------------------------------------------------------------
  * Clean up everything this run created.
  * ---------------------------------------------------------------------- */

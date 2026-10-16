@@ -222,6 +222,52 @@ final class MetaBoxes extends Module {
 	public function add_taxonomy_hooks(): void {
 		foreach ( get_taxonomies( array( 'show_ui' => true ) ) as $taxonomy ) {
 			add_action( "{$taxonomy}_edit_form_fields", array( $this, 'render_term' ) );
+
+			// And the Add New Term form on the taxonomy's own screen, which is
+			// a different hook with a different argument and different markup.
+			add_action( "{$taxonomy}_add_form_fields", array( $this, 'render_new_term' ) );
+		}
+	}
+
+	/**
+	 * Render matching groups on the Add New Term form.
+	 *
+	 * Three things differ from the edit form and each one is why this is a
+	 * method of its own: the hook passes a taxonomy name rather than a term,
+	 * there is no term for the location rules to look at, and the add form is
+	 * a stack of divs where the edit form is a table.
+	 *
+	 * @param string $taxonomy Taxonomy name.
+	 */
+	public function render_new_term( $taxonomy ): void {
+		$taxonomy = (string) $taxonomy;
+
+		if ( '' === $taxonomy ) {
+			return;
+		}
+
+		/*
+		 * Term 0: there is no term yet, and every value therefore reads back
+		 * empty, which is what a new term should show. The taxonomy is passed
+		 * as a screen detail because it cannot be derived from a term that
+		 * does not exist.
+		 */
+		$ref = new ObjectRef( ObjectRef::TERM, 0 );
+
+		$groups = $this->container->get( Resolver::class )->groups(
+			new Context( $ref, array( 'taxonomy' => $taxonomy ) )
+		);
+
+		foreach ( $groups as $group ) {
+			echo '<div class="form-field wpcmb-term-field">';
+
+			if ( '' !== $group->title ) {
+				printf( '<h2 class="wpcmb-term-field__title">%s</h2>', esc_html( $group->title ) );
+			}
+
+			$this->render_group( $group, $ref );
+
+			echo '</div>';
 		}
 	}
 

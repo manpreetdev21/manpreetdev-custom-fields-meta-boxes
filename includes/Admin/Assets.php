@@ -290,7 +290,15 @@ final class Assets extends Module {
 		 * field, which is a grid, a media frame and a URL box behind one
 		 * button — and without the script, a button that does nothing.
 		 */
-		if ( ! $this->is_record_editor() && ( null === $ref || ! $this->container->get( Resolver::class )->has_groups( new Context( $ref ) ) ) ) {
+		$context = $this->current_context();
+
+		if ( ! $this->is_record_editor() && ( null === $context || ! $this->container->get( Resolver::class )->has_groups( $context ) ) ) {
+			return;
+		}
+
+		// A record editor is a post screen, so it always has a reference; this
+		// says so rather than leaving the rest of the method to assume it.
+		if ( null === $ref ) {
 			return;
 		}
 
@@ -446,11 +454,40 @@ final class Assets extends Module {
 		return match ( $screen->base ) {
 			'post'      => new ObjectRef( ObjectRef::POST, $id( 'post' ) ),
 			'term'      => new ObjectRef( ObjectRef::TERM, $id( 'tag_ID' ) ),
+
+			// The taxonomy screen carries the Add New Term form, which has
+			// fields on it and no term yet. Term 0 with the taxonomy supplied
+			// as a screen detail is what that form is.
+			'edit-tags' => new ObjectRef( ObjectRef::TERM, 0 ),
 			'user-edit' => new ObjectRef( ObjectRef::USER, $id( 'user_id' ) ),
 			'profile'   => new ObjectRef( ObjectRef::USER, get_current_user_id() ),
 			'comment'   => new ObjectRef( ObjectRef::COMMENT, $id( 'c' ) ),
 			default     => null,
 		};
+	}
+
+	/**
+	 * The current screen as a context, including what cannot be derived.
+	 *
+	 * A term's taxonomy comes from the term everywhere except the Add New
+	 * Term form, where there is no term — so the screen says which taxonomy
+	 * it is, and the field assets load there as they do everywhere else.
+	 */
+	private function current_context(): ?Context {
+		$ref = $this->current_object();
+
+		if ( null === $ref ) {
+			return null;
+		}
+
+		$screen = get_current_screen();
+		$extra  = array();
+
+		if ( $screen instanceof \WP_Screen && '' !== (string) $screen->taxonomy ) {
+			$extra['taxonomy'] = (string) $screen->taxonomy;
+		}
+
+		return new Context( $ref, $extra );
 	}
 
 	/**

@@ -317,7 +317,20 @@ final class Context {
 
 		$term = get_term( (int) $this->ref->id );
 
-		return $term instanceof \WP_Term ? $term->taxonomy : null;
+		if ( $term instanceof \WP_Term ) {
+			return $term->taxonomy;
+		}
+
+		/*
+		 * The Add New Term form knows its taxonomy and has no term.
+		 *
+		 * Deriving it from the term is right everywhere else, and impossible
+		 * there — so the screen says which taxonomy it is, the same way it
+		 * already says which user form or widget it is. Without this, a group
+		 * located on a taxonomy appeared when editing a term and not when
+		 * adding one.
+		 */
+		return isset( $this->extra['taxonomy'] ) ? (string) $this->extra['taxonomy'] : null;
 	}
 
 	/**
