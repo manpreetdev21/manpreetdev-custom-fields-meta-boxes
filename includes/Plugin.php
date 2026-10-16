@@ -69,6 +69,11 @@ final class Plugin {
 			Fields\Resolver::class,
 			static fn( Container $container ): Fields\Resolver => new Fields\Resolver( $container->get( Fields\Repository::class ) )
 		);
+
+		$this->container->set(
+			Database\Portability::class,
+			static fn( Container $container ): Database\Portability => new Database\Portability( $container )
+		);
 	}
 
 	/**

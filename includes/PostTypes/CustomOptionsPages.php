@@ -169,6 +169,15 @@ final class CustomOptionsPages extends RecordType {
 	}
 
 	/**
+	 * What makes one options page distinguishable: its slug.
+	 *
+	 * @param array<string, mixed> $record Stored configuration.
+	 */
+	public function identity( array $record ): string {
+		return (string) ( $record['slug'] ?? '' );
+	}
+
+	/**
 	 * Every page a record defines, in the shape OptionsPages::pages() uses.
 	 *
 	 * @return array<string, array{title: string, order: int, capability: string, icon: string, parent: string, page_title: string, record: int}>

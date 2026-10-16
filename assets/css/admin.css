@@ -1696,3 +1696,14 @@
 .wpcmb-record-list li {
 	margin-block-end: 4px;
 }
+
+/* The collapsed "choose which field groups" list on the Tools screen. */
+
+.wpcmb-details {
+	margin-block: 8px;
+}
+
+.wpcmb-details summary {
+	cursor: pointer;
+	font-weight: 600;
+}

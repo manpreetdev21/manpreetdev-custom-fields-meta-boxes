@@ -104,6 +104,27 @@ $generated = FieldGroup::sanitize( array() );
 assert( 1 === preg_match( '/^group_[a-z0-9]+$/', $generated['key'] ), 'missing group keys must be generated' );
 assert( array() === $generated['fields'] && array() === $generated['location'], 'an empty group sanitizes to empty' );
 
+/*
+ * A key somebody wrote by hand survives. A key is an identity: values are
+ * stored against it, code refers to it, and an import matches on it. Renaming
+ * `group_site_header` to a generated key would orphan the values and make the
+ * next import of the same file create a second group rather than update this
+ * one.
+ */
+$spelled = FieldGroup::sanitize(
+	array(
+		'key'    => 'group_site_header',
+		'fields' => array( array( 'name' => 'headline', 'key' => 'field_headline_text' ) ),
+	)
+);
+
+assert( 'group_site_header' === $spelled['key'], 'a hand-written group key is kept' );
+assert( 'field_headline_text' === $spelled['fields'][0]['key'], 'and so is a hand-written field key' );
+
+// The prefix is still required, so a key from somewhere else cannot be taken
+// for one of ours.
+assert( 'not_ours' !== FieldGroup::sanitize( array( 'key' => 'not_ours' ) )['key'], 'a key without the prefix is still replaced' );
+
 // A field name can never claim a protected meta key. Names go straight to
 // update_metadata(), and an underscore is how WordPress and every other plugin
 // mark meta as internal — so `_thumbnail_id` would hand everyone who can edit

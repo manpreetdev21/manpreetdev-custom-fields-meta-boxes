@@ -60,6 +60,45 @@ abstract class RecordType extends Module {
 	abstract public function sanitize( array $raw ): array;
 
 	/**
+	 * What makes one record distinguishable from another.
+	 *
+	 * Used by an import to decide whether it is updating a record or adding
+	 * one. Field groups have a key for this; records do not, so each type
+	 * names the thing that is already unique about it — a post type's key, an
+	 * options page's slug — and an import of the same export twice updates
+	 * rather than duplicating.
+	 *
+	 * @param array<string, mixed> $record Stored configuration.
+	 */
+	public function identity( array $record ): string {
+		return (string) ( $record['name'] ?? '' );
+	}
+
+	/**
+	 * The record whose identity matches, with its post id, or null.
+	 *
+	 * @param string $identity Identity to look for.
+	 *
+	 * @return array{id: int, config: array<string, mixed>}|null
+	 */
+	public function find( string $identity ): ?array {
+		if ( '' === $identity ) {
+			return null;
+		}
+
+		foreach ( $this->records( true ) as $post_id => $record ) {
+			if ( $this->identity( $record ) === $identity ) {
+				return array(
+					'id'     => (int) $post_id,
+					'config' => $record,
+				);
+			}
+		}
+
+		return null;
+	}
+
+	/**
 	 * Act on the records, once, on `init`.
 	 *
 	 * A post type record registers a post type; a block record registers a

@@ -796,3 +796,37 @@ $GLOBALS['wpcmb_test_taxonomies'] = array();
 function wpcmb_test_taxonomy( string $taxonomy ): void {
 	$GLOBALS['wpcmb_test_taxonomies'][] = $taxonomy;
 }
+
+/**
+ * Site home URL. Exports record where they came from.
+ */
+function home_url( string $path = '' ): string {
+	return 'https://example.test' . $path;
+}
+
+/**
+ * Post meta store setter.
+ *
+ * @param int    $id    Post id.
+ * @param string $key   Meta key.
+ * @param mixed  $value Value.
+ */
+function update_post_meta( int $id, string $key, $value ): bool {
+	$GLOBALS['wpcmb_test_meta']['post'][ $id ][ $key ] = $value;
+
+	return true;
+}
+
+/**
+ * Seed a record post and its stored configuration.
+ *
+ * @param int                  $id        Post id.
+ * @param string               $post_type Post type.
+ * @param string               $title     Post title.
+ * @param array<string, mixed> $config    Stored configuration.
+ */
+function wpcmb_test_record( int $id, string $post_type, string $title, array $config ): void {
+	$GLOBALS['wpcmb_test_posts'][] = new WP_Post( $id, $title, 'publish', $post_type );
+
+	update_post_meta( $id, '_wpcmb_config', (string) wp_json_encode( $config ) );
+}

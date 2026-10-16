@@ -10,13 +10,12 @@ declare( strict_types=1 );
 namespace WPCMB\CLI;
 
 use WPCMB\Container;
-use WPCMB\Fields\FieldGroup;
+use WPCMB\Database\Portability;
 use WPCMB\Fields\ObjectRef;
 use WPCMB\Fields\Renderer;
 use WPCMB\Fields\Repository;
 use WPCMB\Fields\Validator;
 use WPCMB\Fields\Values;
-use WPCMB\PostTypes\FieldGroupPostType;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -222,40 +221,52 @@ final class FieldCommand {
 	}
 
 	/**
-	 * Export field groups as JSON.
+	 * Export this site's field configuration as JSON.
 	 *
 	 * ## OPTIONS
 	 *
 	 * [<key>...]
-	 * : Group keys to export. Omit for all of them.
+	 * : Field group keys to export. Omit for all of them.
+	 *
+	 * [--only=<sections>]
+	 * : Comma separated sections to include. Any of field_groups, post_types,
+	 * taxonomies, blocks, forms, options_pages. Everything by default.
 	 *
 	 * [--file=<path>]
 	 * : Write to a file instead of standard output.
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     wp wpcmb export > groups.json
-	 *     wp wpcmb export group_abc123 --file=groups.json
+	 *     wp wpcmb export > site.json
+	 *     wp wpcmb export --only=post_types,taxonomies --file=types.json
+	 *     wp wpcmb export group_abc123 --only=field_groups
 	 *
-	 * @param array<int, string>    $args       Group keys.
+	 * @param array<int, string>    $args       Field group keys.
 	 * @param array<string, string> $assoc_args Options.
 	 */
 	public function export( $args, $assoc_args ): void {
-		$groups = $this->container->get( Repository::class )->all( true );
+		$sections = isset( $assoc_args['only'] )
+			? array_map( 'trim', explode( ',', (string) $assoc_args['only'] ) )
+			: null;
 
-		if ( array() !== $args ) {
-			$groups = array_intersect_key( $groups, array_flip( $args ) );
+		$known = array_merge( array( 'field_groups' ), array_keys( Portability::sections() ) );
+
+		if ( null !== $sections ) {
+			$unknown = array_diff( $sections, $known );
+
+			if ( array() !== $unknown ) {
+				\WP_CLI::error( sprintf( 'Unknown section: %s. Known: %s.', implode( ', ', $unknown ), implode( ', ', $known ) ) );
+			}
 		}
 
-		if ( array() === $groups ) {
-			\WP_CLI::error( 'No matching field groups.' );
+		$payload = $this->container->get( Portability::class )->export( $sections, array() !== $args ? $args : null );
+		$counts  = array_filter( Portability::summarise( $payload ) );
+
+		if ( array() === $counts ) {
+			\WP_CLI::error( 'Nothing matched.' );
 		}
 
-		$json = (string) wp_json_encode(
-			array_values( array_map( static fn( FieldGroup $g ): array => $g->to_array(), $groups ) ),
-			JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
-		);
-
+		$json = (string) wp_json_encode( $payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 		$file = (string) ( $assoc_args['file'] ?? '' );
 
 		if ( '' === $file ) {
@@ -269,15 +280,19 @@ final class FieldCommand {
 			\WP_CLI::error( sprintf( 'Could not write to %s.', $file ) );
 		}
 
-		\WP_CLI::success( sprintf( 'Exported %d field groups to %s.', count( $groups ), $file ) );
+		\WP_CLI::success( sprintf( 'Exported %s to %s.', self::tally( $counts ), $file ) );
 	}
-
 	/**
-	 * Import field groups from a JSON export.
+	 * Import a JSON export.
 	 *
-	 * A group whose key already exists is updated in place. Anything new is
-	 * created inactive, so an import cannot quietly start showing fields on a
-	 * production site before somebody has looked at them.
+	 * Field groups, post types, taxonomies, block types, forms and options
+	 * pages, whichever the file holds. Anything already here is matched and
+	 * updated in place; anything new is created inactive, so an import cannot
+	 * quietly start changing a production site before somebody has looked at
+	 * it.
+	 *
+	 * Exports from any version of this plugin are accepted, including the bare
+	 * list of field groups older versions wrote.
 	 *
 	 * ## OPTIONS
 	 *
@@ -285,12 +300,12 @@ final class FieldCommand {
 	 * : Path to a JSON export.
 	 *
 	 * [--activate]
-	 * : Publish newly created groups instead of leaving them inactive.
+	 * : Publish whatever is newly created instead of leaving it inactive.
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     wp wpcmb import groups.json
-	 *     wp wpcmb import groups.json --activate
+	 *     wp wpcmb import site.json
+	 *     wp wpcmb import site.json --activate
 	 *
 	 * @param array<int, string>    $args       Positional arguments.
 	 * @param array<string, string> $assoc_args Options.
@@ -303,63 +318,39 @@ final class FieldCommand {
 		}
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- A local path the operator gave us.
-		$decoded = json_decode( (string) file_get_contents( $file ), true );
+		$payload = Portability::normalise( json_decode( (string) file_get_contents( $file ), true ) );
 
-		if ( ! is_array( $decoded ) || array() === $decoded ) {
-			\WP_CLI::error( 'That file is not a field group export.' );
+		if ( null === $payload ) {
+			\WP_CLI::error( sprintf( '%s is not an export from this plugin.', $file ) );
 		}
 
-		if ( isset( $decoded['key'] ) || isset( $decoded['fields'] ) ) {
-			$decoded = array( $decoded );
-		}
+		$written = array_filter(
+			$this->container->get( Portability::class )->import(
+				$payload,
+				isset( $assoc_args['activate'] ) ? 'publish' : 'draft'
+			)
+		);
 
-		$repository = $this->container->get( Repository::class );
-		$status     = isset( $assoc_args['activate'] ) ? 'publish' : 'draft';
-		$imported   = 0;
-
-		foreach ( $decoded as $raw ) {
-			if ( ! is_array( $raw ) ) {
-				continue;
-			}
-
-			$config   = FieldGroup::sanitize( $raw );
-			$existing = $repository->get( $config['key'] );
-			$post_id  = $existing instanceof FieldGroup ? $existing->id : 0;
-
-			if ( 0 === $post_id ) {
-				$post_id = wp_insert_post(
-					array(
-						'post_type'   => FieldGroupPostType::POST_TYPE,
-						'post_status' => $status,
-						'post_title'  => '' !== $config['title'] ? $config['title'] : 'Imported field group',
-					),
-					true
-				);
-
-				if ( is_wp_error( $post_id ) ) {
-					\WP_CLI::warning( $post_id->get_error_message() );
-					continue;
-				}
-			} else {
-				wp_update_post(
-					array(
-						'ID'         => $post_id,
-						'post_title' => $config['title'],
-					)
-				);
-			}
-
-			$repository->save( (int) $post_id, $config );
-			++$imported;
-
-			\WP_CLI::log( sprintf( '  %s (%s)', $config['title'], $config['key'] ) );
-		}
-
-		if ( 0 === $imported ) {
+		if ( array() === $written ) {
 			\WP_CLI::error( 'Nothing was imported.' );
 		}
 
-		\WP_CLI::success( sprintf( 'Imported %d field groups.', $imported ) );
+		\WP_CLI::success( sprintf( 'Imported %s.', self::tally( $written ) ) );
+	}
+
+	/**
+	 * Section counts as something a human reads.
+	 *
+	 * @param array<string, int> $counts Counts, keyed by section.
+	 */
+	private static function tally( array $counts ): string {
+		$parts = array();
+
+		foreach ( $counts as $section => $count ) {
+			$parts[] = sprintf( '%d %s', $count, str_replace( '_', ' ', (string) $section ) );
+		}
+
+		return implode( ', ', $parts );
 	}
 
 	/**

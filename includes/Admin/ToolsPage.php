@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace WPCMB\Admin;
 
 use WPCMB\Abstracts\Module;
+use WPCMB\Database\Portability;
 use WPCMB\Fields\FieldGroup;
 use WPCMB\Fields\Repository;
 use WPCMB\PostTypes\FieldGroupPostType;
@@ -93,20 +94,51 @@ final class ToolsPage extends Module {
 	 * Stream the selected groups as a JSON download.
 	 */
 	private function export_json(): void {
-		$groups = $this->selected_groups();
+		$payload = $this->payload();
 
-		if ( array() === $groups ) {
+		if ( array() === Portability::summarise( $payload ) ) {
 			$this->redirect( 'nothing_selected' );
 		}
 
-		$payload = array_values( array_map( static fn( FieldGroup $g ): array => $g->to_array(), $groups ) );
-
 		nocache_headers();
 		header( 'Content-Type: application/json; charset=utf-8' );
-		header( 'Content-Disposition: attachment; filename=wpcmb-field-groups-' . gmdate( 'Y-m-d' ) . '.json' );
+		header( 'Content-Disposition: attachment; filename=wpcmb-export-' . gmdate( 'Y-m-d' ) . '.json' );
 
 		echo wp_json_encode( $payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 		exit;
+	}
+
+	/**
+	 * The export the current request asked for.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function payload(): array {
+		$sections = $this->selected_sections();
+		$groups   = in_array( 'field_groups', $sections, true ) ? array_keys( $this->selected_groups() ) : array();
+
+		return $this->container->get( Portability::class )->export( $sections, $groups );
+	}
+
+	/**
+	 * Which sections the request asked to export.
+	 *
+	 * Nothing ticked means nothing, not everything: an export with no boxes
+	 * ticked is a mistake, and the screen says so rather than quietly
+	 * downloading the entire site.
+	 *
+	 * @return array<int, string>
+	 */
+	private function selected_sections(): array {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- handle_request() verified the nonce before dispatching here.
+		$sections = isset( $_POST['wpcmb_sections'] ) && is_array( $_POST['wpcmb_sections'] )
+			? array_map( 'sanitize_key', wp_unslash( $_POST['wpcmb_sections'] ) )
+			: array();
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		$known = array_merge( array( 'field_groups' ), array_keys( Portability::sections() ) );
+
+		return array_values( array_intersect( $known, $sections ) );
 	}
 
 	/**
@@ -124,56 +156,16 @@ final class ToolsPage extends Module {
 		$contents = file_get_contents( $_FILES['wpcmb_import']['tmp_name'] ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Local upload, not a remote request.
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
-		$decoded = is_string( $contents ) ? json_decode( $contents, true ) : null;
+		$payload = Portability::normalise( is_string( $contents ) ? json_decode( $contents, true ) : null );
 
-		if ( ! is_array( $decoded ) || array() === $decoded ) {
+		if ( null === $payload ) {
 			$this->redirect( 'import_failed' );
 		}
 
-		// Accept both a single exported group and a list of them.
-		if ( isset( $decoded['key'] ) || isset( $decoded['fields'] ) ) {
-			$decoded = array( $decoded );
-		}
+		$written = $this->container->get( Portability::class )->import( $payload );
+		$total   = array_sum( $written );
 
-		$repository = $this->container->get( Repository::class );
-		$imported   = 0;
-
-		foreach ( $decoded as $raw ) {
-			if ( ! is_array( $raw ) ) {
-				continue;
-			}
-
-			$config   = FieldGroup::sanitize( $raw );
-			$existing = $repository->get( $config['key'] );
-			$post_id  = $existing instanceof FieldGroup ? $existing->id : 0;
-
-			if ( 0 === $post_id ) {
-				$post_id = wp_insert_post(
-					array(
-						'post_type'   => FieldGroupPostType::POST_TYPE,
-						'post_status' => 'draft',
-						'post_title'  => '' !== $config['title'] ? $config['title'] : __( 'Imported field group', 'metafields-custom-fields' ),
-					),
-					true
-				);
-
-				if ( is_wp_error( $post_id ) ) {
-					continue;
-				}
-			} else {
-				wp_update_post(
-					array(
-						'ID'         => $post_id,
-						'post_title' => $config['title'],
-					)
-				);
-			}
-
-			$repository->save( (int) $post_id, $config );
-			++$imported;
-		}
-
-		$this->redirect( 0 === $imported ? 'import_failed' : 'imported', $imported );
+		$this->redirect( 0 === $total ? 'import_failed' : 'imported', $total );
 	}
 
 	/**
@@ -223,6 +215,11 @@ final class ToolsPage extends Module {
 
 		$groups = $this->container->get( Repository::class )->all( true );
 
+		// Asked once: the export is a few queries, and the view reads the
+		// counts twice and the payload again for the PHP.
+		$portability = $this->container->get( Portability::class );
+		$counts      = Portability::summarise( $portability->export() );
+
 		$this->render_notice();
 		?>
 		<div class="wrap wpcmb-wrap">
@@ -231,35 +228,45 @@ final class ToolsPage extends Module {
 			<div class="wpcmb-cards">
 				<div class="wpcmb-card">
 					<h2><?php esc_html_e( 'Export', 'metafields-custom-fields' ); ?></h2>
-					<p><?php esc_html_e( 'Download the selected field groups as JSON, or copy them as PHP.', 'metafields-custom-fields' ); ?></p>
+					<p><?php esc_html_e( 'Everything this plugin holds as configuration, in one file: field groups, and the post types, taxonomies, block types, forms and options pages built from them.', 'metafields-custom-fields' ); ?></p>
 
 					<form method="post">
 						<?php wp_nonce_field( self::NONCE ); ?>
 
-						<?php if ( array() === $groups ) : ?>
-							<p><em><?php esc_html_e( 'No field groups yet.', 'metafields-custom-fields' ); ?></em></p>
-						<?php else : ?>
-							<fieldset class="wpcmb-fieldset">
-								<?php foreach ( $groups as $group ) : ?>
-									<label class="wpcmb-checkbox">
-										<input type="checkbox" name="wpcmb_groups[]" value="<?php echo esc_attr( $group->key ); ?>" checked />
-										<?php echo esc_html( '' !== $group->title ? $group->title : $group->key ); ?>
-									</label>
-								<?php endforeach; ?>
-							</fieldset>
+						<fieldset class="wpcmb-fieldset"><legend><?php esc_html_e( 'Include', 'metafields-custom-fields' ); ?></legend>
+							<?php foreach ( $counts as $section => $count ) : ?>
+								<label class="wpcmb-checkbox">
+									<input type="checkbox" name="wpcmb_sections[]" value="<?php echo esc_attr( $section ); ?>"<?php checked( $count > 0 ); ?><?php disabled( 0 === $count ); ?> />
+									<?php echo esc_html( sprintf( '%s (%d)', self::section_label( (string) $section ), $count ) ); ?>
+								</label>
+							<?php endforeach; ?>
+						</fieldset>
 
-							<p>
-								<button type="submit" class="wpcmb-btn wpcmb-btn--primary" name="wpcmb_tool" value="export_json">
-									<?php esc_html_e( 'Download JSON', 'metafields-custom-fields' ); ?>
-								</button>
-							</p>
+						<?php if ( array() !== $groups ) : ?>
+							<details class="wpcmb-details">
+								<summary><?php esc_html_e( 'Choose which field groups', 'metafields-custom-fields' ); ?></summary>
+								<fieldset class="wpcmb-fieldset">
+									<?php foreach ( $groups as $group ) : ?>
+										<label class="wpcmb-checkbox">
+											<input type="checkbox" name="wpcmb_groups[]" value="<?php echo esc_attr( $group->key ); ?>" checked />
+											<?php echo esc_html( '' !== $group->title ? $group->title : $group->key ); ?>
+										</label>
+									<?php endforeach; ?>
+								</fieldset>
+							</details>
 						<?php endif; ?>
+
+						<p>
+							<button type="submit" class="wpcmb-btn wpcmb-btn--primary" name="wpcmb_tool" value="export_json">
+								<?php esc_html_e( 'Download JSON', 'metafields-custom-fields' ); ?>
+							</button>
+						</p>
 					</form>
 				</div>
 
 				<div class="wpcmb-card">
 					<h2><?php esc_html_e( 'Import', 'metafields-custom-fields' ); ?></h2>
-					<p><?php esc_html_e( 'Upload a JSON export. Groups with a matching key are updated; new groups are created as drafts.', 'metafields-custom-fields' ); ?></p>
+					<p><?php esc_html_e( 'Upload a JSON export from this plugin, at any version. Anything already here is updated in place; anything new arrives inactive, so uploading a file never starts changing your screens on its own.', 'metafields-custom-fields' ); ?></p>
 
 					<form method="post" enctype="multipart/form-data">
 						<?php wp_nonce_field( self::NONCE ); ?>
@@ -273,33 +280,31 @@ final class ToolsPage extends Module {
 				</div>
 			</div>
 
-			<?php if ( array() !== $groups ) : ?>
+			<?php if ( array() !== array_filter( $counts ) ) : ?>
 				<h2><?php esc_html_e( 'PHP export', 'metafields-custom-fields' ); ?></h2>
-				<p class="description"><?php esc_html_e( 'Drop this into your theme or plugin to register these groups in code.', 'metafields-custom-fields' ); ?></p>
-				<textarea class="widefat code wpcmb-php-export" rows="16" readonly><?php echo esc_textarea( $this->php_export( $groups ) ); ?></textarea>
+				<p class="description"><?php esc_html_e( 'The same configuration as code. Drop it into a theme or a small plugin and the records it replaces can be deleted — the screens still show everything, and it deploys with your code instead of being carried by hand.', 'metafields-custom-fields' ); ?></p>
+				<textarea class="widefat code wpcmb-php-export" rows="16" readonly><?php echo esc_textarea( $portability->php( $portability->export() ) ); ?></textarea>
 			<?php endif; ?>
 		</div>
 		<?php
 	}
 
 	/**
-	 * Build a PHP snippet that registers the given groups.
+	 * A section's name, for the export checkboxes.
 	 *
-	 * @param array<string, FieldGroup> $groups Field groups.
+	 * @param string $section Section name.
 	 */
-	private function php_export( array $groups ): string {
-		$lines = array( '<?php', '', "add_action( 'wpcmb/register_field_groups', function () {" );
+	private static function section_label( string $section ): string {
+		$labels = array(
+			'field_groups'  => __( 'Field groups', 'metafields-custom-fields' ),
+			'post_types'    => __( 'Post types', 'metafields-custom-fields' ),
+			'taxonomies'    => __( 'Taxonomies', 'metafields-custom-fields' ),
+			'blocks'        => __( 'Block types', 'metafields-custom-fields' ),
+			'forms'         => __( 'Forms', 'metafields-custom-fields' ),
+			'options_pages' => __( 'Options pages', 'metafields-custom-fields' ),
+		);
 
-		foreach ( $groups as $group ) {
-			$exported = var_export( $group->to_array(), true ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export -- Deliberate code generation.
-			$exported = str_replace( array( 'array (', "\n" ), array( 'array(', "\n\t" ), $exported );
-			$lines[]  = "\twpcmb_register_field_group( {$exported} );";
-			$lines[]  = '';
-		}
-
-		$lines[] = '} );';
-
-		return implode( "\n", $lines );
+		return $labels[ $section ] ?? $section;
 	}
 
 	/**

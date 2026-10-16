@@ -2,7 +2,7 @@
 
 Field groups, meta boxes and a developer-friendly field API for WordPress.
 
-- **Version:** 1.14.0
+- **Version:** 1.15.0
 - **Author:** Manpreet Singh
 - **Requires PHP:** 8.1
 - **Requires WordPress:** 6.8
@@ -739,11 +739,13 @@ wp wpcmb get byline 12 [--raw]
 wp wpcmb update byline 12 "Manpreet Singh"
 wp wpcmb update rows 12 '[{"title":"One"},{"title":"Two"}]'
 wp wpcmb delete byline 12
-wp wpcmb export [<key>...] [--file=groups.json]
-wp wpcmb import groups.json [--activate]
+wp wpcmb export [<key>...] [--only=<sections>] [--file=site.json]
+wp wpcmb import site.json [--activate]
 ```
 
-Writes are validated and sanitized exactly as from an edit screen, so a script cannot store what the admin would refuse. Imports create new groups **inactive** unless `--activate` is passed.
+Writes are validated and sanitized exactly as from an edit screen, so a script cannot store what the admin would refuse. An import creates things **inactive** unless `--activate` is passed.
+
+`export` and `import` are the same code the Tools screen runs — one definition of what a file holds and one of what an import accepts, rather than a second implementation that drifts. `--only` takes any of `field_groups`, `post_types`, `taxonomies`, `blocks`, `forms`, `options_pages`, and an unknown name is an error rather than a silently empty file.
 
 The command surface is a separate class from the module that registers it: WP-CLI turns every public method of a command object into a subcommand, so registering the module itself would publish `wp wpcmb boot` and `wp wpcmb is_enabled`.
 
@@ -1094,6 +1096,9 @@ WordPress 6.4+ already stores, restores, diffs and autosaves any meta key named 
 | `wpcmb/storage/read` | filter | Claim a value read (HPOS orders). |
 | `wpcmb/storage/write` | filter | Claim a value write. |
 | `wpcmb/storage/delete` | filter | Claim a value delete. |
+| `wpcmb/records/{$post_type}` | filter | Records of one type before they are used. Define them in code. |
+| `wpcmb/export` | filter | An export payload before it is written. |
+| `wpcmb/imported` | action | After an import. Receives `array $written, array $payload`. |
 
 ### Registering your own module
 
@@ -1104,6 +1109,60 @@ add_filter( 'wpcmb/modules', function ( array $classes ): array {
 } );
 ```
 
+## Moving a site between installs
+
+Everything this plugin treats as configuration exports as one file: field
+groups, and the post types, taxonomies, block types, forms and options pages
+built from them. **Tools → Export** writes it; **Tools → Import** reads it. The
+same code backs `wp wpcmb export` and `wp wpcmb import`, so there is one
+definition of what a file holds rather than two that drift.
+
+### What an import does with a file
+
+**It matches on identity, so importing twice does not duplicate.** A field
+group matches on its key, a post type and a taxonomy on theirs, an options page
+on its slug. Whatever matches is updated in place; only what has no match is
+created. Export, import, spot a typo, export, import again — the second run
+changes the same records rather than building a second copy of the site.
+
+A form has no natural key of its own, so it is identified by the field group it
+renders plus its title. Two forms on the same group with the same title are the
+same form to an import.
+
+**Anything new arrives inactive.** A file somebody uploads must not start
+putting fields on post screens before anyone has looked at it. `wp wpcmb import
+--activate` publishes what it creates, which is for a deploy script that
+already knows what it is importing.
+
+**Every file this plugin has ever written still imports.** Three shapes are
+accepted: the envelope current versions write, the bare list of field groups
+earlier versions wrote, and a single field group on its own. A file exported a
+year ago is the one thing an import has to be forgiving about. Anything else —
+another plugin's JSON, a truncated file, an empty array — is refused before
+anything is written, not part way through.
+
+### The PHP export
+
+The same configuration as code, for a theme or a small plugin. Field groups go
+through `wpcmb_register_field_group()`; records go through the
+`wpcmb/records/{$post_type}` filter each record type already applies to its own
+list. Nothing in the plugin exists only to support this.
+
+Once the configuration is in code, the records it replaces can be deleted: the
+screens still show everything, and it deploys with the rest of your code
+instead of being carried between installs by hand.
+
+Leaving both in place is safe but does nothing useful. A stored field group
+with the same key wins over a registered one, and a stored record registers
+before a code one — `register_post_type` and `register_taxonomy` are skipped
+for a name that already exists, so the record you can see in the admin is the
+one in effect, and the code definition is the fallback for a site that has no
+record. That is what makes "export to PHP, keep editing in the admin" work.
+
+A key written by hand — `group_site_header` rather than a generated
+`group_6a1f…` — survives a round trip. It has to: a key is an identity, values
+are stored against it, and renaming it on import would orphan them and make the
+next import create a second group.
 ## Data on uninstall
 
 Deleting the plugin removes nothing unless `wpcmb_delete_data_on_uninstall` is set. Reinstalling should not cost a site its field groups.
@@ -1111,8 +1170,8 @@ Deleting the plugin removes nothing unless `wpcmb_delete_data_on_uninstall` is s
 ## Checks
 
 ```bash
-composer test        # all 17 PHP checks, one process each
-npm test             # 156 browser tests against the real scripts
+composer test        # all 19 PHP checks, one process each
+npm test             # 158 browser tests against the real scripts
 php tests/integration.php   # real WordPress, non-destructive
 composer lint        # WordPress Coding Standards
 ```
@@ -1142,6 +1201,8 @@ php tests/integrations-check.php # integrations stay dormant without their hosts
 php tests/security-check.php     # nonces, capabilities and storage boundaries
 php tests/validation-check.php   # required fields, including inside repeaters
 php tests/settings-check.php     # every group and field setting, where it takes effect
+php tests/records-check.php      # post type, taxonomy, block, form and options page records
+php tests/portability-check.php  # what an export holds, and what an import accepts
 ```
 
 None of these need WordPress.
@@ -1229,10 +1290,13 @@ metafields-custom-fields/
 │   │   ├── OptionsPages.php      screens built from options_page rules
 │   │   ├── Submissions.php       reading what a form stored
 │   │   ├── SettingsPage.php
-│   │   └── ToolsPage.php         JSON import/export, PHP export
+│   │   └── ToolsPage.php         the export/import screen
 │   ├── FieldTypes/               11 classes, 52 types
 │   ├── API/functions.php         the public template functions
-│   ├── Database/Revisions.php    revisioned meta keys (revisions + autosave)
+│   ├── Database/
+│   │   ├── Migrations.php        additive, one-way, keyed by an option
+│   │   ├── Portability.php       what an export holds, what an import accepts
+│   │   └── Revisions.php         revisioned meta keys (revisions + autosave)
 │   ├── Fields/
 │   │   ├── Conditional.php       server-side conditional logic
 │   │   ├── Context.php           lazy description of the matched object

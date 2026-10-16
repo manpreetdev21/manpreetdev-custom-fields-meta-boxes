@@ -164,6 +164,23 @@ final class CustomForms extends RecordType {
 	}
 
 	/**
+	 * What makes one form distinguishable.
+	 *
+	 * A form has no key of its own — nothing about it has to be unique, and
+	 * two forms can legitimately render the same field group with different
+	 * settings. The group it draws plus the name somebody gave it is the most
+	 * stable thing available, so re-importing an export updates rather than
+	 * duplicating, while two genuinely different forms stay two records.
+	 *
+	 * @param array<string, mixed> $record Stored configuration.
+	 */
+	public function identity( array $record ): string {
+		$group = (string) ( $record['field_group'] ?? '' );
+
+		return '' === $group ? '' : $group . '|' . (string) ( $record['title'] ?? '' );
+	}
+
+	/**
 	 * A record by its post id, or null.
 	 *
 	 * @param int $post_id Record post id.

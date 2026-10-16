@@ -1675,6 +1675,118 @@ wpcmb_group(
 	}
 );
 
+wpcmb_group(
+	'an export imports onto another site, and importing it twice changes nothing',
+	function (): void {
+		$portability = wpcmb()->container()->get( WPCMB\Database\Portability::class );
+		$types       = wpcmb()->container()->get( WPCMB\PostTypes\CustomPostTypes::class );
+
+		/*
+		 * Built by hand rather than exported from this site: an import's job
+		 * is to read somebody else's file, and a payload this site produced
+		 * would hide a mismatch between what export writes and what import
+		 * reads.
+		 */
+		$payload = array(
+			'format'       => WPCMB\Database\Portability::FORMAT,
+			'version'      => '1.0.0',
+			'field_groups' => array(
+				array(
+					'key'    => 'group_imported_check',
+					'title'  => 'Imported group',
+					'fields' => array(
+						array( 'name' => 'ifield', 'label' => 'Imported field', 'type' => 'text' ),
+					),
+				),
+			),
+			'post_types'   => array(
+				array( 'name' => 'iportable', 'title' => 'Portable Things' ),
+			),
+		);
+
+		$before = array_keys( $types->records( true ) );
+
+		$first = $portability->import( $payload );
+
+		wpcmb_is( 1 === ( $first['field_groups'] ?? 0 ), 'the field group in the file was written' );
+		wpcmb_is( 1 === ( $first['post_types'] ?? 0 ), 'and so was the post type record' );
+
+		/* Remember what the import made, so the run cleans up after itself. */
+		$made = array_diff( array_keys( $types->records( true ) ), $before );
+
+		foreach ( $made as $id ) {
+			$GLOBALS['wpcmb_created'][] = array( 'type' => 'post', 'id' => (int) $id );
+		}
+
+		$repository = wpcmb()->container()->get( WPCMB\Fields\Repository::class );
+		$repository->flush();
+
+		$group = $repository->get( 'group_imported_check' );
+
+		wpcmb_is( $group instanceof WPCMB\Fields\FieldGroup, 'the group can be found by the key the file gave it' );
+
+		if ( $group instanceof WPCMB\Fields\FieldGroup ) {
+			$GLOBALS['wpcmb_created'][] = array( 'type' => 'post', 'id' => $group->id );
+
+			// Inactive on arrival: a file somebody uploaded must not start
+			// putting fields on post screens before anyone has looked at it.
+			wpcmb_is( 'draft' === get_post_status( $group->id ), 'and arrives inactive' );
+		}
+
+		$record = $types->find( 'iportable' );
+
+		wpcmb_is( null !== $record, 'the record can be found by its own identity' );
+		wpcmb_is( null !== $record && 'draft' === get_post_status( $record['id'] ), 'and it is inactive too' );
+
+		/*
+		 * The same file again. This is what somebody actually does — export,
+		 * import, notice a typo, export, import — and a second copy of every
+		 * post type is the failure that makes an import tool useless.
+		 */
+		$second = $portability->import( $payload );
+
+		wpcmb_is( 1 === ( $second['post_types'] ?? 0 ), 'importing the file again writes one record, not two' );
+
+		$ids = array();
+
+		foreach ( $types->records( true ) as $id => $config ) {
+			if ( 'iportable' === ( $config['name'] ?? '' ) ) {
+				$ids[] = $id;
+			}
+		}
+
+		wpcmb_is( 1 === count( $ids ), 'and there is still exactly one record with that key' );
+		wpcmb_is( null !== $record && array( $record['id'] ) === $ids, 'the same one, updated in place' );
+
+		/* A changed title follows the file rather than being left behind. */
+		$payload['post_types'][0]['title'] = 'Renamed Things';
+
+		$portability->import( $payload );
+
+		wpcmb_is( null !== $record && 'Renamed Things' === get_post_field( 'post_title', $record['id'] ), 'a renamed record is renamed here' );
+
+		/*
+		 * `wp wpcmb import --activate` is for a deploy script that already
+		 * knows what it is importing, so it publishes what it creates.
+		 */
+		$payload['post_types'][0]['name'] = 'iportable2';
+
+		$portability->import( $payload, 'publish' );
+
+		$activated = $types->find( 'iportable2' );
+
+		wpcmb_is( null !== $activated, 'an activating import creates the record' );
+
+		if ( null !== $activated ) {
+			$GLOBALS['wpcmb_created'][] = array( 'type' => 'post', 'id' => $activated['id'] );
+
+			wpcmb_is( 'publish' === get_post_status( $activated['id'] ), 'and publishes it' );
+		}
+
+		/* And a file that is not ours is refused before anything is written. */
+		wpcmb_is( null === WPCMB\Database\Portability::normalise( array( 'format' => 'other-plugin' ) ), "another plugin's export is refused" );
+	}
+);
 /* -------------------------------------------------------------------------
  * Clean up everything this run created.
  * ---------------------------------------------------------------------- */

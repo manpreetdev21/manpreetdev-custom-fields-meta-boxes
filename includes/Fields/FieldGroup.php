@@ -575,7 +575,15 @@ final class FieldGroup {
 	private static function sanitize_key_string( string $key, string $prefix ): string {
 		$key = sanitize_key( $key );
 
-		return preg_match( '/^(group|field|layout)_[a-z0-9]+$/', $key ) ? $key : self::generate_key( $prefix );
+		/*
+		 * Underscores and hyphens are allowed after the prefix, not just the
+		 * hex the editor generates. A key is an identity: a group keyed
+		 * `group_site_header` in code, exported and imported, has to come back
+		 * with that key — regenerating it renames the group, orphans its
+		 * stored values, and makes the next import create a second copy
+		 * instead of updating the first.
+		 */
+		return preg_match( '/^(group|field|layout)_[a-z0-9_-]+$/', $key ) ? $key : self::generate_key( $prefix );
 	}
 
 	/**

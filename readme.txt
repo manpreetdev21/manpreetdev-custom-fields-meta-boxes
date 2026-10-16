@@ -4,7 +4,7 @@ Tags: custom fields, meta box, repeater, options page, custom post type
 Requires at least: 6.8
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.14.0
+Stable tag: 1.15.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -95,6 +95,17 @@ Yes. Every string is translatable under the `metafields-custom-fields` text doma
 5. The field group list, with each group's key, field count and location.
 
 == Changelog ==
+
+= 1.15.0 =
+* Export and import now cover everything the plugin holds, not just field groups. Post types, taxonomies, block types, forms and options pages were added over the last five releases and none of them could leave the site they were built on, so a site built on staging had to be rebuilt by hand on production.
+* One file, one envelope. Tools → Export writes field groups and all five record types, with a checkbox per section and a count beside it, and a collapsed list for picking individual field groups.
+* Importing the same file twice updates what is here instead of making a second copy of everything. Records are matched on their own identity — a post type by its key, a taxonomy by its key, an options page by its slug.
+* Anything new arrives inactive. A file somebody uploads cannot start changing post screens before it has been looked at. wp wpcmb import --activate publishes what it creates, for a deploy script that already knows what it is importing.
+* Exports from every earlier version still import: the envelope this version writes, the bare list of field groups older versions wrote, and a single field group on its own.
+* The PHP export covers all of it too. It registers the field groups through wpcmb_register_field_group() and the records through the wpcmb/records/* filter each record type already applies, so the records it replaces can be deleted and the configuration deploys with your code.
+* wp wpcmb export gained --only, to export named sections: wp wpcmb export --only=post_types,taxonomies. wp wpcmb import takes the same files the Tools screen does. Both commands and the Tools screen now share one definition of what an export holds.
+* Fixed: a field group whose key was written by hand rather than generated — group_site_header, say — had that key replaced on import, which renamed the group, orphaned its stored values, and made the next import of the same file create a second group instead of updating the first.
+* New filter wpcmb/export and action wpcmb/imported.
 
 = 1.14.0 =
 * The last location rule that drew nothing now draws: a field group located on a menu renders under Menu Settings on the Menus screen, beside Auto add pages and Menu location, and saves with the Save Menu button.
