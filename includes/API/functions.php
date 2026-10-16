@@ -15,6 +15,7 @@ use WPCMB\Fields\Context;
 use WPCMB\Fields\FieldGroup;
 use WPCMB\Fields\Repository;
 use WPCMB\Fields\Resolver;
+use WPCMB\Fields\Rows;
 use WPCMB\Fields\Validator;
 use WPCMB\Fields\Values;
 use WPCMB\Frontend\Form;
@@ -220,5 +221,236 @@ if ( ! function_exists( 'wpcmb_validate_values' ) ) {
 		$fields = wpcmb()->container()->get( Resolver::class )->fields( Context::for( $identifier ) );
 
 		return wpcmb()->container()->get( Validator::class )->validate( $fields, $values );
+	}
+}
+
+/*
+ * The row loop.
+ *
+ * A repeater value is already a list of rows, so `foreach ( wpcmb_get_field(
+ * 'slides' ) as $row )` works and is the shorter thing to write for a flat
+ * repeater. These exist for the two cases it cannot do: reaching a sub field's
+ * definition — its label, its choices, its default, none of which are in the
+ * top-level name index — and walking a repeater nested inside a repeater
+ * without nesting the loops by hand.
+ *
+ * The spelling is ACF's on purpose. A site moving across has it in every
+ * template, and a second spelling for the same idea would mean editing all of
+ * them.
+ */
+
+if ( ! function_exists( 'wpcmb_have_rows' ) ) {
+	/**
+	 * Whether the repeater has another row, opening the loop if needed.
+	 *
+	 * Looks without moving, so an `if` around a `while` does not consume the
+	 * first row. Moving is wpcmb_the_row()'s job, and a loop body that never
+	 * calls it never ends.
+	 *
+	 * @since 1.16.0
+	 *
+	 * @param string $selector   Field name.
+	 * @param mixed  $identifier Object identifier. Ignored for a nested loop,
+	 *                           which belongs to the row it is opened inside.
+	 */
+	function wpcmb_have_rows( string $selector, mixed $identifier = null ): bool {
+		return wpcmb()->container()->get( Rows::class )->have( $selector, $identifier );
+	}
+}
+
+if ( ! function_exists( 'wpcmb_the_row' ) ) {
+	/**
+	 * Move onto the next row and return it.
+	 *
+	 * @since 1.16.0
+	 *
+	 * @param bool $format Whether to format the row's values.
+	 *
+	 * @return array<string, mixed> The row, or an empty array outside a loop.
+	 */
+	function wpcmb_the_row( bool $format = false ): array {
+		return wpcmb()->container()->get( Rows::class )->row( $format );
+	}
+}
+
+if ( ! function_exists( 'wpcmb_get_row' ) ) {
+	/**
+	 * The current row, without moving onto the next one.
+	 *
+	 * @since 1.16.0
+	 *
+	 * @param bool $format Whether to format the row's values.
+	 *
+	 * @return array<string, mixed> The row, or an empty array outside a loop.
+	 */
+	function wpcmb_get_row( bool $format = false ): array {
+		return wpcmb()->container()->get( Rows::class )->get( $format );
+	}
+}
+
+if ( ! function_exists( 'wpcmb_get_sub_field' ) ) {
+	/**
+	 * Read a value from the current row.
+	 *
+	 * @since 1.16.0
+	 *
+	 * @param string $selector Sub field name.
+	 * @param bool   $format   Whether to run the value through field-type formatting.
+	 *
+	 * @return mixed The value, the sub field's default, or null.
+	 */
+	function wpcmb_get_sub_field( string $selector, bool $format = true ): mixed {
+		return wpcmb()->container()->get( Rows::class )->sub( $selector, $format );
+	}
+}
+
+if ( ! function_exists( 'wpcmb_the_sub_field' ) ) {
+	/**
+	 * Echo a value from the current row, escaped for HTML output.
+	 *
+	 * Behaves as wpcmb_the_field() does: arrays are joined with a comma, and
+	 * anything that is not a scalar or a list of scalars prints nothing rather
+	 * than "Array".
+	 *
+	 * @since 1.16.0
+	 *
+	 * @param string $selector Sub field name.
+	 */
+	function wpcmb_the_sub_field( string $selector ): void {
+		$value = wpcmb_get_sub_field( $selector );
+
+		if ( is_array( $value ) ) {
+			$value = implode( ', ', array_filter( $value, 'is_scalar' ) );
+		}
+
+		if ( ! is_scalar( $value ) ) {
+			return;
+		}
+
+		echo esc_html( (string) $value );
+	}
+}
+
+if ( ! function_exists( 'wpcmb_get_sub_field_object' ) ) {
+	/**
+	 * The definition of a sub field of the current row.
+	 *
+	 * The one thing a plain foreach over the rows cannot reach: a sub field is
+	 * not in the top-level name index, so this is the only way a template gets
+	 * at its label, choices or default.
+	 *
+	 * @since 1.16.0
+	 *
+	 * @param string $selector Sub field name.
+	 *
+	 * @return array<string, mixed>|null
+	 */
+	function wpcmb_get_sub_field_object( string $selector ): ?array {
+		return wpcmb()->container()->get( Rows::class )->sub_field( $selector );
+	}
+}
+
+if ( ! function_exists( 'wpcmb_get_row_layout' ) ) {
+	/**
+	 * Which layout the current flexible content row is.
+	 *
+	 * @since 1.16.0
+	 *
+	 * @return string Layout name, or an empty string for a plain repeater.
+	 */
+	function wpcmb_get_row_layout(): string {
+		return wpcmb()->container()->get( Rows::class )->layout();
+	}
+}
+
+if ( ! function_exists( 'wpcmb_get_row_index' ) ) {
+	/**
+	 * The current row's position, counting from one.
+	 *
+	 * @since 1.16.0
+	 *
+	 * @return int Zero outside a loop.
+	 */
+	function wpcmb_get_row_index(): int {
+		return wpcmb()->container()->get( Rows::class )->index();
+	}
+}
+
+if ( ! function_exists( 'wpcmb_count_rows' ) ) {
+	/**
+	 * How many rows the current loop holds.
+	 *
+	 * @since 1.16.0
+	 *
+	 * @return int Zero outside a loop.
+	 */
+	function wpcmb_count_rows(): int {
+		return wpcmb()->container()->get( Rows::class )->count();
+	}
+}
+
+if ( ! function_exists( 'wpcmb_reset_rows' ) ) {
+	/**
+	 * Close every open row loop.
+	 *
+	 * Needed after breaking out of a loop part way through, which otherwise
+	 * leaves it open and makes the next loop over the same field resume where
+	 * that one stopped.
+	 *
+	 * @since 1.16.0
+	 */
+	function wpcmb_reset_rows(): void {
+		wpcmb()->container()->get( Rows::class )->reset();
+	}
+}
+
+if ( ! function_exists( 'wpcmb_add_row' ) ) {
+	/**
+	 * Append a row to a repeater.
+	 *
+	 * The row goes through the same sanitizing an edit screen does, so this
+	 * cannot store what the admin would refuse.
+	 *
+	 * @since 1.16.0
+	 *
+	 * @param string               $selector   Field name.
+	 * @param array<string, mixed> $row        Values keyed by sub field name.
+	 * @param mixed                $identifier Object identifier.
+	 *
+	 * @return int The number of rows now stored, or 0 if nothing was written.
+	 */
+	function wpcmb_add_row( string $selector, array $row, mixed $identifier = null ): int {
+		return wpcmb()->container()->get( Rows::class )->add( $selector, $row, $identifier );
+	}
+}
+
+if ( ! function_exists( 'wpcmb_update_row' ) ) {
+	/**
+	 * Replace one row of a repeater.
+	 *
+	 * @since 1.16.0
+	 *
+	 * @param string               $selector   Field name.
+	 * @param int                  $index      Row position, counting from one.
+	 * @param array<string, mixed> $row        Values keyed by sub field name.
+	 * @param mixed                $identifier Object identifier.
+	 */
+	function wpcmb_update_row( string $selector, int $index, array $row, mixed $identifier = null ): bool {
+		return wpcmb()->container()->get( Rows::class )->update( $selector, $index, $row, $identifier );
+	}
+}
+
+if ( ! function_exists( 'wpcmb_delete_row' ) ) {
+	/**
+	 * Remove one row of a repeater.
+	 *
+	 * @since 1.16.0
+	 *
+	 * @param string $selector   Field name.
+	 * @param int    $index      Row position, counting from one.
+	 * @param mixed  $identifier Object identifier.
+	 */
+	function wpcmb_delete_row( string $selector, int $index, mixed $identifier = null ): bool {
+		return wpcmb()->container()->get( Rows::class )->delete( $selector, $index, $identifier );
 	}
 }

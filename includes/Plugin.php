@@ -71,6 +71,14 @@ final class Plugin {
 		);
 
 		$this->container->set(
+			Fields\Rows::class,
+			static fn( Container $container ): Fields\Rows => new Fields\Rows(
+				$container->get( Fields\Values::class ),
+				$container->get( Fields\Repository::class )
+			)
+		);
+
+		$this->container->set(
 			Database\Portability::class,
 			static fn( Container $container ): Database\Portability => new Database\Portability( $container )
 		);
