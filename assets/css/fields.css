@@ -1767,3 +1767,22 @@ input.wpcmb-input[type="datetime-local"] {
 	margin: 0 0 6px;
 	padding: 0;
 }
+
+/*
+ * Field groups inside a widget form and a nav menu item panel.
+ *
+ * Both are narrow columns owned by core, so the fields get a rule above them
+ * to separate them from the settings core drew, and nothing else.
+ */
+
+.wpcmb-widget-fields,
+.wpcmb-menu-fields {
+	border-block-start: 1px solid var( --wpcmb-border );
+	margin-block-start: 12px;
+	padding-block-start: 10px;
+}
+
+.wpcmb-widget-fields__title,
+.wpcmb-menu-fields__title {
+	margin: 0 0 8px;
+}

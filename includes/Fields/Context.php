@@ -112,7 +112,7 @@ final class Context {
 			'user_role'                           => $this->user_roles(),
 			'user_form'                           => $this->extra['user_form'] ?? null,
 			'options_page'                        => ObjectRef::OPTION === $this->ref->type ? (string) $this->ref->id : null,
-			'widget'                              => $this->extra['widget'] ?? null,
+			'widget'                              => $this->widget(),
 			'block'                               => $this->extra['block'] ?? null,
 			'current_user'                        => $this->current_user(),
 			'current_user_role'                   => $this->current_user_roles(),
@@ -309,6 +309,24 @@ final class Context {
 
 	/**
 	 * The referenced term's taxonomy.
+	 */
+	/**
+	 * The widget being rendered, as both its own type and "all".
+	 *
+	 * Two values rather than one, so a group can be located on `text` or on
+	 * every widget. A rule matches when its value is any of the ones the
+	 * context reports, which is how post categories already work.
+	 *
+	 * @return array<int, string>|null
+	 */
+	private function widget(): ?array {
+		$id_base = (string) ( $this->extra['widget'] ?? '' );
+
+		return '' !== $id_base ? array( $id_base, 'all' ) : null;
+	}
+
+	/**
+	 * The taxonomy of the referenced term, or of the screen adding one.
 	 */
 	private function taxonomy(): ?string {
 		if ( ObjectRef::TERM !== $this->ref->type ) {

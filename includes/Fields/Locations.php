@@ -658,7 +658,15 @@ final class Locations {
 			}
 		}
 
-		return $widgets;
+		asort( $widgets );
+
+		/*
+		 * "All" first, the way the attachment and menu item rules offer it.
+		 * A group of fields for every widget is a common thing to want and was
+		 * impossible to say: the list held one entry per widget type and
+		 * nothing that meant all of them.
+		 */
+		return array( 'all' => __( 'All widgets', 'metafields-custom-fields' ) ) + $widgets;
 	}
 
 	/**

@@ -348,3 +348,92 @@ test( 'the marker itself is gone once its section exists', () => {
 	// field wrapper sitting between the sections.
 	assert.equal( page.$$( '[data-wpcmb-accordion]' ).length, 0 );
 } );
+
+/*
+ * A legacy widget's form is fetched over REST and injected by the block
+ * widgets editor and the Customizer, long after the page loaded. Nothing
+ * initialised it, so those fields rendered inert: a media button that did
+ * nothing, an icon picker that never opened, conditional logic that never ran.
+ *
+ * These wait a tick before injecting anything. jsdom fires a second
+ * DOMContentLoaded of its own shortly after construction, which re-runs the
+ * script's load handler — and a test that injected before that landed would
+ * pass whether or not the observer existed, which is exactly how the first
+ * version of this test fooled itself.
+ */
+
+/**
+ * Let pending timers and microtasks run.
+ *
+ * @return {Promise} Resolves on the next macrotask.
+ */
+function tick() {
+	return new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+}
+
+test( 'field markup injected after load is initialised', async () => {
+	const page = conditionalPage();
+	const { document } = page.window;
+
+	// Let the harness's load handling finish, so only the observer can act.
+	await tick();
+
+	const host = document.createElement( 'div' );
+	host.innerHTML = fixture( 'conditional' );
+	document.body.appendChild( host );
+
+	await tick();
+
+	const injected = host.querySelector( '.wpcmb-group-fields' );
+
+	assert.ok( injected, 'the injected markup is in the document' );
+	assert.equal( injected.dataset.wpcmbReady, '1', 'the observer initialised it' );
+
+	/*
+	 * And it is really initialised, not just marked: conditional logic has
+	 * run over the injected copy and hidden the field whose rule is unmet.
+	 */
+	const dependent = injected.querySelector( '[data-wpcmb-name="extra"]' );
+
+	assert.ok( dependent, 'the injected copy has the conditional field' );
+	assert.ok( dependent.hidden, 'and conditional logic has been applied to it' );
+} );
+
+test( 'an injected group is initialised once, however it is moved', async () => {
+	/*
+	 * Tabs, because a second initialisation leaves a mark there: initTabs
+	 * builds a tab bar from the markers it finds, so running it twice over
+	 * the same group builds two.
+	 */
+	const page = setup( { html: '', scripts: [ 'fields.js' ], globals } );
+	const { document } = page.window;
+
+	await tick();
+
+	const host = document.createElement( 'div' );
+	host.innerHTML = fixture( 'tabs' );
+	document.body.appendChild( host );
+
+	await tick();
+
+	const injected = host.querySelector( '.wpcmb-group-fields' );
+
+	assert.equal( injected.dataset.wpcmbReady, '1', 'the observer initialised it' );
+
+	const bars = injected.querySelectorAll( '.wpcmb-tabs' ).length;
+
+	assert.equal( bars, 1, 'and built one tab bar' );
+
+	// Moving nodes around is the block editor's whole way of working.
+	const elsewhere = document.createElement( 'div' );
+	document.body.appendChild( elsewhere );
+	elsewhere.appendChild( injected );
+
+	await tick();
+
+	assert.equal(
+		injected.querySelectorAll( '.wpcmb-tabs' ).length,
+		bars,
+		'a moved group is not initialised a second time'
+	);
+} );

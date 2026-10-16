@@ -282,6 +282,23 @@ final class Assets extends Module {
 	 * far more, on screens that render nothing.
 	 */
 	private function enqueue_fields(): void {
+		/*
+		 * Widgets and nav menus come first and unconditionally.
+		 *
+		 * Neither screen shows one object: the widgets screen lists every
+		 * widget in every sidebar and the menus screen every item in a menu,
+		 * so there is no reference to resolve groups against and no way to
+		 * know whether any of them will draw fields without checking all of
+		 * them. Loading the field assets on three admin screens is cheaper
+		 * than that, and the alternative is controls with no styles and a
+		 * media button that does nothing.
+		 */
+		if ( $this->is_widget_or_menu_screen() ) {
+			$this->enqueue_field_assets( null );
+
+			return;
+		}
+
 		$ref = $this->current_object();
 
 		/*
@@ -302,6 +319,32 @@ final class Assets extends Module {
 			return;
 		}
 
+		$this->enqueue_field_assets( $ref );
+	}
+
+	/**
+	 * Whether this screen lists widgets or nav menu items.
+	 *
+	 * The Customizer counts: a widget form inside it is the same form, drawn
+	 * by the same hook.
+	 */
+	private function is_widget_or_menu_screen(): bool {
+		if ( is_customize_preview() || ( function_exists( 'wp_doing_ajax' ) && wp_doing_ajax() ) ) {
+			return false;
+		}
+
+		$screen = get_current_screen();
+
+		return $screen instanceof \WP_Screen
+			&& in_array( $screen->base, array( 'widgets', 'nav-menus', 'customize' ), true );
+	}
+
+	/**
+	 * Enqueue the field stylesheet, scripts and their configuration.
+	 *
+	 * @param ObjectRef|null $ref The object the screen shows, when it shows one.
+	 */
+	private function enqueue_field_assets( ?ObjectRef $ref ): void {
 		wp_enqueue_media();
 
 		wp_enqueue_style(
@@ -328,7 +371,7 @@ final class Assets extends Module {
 				'dashicons' => Enhanced::dashicons(),
 				// What "uploaded to this item" means, when the screen is a
 				// post. Zero everywhere else, where the filter has no subject.
-				'postId'    => ObjectRef::POST === $ref->type ? (int) $ref->id : 0,
+				'postId'    => null !== $ref && ObjectRef::POST === $ref->type ? (int) $ref->id : 0,
 				'i18n'      => array(
 					'remove'             => __( 'Remove', 'metafields-custom-fields' ),
 					'searchOptions'      => __( 'Search options', 'metafields-custom-fields' ),
@@ -415,7 +458,7 @@ final class Assets extends Module {
 			array(
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
 				'nonce'   => wp_create_nonce( Ajax::NONCE ),
-				'object'  => (string) $ref,
+				'object'  => null !== $ref ? (string) $ref : '',
 				'i18n'    => array(
 					'blocked'   => __( 'This cannot be saved yet:', 'metafields-custom-fields' ),
 					'showField' => __( 'Show me', 'metafields-custom-fields' ),

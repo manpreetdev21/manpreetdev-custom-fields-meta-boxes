@@ -608,10 +608,59 @@
 		} );
 	}
 
+	/**
+	 * Initialise field markup that arrived after the page did.
+	 *
+	 * A legacy widget's form is fetched over REST and injected by the block
+	 * widgets editor and the Customizer, long after DOMContentLoaded. Without
+	 * this, those fields render and nothing wires them up: the media button
+	 * does nothing, the icon picker never opens, and conditional logic never
+	 * runs.
+	 *
+	 * Each group is marked once, so a group that moves around the DOM — which
+	 * is the editor's whole way of working — is not initialised again.
+	 */
+	function watch() {
+		if ( ! window.MutationObserver ) {
+			return;
+		}
+
+		new window.MutationObserver( function ( records ) {
+			records.forEach( function ( record ) {
+				Array.prototype.forEach.call( record.addedNodes, function ( node ) {
+					if ( ! node || 1 !== node.nodeType ) {
+						return;
+					}
+
+					var groups = node.matches( '.wpcmb-group-fields' )
+						? [ node ]
+						: Array.prototype.slice.call( node.querySelectorAll( '.wpcmb-group-fields' ) );
+
+					groups.forEach( function ( group ) {
+						if ( group.dataset.wpcmbReady ) {
+							return;
+						}
+
+						group.dataset.wpcmbReady = '1';
+						init( group );
+					} );
+				} );
+			} );
+		} ).observe( document.body, { childList: true, subtree: true } );
+	}
+
 	window.wpcmb = window.wpcmb || {};
 	window.wpcmb.initFields = init;
 
 	document.addEventListener( 'DOMContentLoaded', function () {
 		init( document );
+
+		// Everything already on the page is done; the observer is only for
+		// what turns up later.
+		document.querySelectorAll( '.wpcmb-group-fields' ).forEach( function ( group ) {
+			group.dataset.wpcmbReady = '1';
+		} );
+
+		watch();
 	} );
 }() );

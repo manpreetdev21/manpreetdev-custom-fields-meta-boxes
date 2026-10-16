@@ -197,6 +197,8 @@ final class Plugin {
 			Admin\FormEditor::class,
 			Admin\OptionsPageEditor::class,
 			Admin\MetaBoxes::class,
+			Admin\WidgetFields::class,
+			Admin\NavMenuFields::class,
 			Admin\Ajax::class,
 			Admin\OptionsPages::class,
 			Admin\Submissions::class,
