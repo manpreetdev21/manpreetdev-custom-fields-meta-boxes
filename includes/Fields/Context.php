@@ -352,10 +352,18 @@ final class Context {
 	}
 
 	/**
-	 * The referenced term id, when it is a nav menu.
+	 * The referenced menu, as both its own id and "all".
+	 *
+	 * @return array<int, string>|null
 	 */
-	private function nav_menu(): ?string {
-		return 'nav_menu' === $this->taxonomy() ? (string) $this->ref->id : null;
+	private function nav_menu(): ?array {
+		if ( 'nav_menu' !== $this->taxonomy() ) {
+			return null;
+		}
+
+		// The menu's own id and "all", so a group can be located on one menu
+		// or on every one of them. Same shape as the widget rule.
+		return array( (string) $this->ref->id, 'all' );
 	}
 
 	/**

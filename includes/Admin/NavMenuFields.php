@@ -133,10 +133,12 @@ final class NavMenuFields extends Module {
 			return;
 		}
 
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Each value is sanitized by its own field type below; a blanket sanitizer here would flatten the arrays composite types post.
-		$all = isset( $_POST[ Renderer::INPUT_PREFIX ] ) && is_array( $_POST[ Renderer::INPUT_PREFIX ] )
-			? wp_unslash( $_POST[ Renderer::INPUT_PREFIX ] )
-			: array();
+		$all = array();
+
+		if ( isset( $_POST[ Renderer::INPUT_PREFIX ] ) && is_array( $_POST[ Renderer::INPUT_PREFIX ] ) ) {
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Each value is sanitized by its own field type below; a blanket sanitizer here would flatten the arrays composite types post.
+			$all = wp_unslash( $_POST[ Renderer::INPUT_PREFIX ] );
+		}
 
 		if ( ! isset( $all[ $item_id ] ) || ! is_array( $all[ $item_id ] ) ) {
 			return;

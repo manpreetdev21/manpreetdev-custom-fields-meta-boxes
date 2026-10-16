@@ -4,7 +4,7 @@ Tags: custom fields, meta box, repeater, options page, custom post type
 Requires at least: 6.8
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.12.1
+Stable tag: 1.14.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -95,6 +95,21 @@ Yes. Every string is translatable under the `metafields-custom-fields` text doma
 5. The field group list, with each group's key, field count and location.
 
 == Changelog ==
+
+= 1.14.0 =
+* The last location rule that drew nothing now draws: a field group located on a menu renders under Menu Settings on the Menus screen, beside Auto add pages and Menu location, and saves with the Save Menu button.
+* Menu values are term meta on the menu, because a menu is a term. Read them with wpcmb_get_field( 'note', 'term_' . $menu_id ).
+* New location choice: All menus, matching the All widgets choice added last release.
+* WordPress provides no hook inside the menu editor — its only action on that screen belongs to another tab, and the panels that look like the menu's own are in a second form whose action is "add menu item". The fields are therefore printed at the end of the page and moved into the menu form by a short inline script. With that script blocked they say so rather than appearing to save and not saving.
+
+= 1.13.0 =
+* Widgets and nav menu items now draw their fields. Both location rules have matched since the first release and had nothing hooked to the form, so a group located on either showed nothing anywhere.
+* Widget values live inside the widget instance, where WordPress keeps the rest of a widget's settings: they are copied when a widget is duplicated, carried when it moves sidebar, and deleted with the widget. Read them with wpcmb_get_field( 'name', 'options_widget_text-3' ).
+* Customizer support comes with it. A widget form in the Customizer is the same form drawn by the same hook, and it saves through the same callback — which is all "Customizer support" has ever meant.
+* Legacy widgets in the block widgets editor work too. Their forms arrive over REST and are injected into the page, so the field script now watches for markup that turns up after load and wires it up.
+* New location choice: All widgets. The list offered one entry per widget type and no way to say every one of them.
+* Fixed: wpcmb.initFields() did nothing when handed a single field group rather than a container of them, so tabs and accordions were skipped in any injected markup.
+* Nav menu item values are post meta on the item, since a menu item is a post — nothing new to store, and wpcmb_get_field( 'icon', $item->ID ) works in a walker.
 
 = 1.12.1 =
 * Fixed: a field group located on a taxonomy appeared when editing a term but not on the Add New Term form. Only the edit hook was ever registered, and the location rule could not match on that form anyway because it works out the taxonomy from the term — of which there is none yet. The screen now supplies the taxonomy, the same way it already supplies which user form or widget it is.

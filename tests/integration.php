@@ -1555,6 +1555,126 @@ wpcmb_group(
 	}
 );
 
+wpcmb_group(
+	'a group located on a menu renders on the menu and saves as term meta',
+	static function (): void {
+		$menu_name = 'Integration menu ' . wp_generate_password( 6, false, false );
+		$menu_id   = wp_create_nav_menu( $menu_name );
+
+		wpcmb_is( ! is_wp_error( $menu_id ), 'the fixture menu was created' );
+
+		if ( is_wp_error( $menu_id ) ) {
+			return;
+		}
+
+		$menu_id = (int) $menu_id;
+
+		wpcmb_group_fixture(
+			array(
+				'title'    => 'Integration menu group',
+				'location' => array( array( array( 'param' => 'nav_menu', 'operator' => '==', 'value' => 'all' ) ) ),
+				'fields'   => array( array( 'name' => 'imenu_note', 'label' => 'Note', 'type' => 'text' ) ),
+			)
+		);
+
+		$resolver = wpcmb()->container()->get( WPCMB\Fields\Resolver::class );
+		$ref      = new WPCMB\Fields\ObjectRef( WPCMB\Fields\ObjectRef::TERM, $menu_id );
+
+		$matched = $resolver->groups( new WPCMB\Fields\Context( $ref ) );
+
+		wpcmb_is( array() !== $matched, 'a menu resolves the group located on all menus' );
+
+		// A menu located on one specific menu must not appear on another.
+		wpcmb_group_fixture(
+			array(
+				'title'    => 'Integration one menu only',
+				'location' => array( array( array( 'param' => 'nav_menu', 'operator' => '==', 'value' => (string) $menu_id ) ) ),
+				'fields'   => array( array( 'name' => 'imenu_only', 'label' => 'Only', 'type' => 'text' ) ),
+			)
+		);
+
+		$fields = $resolver->fields( new WPCMB\Fields\Context( $ref ) );
+
+		wpcmb_is( isset( $fields['imenu_only'] ), 'and the group located on that one menu' );
+
+		$other = wp_create_nav_menu( 'Integration other ' . wp_generate_password( 6, false, false ) );
+
+		if ( ! is_wp_error( $other ) ) {
+			$others = $resolver->fields(
+				new WPCMB\Fields\Context( new WPCMB\Fields\ObjectRef( WPCMB\Fields\ObjectRef::TERM, (int) $other ) )
+			);
+
+			wpcmb_is( ! isset( $others['imenu_only'] ), 'but not on a different menu' );
+			wpcmb_is( isset( $others['imenu_note'] ), 'while the all-menus group appears on both' );
+
+			wp_delete_nav_menu( (int) $other );
+		}
+
+		/*
+		 * The screen has no hook inside the menu form, so the markup is
+		 * printed at the end of the page and moved in by script. What is
+		 * asserted here is that the markup, the nonce and the relocation
+		 * script are all printed for the menu core says is selected.
+		 */
+		global $nav_menu_selected_id;
+
+		$was                  = $nav_menu_selected_id;
+		$nav_menu_selected_id = $menu_id;
+
+		$settings = new WPCMB\Admin\NavMenuSettings( wpcmb()->container() );
+
+		ob_start();
+		$settings->render();
+		$html = (string) ob_get_clean();
+
+		wpcmb_is( str_contains( $html, 'imenu_note' ), 'the menu fields are printed' );
+		wpcmb_is( str_contains( $html, 'wpcmb_menu_settings_nonce' ), 'with their own nonce' );
+		wpcmb_is( str_contains( $html, 'update-nav-menu' ), 'and the script that moves them into the menu form' );
+
+		// Menu items post wpcmb_values[12][x] on the same form, so a menu's
+		// own fields use a key of their own or an id collision reads the
+		// wrong values.
+		wpcmb_is( str_contains( $html, 'wpcmb_menu_values[imenu_note]' ), 'under a request key of their own' );
+
+		/* Saving, as the Save Menu button does it. */
+		$_POST['wpcmb_menu_settings_nonce'] = wp_create_nonce( 'wpcmb_save_nav_menu_settings' );
+		$_POST['wpcmb_menu_values']         = array( 'imenu_note' => '  Spaced  ' );
+
+		$settings->save( $menu_id );
+
+		wpcmb_is( 'Spaced' === get_term_meta( $menu_id, 'imenu_note', true ), 'a submitted value is sanitized and stored as term meta' );
+
+		/*
+		 * A field that was not on the form keeps what it had.
+		 *
+		 * A menu can be saved from a screen showing a narrower set of fields
+		 * than the one that filled them in — a group deactivated, a location
+		 * rule changed — and writing an empty value for everything missing
+		 * would wipe values nobody was shown.
+		 */
+		$_POST['wpcmb_menu_values'] = array();
+
+		$settings->save( $menu_id );
+
+		wpcmb_is( 'Spaced' === get_term_meta( $menu_id, 'imenu_note', true ), 'a field absent from the submission is left alone' );
+
+		// Without the nonce nothing is written, which is the whole reason the
+		// markup carries one of its own.
+		unset( $_POST['wpcmb_menu_settings_nonce'] );
+		$_POST['wpcmb_menu_values'] = array( 'imenu_note' => 'Unsigned' );
+
+		$settings->save( $menu_id );
+
+		wpcmb_is( 'Spaced' === get_term_meta( $menu_id, 'imenu_note', true ), 'and an unsigned submission writes nothing' );
+
+		unset( $_POST['wpcmb_menu_values'] );
+
+		$nav_menu_selected_id = $was;
+
+		wp_delete_nav_menu( $menu_id );
+	}
+);
+
 /* -------------------------------------------------------------------------
  * Clean up everything this run created.
  * ---------------------------------------------------------------------- */

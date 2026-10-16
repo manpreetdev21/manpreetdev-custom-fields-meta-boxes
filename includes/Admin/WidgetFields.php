@@ -112,20 +112,20 @@ final class WidgetFields extends Module {
 	 * Render matching groups inside a widget's form.
 	 *
 	 * @param \WP_Widget           $widget   Widget instance.
-	 * @param null|bool            $return   Whether the form returned markup.
+	 * @param null|bool            $rendered Whether the widget's own form returned markup.
 	 * @param array<string, mixed> $instance Widget settings.
 	 *
 	 * @return null|bool
 	 */
-	public function render( $widget, $return = null, $instance = array() ) {
+	public function render( $widget, $rendered = null, $instance = array() ) {
 		if ( ! $widget instanceof \WP_Widget ) {
-			return $return;
+			return $rendered;
 		}
 
 		$groups = $this->groups( (string) $widget->id_base, (string) $widget->id );
 
 		if ( array() === $groups ) {
-			return $return;
+			return $rendered;
 		}
 
 		$ref      = self::ref( (string) $widget->id );
@@ -154,7 +154,7 @@ final class WidgetFields extends Module {
 			echo '</div>';
 		}
 
-		return $return;
+		return $rendered;
 	}
 
 	/**

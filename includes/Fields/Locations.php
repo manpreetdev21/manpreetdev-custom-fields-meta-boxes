@@ -639,7 +639,10 @@ final class Locations {
 			$menus[ (string) $menu->term_id ] = $menu->name;
 		}
 
-		return $menus;
+		// "All" first, as the widget and attachment rules offer it. Fields
+		// that belong on every menu are the common case, and the list held
+		// one entry per menu and no way to say all of them.
+		return array( 'all' => __( 'All menus', 'metafields-custom-fields' ) ) + $menus;
 	}
 
 	/**

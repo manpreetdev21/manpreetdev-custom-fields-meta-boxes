@@ -1786,3 +1786,19 @@ input.wpcmb-input[type="datetime-local"] {
 .wpcmb-menu-fields__title {
 	margin: 0 0 8px;
 }
+
+/*
+ * A menu's own fields, moved into the menu settings by script.
+ *
+ * They borrow core's `menu-settings-group` so they sit beside Auto add pages
+ * and Menu location as if they had always been there; only the spacing below
+ * is ours.
+ */
+
+.wpcmb-menu-settings__group .wpcmb-group-fields {
+	margin-block-start: 6px;
+}
+
+.wpcmb-menu-settings__fallback {
+	color: var( --wpcmb-muted );
+}

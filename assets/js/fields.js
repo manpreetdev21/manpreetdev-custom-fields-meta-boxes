@@ -589,10 +589,23 @@
 	function init( root ) {
 		root = root || document;
 
+		/*
+		 * A group, or something containing groups.
+		 *
+		 * `querySelectorAll` never returns the element it was called on, so
+		 * handing this function a single group — which is what the observer
+		 * below does, and what anyone calling `wpcmb.initFields` on injected
+		 * markup would do — found no groups at all, and tabs and accordions
+		 * were silently skipped.
+		 */
+		var groups = root.matches && root.matches( '.wpcmb-group-fields' )
+			? [ root ]
+			: Array.prototype.slice.call( root.querySelectorAll( '.wpcmb-group-fields' ) );
+
 		// Tabs first: an accordion inside a tab has to be sliced within its
 		// panel, and the panel does not exist until initTabs has built it.
-		root.querySelectorAll( '.wpcmb-group-fields' ).forEach( initTabs );
-		root.querySelectorAll( '.wpcmb-group-fields' ).forEach( initAccordions );
+		groups.forEach( initTabs );
+		groups.forEach( initAccordions );
 		root.querySelectorAll( '[data-wpcmb-media]' ).forEach( initMedia );
 
 		initColors( root );
