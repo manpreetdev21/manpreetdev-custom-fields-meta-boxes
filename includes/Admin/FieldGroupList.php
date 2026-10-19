@@ -72,11 +72,11 @@ final class FieldGroupList extends Module {
 	public function columns( $columns ): array {
 		return array(
 			'cb'             => $columns['cb'] ?? '',
-			'title'          => __( 'Title', 'metafields-custom-fields' ),
-			'wpcmb_key'      => __( 'Key', 'metafields-custom-fields' ),
-			'wpcmb_fields'   => __( 'Fields', 'metafields-custom-fields' ),
-			'wpcmb_location' => __( 'Location', 'metafields-custom-fields' ),
-			'date'           => __( 'Modified', 'metafields-custom-fields' ),
+			'title'          => __( 'Title', 'manpreetdev-custom-fields-meta-boxes' ),
+			'wpcmb_key'      => __( 'Key', 'manpreetdev-custom-fields-meta-boxes' ),
+			'wpcmb_fields'   => __( 'Fields', 'manpreetdev-custom-fields-meta-boxes' ),
+			'wpcmb_location' => __( 'Location', 'manpreetdev-custom-fields-meta-boxes' ),
+			'date'           => __( 'Modified', 'manpreetdev-custom-fields-meta-boxes' ),
 		);
 	}
 
@@ -121,7 +121,7 @@ final class FieldGroupList extends Module {
 				printf(
 					'<span class="wpcmb-cell-count%s">%s</span>',
 					0 === $count ? ' is-empty' : '',
-					esc_html( 0 === $count ? __( 'None', 'metafields-custom-fields' ) : (string) $count )
+					esc_html( 0 === $count ? __( 'None', 'manpreetdev-custom-fields-meta-boxes' ) : (string) $count )
 				);
 				break;
 
@@ -131,7 +131,7 @@ final class FieldGroupList extends Module {
 				printf(
 					'<span class="wpcmb-cell-location%s">%s</span>',
 					'' === $summary ? ' is-unset' : '',
-					esc_html( '' !== $summary ? $summary : __( 'Not set', 'metafields-custom-fields' ) )
+					esc_html( '' !== $summary ? $summary : __( 'Not set', 'manpreetdev-custom-fields-meta-boxes' ) )
 				);
 				break;
 		}
@@ -207,7 +207,7 @@ final class FieldGroupList extends Module {
 		$actions['wpcmb_duplicate'] = sprintf(
 			'<a href="%s">%s</a>',
 			esc_url( $url ),
-			esc_html__( 'Duplicate', 'metafields-custom-fields' )
+			esc_html__( 'Duplicate', 'manpreetdev-custom-fields-meta-boxes' )
 		);
 
 		return $actions;
@@ -229,7 +229,7 @@ final class FieldGroupList extends Module {
 			&& 'draft' === $post->post_status
 		) {
 			unset( $states['draft'] );
-			$states['wpcmb_inactive'] = __( 'Inactive', 'metafields-custom-fields' );
+			$states['wpcmb_inactive'] = __( 'Inactive', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
 		return $states;
@@ -258,7 +258,7 @@ final class FieldGroupList extends Module {
 		check_admin_referer( self::ACTION_DUPLICATE . '_' . $post_id );
 
 		if ( ! current_user_can( FieldGroupPostType::capability() ) ) {
-			wp_die( esc_html__( 'You do not have permission to duplicate field groups.', 'metafields-custom-fields' ) );
+			wp_die( esc_html__( 'You do not have permission to duplicate field groups.', 'manpreetdev-custom-fields-meta-boxes' ) );
 		}
 
 		$new_id = $this->container->get( Repository::class )->duplicate( $post_id );
@@ -282,7 +282,7 @@ final class FieldGroupList extends Module {
 
 		printf(
 			'<div class="notice notice-success is-dismissible"><p>%s</p></div>',
-			esc_html__( 'Field group duplicated. It is inactive until you publish it.', 'metafields-custom-fields' )
+			esc_html__( 'Field group duplicated. It is inactive until you publish it.', 'manpreetdev-custom-fields-meta-boxes' )
 		);
 	}
 

@@ -155,7 +155,7 @@ final class Schema {
 					Flexible::LAYOUT_KEY => array(
 						'type'        => 'string',
 						'enum'        => $names,
-						'description' => __( 'Which layout this row uses.', 'metafields-custom-fields' ),
+						'description' => __( 'Which layout this row uses.', 'manpreetdev-custom-fields-meta-boxes' ),
 					),
 				),
 			)

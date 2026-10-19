@@ -66,7 +66,7 @@ final class Submissions extends Module {
 
 		add_meta_box(
 			'wpcmb-submission',
-			__( 'Submitted values', 'metafields-custom-fields' ),
+			__( 'Submitted values', 'manpreetdev-custom-fields-meta-boxes' ),
 			function ( $post ): void {
 				$this->render( $post instanceof \WP_Post ? $post : null );
 			},
@@ -91,7 +91,7 @@ final class Submissions extends Module {
 		if ( ! $group instanceof FieldGroup ) {
 			printf(
 				'<p class="wpcmb-submission__empty">%s</p>',
-				esc_html__( 'The field group this came from no longer exists, so its values cannot be labelled.', 'metafields-custom-fields' )
+				esc_html__( 'The field group this came from no longer exists, so its values cannot be labelled.', 'manpreetdev-custom-fields-meta-boxes' )
 			);
 
 			return;
@@ -119,7 +119,7 @@ final class Submissions extends Module {
 		if ( '' === $rows ) {
 			printf(
 				'<p class="wpcmb-submission__empty">%s</p>',
-				esc_html__( 'This submission is empty.', 'metafields-custom-fields' )
+				esc_html__( 'This submission is empty.', 'manpreetdev-custom-fields-meta-boxes' )
 			);
 
 			return;
@@ -142,7 +142,7 @@ final class Submissions extends Module {
 		if ( '' !== $source ) {
 			printf(
 				'<p class="wpcmb-submission__source">%s <a href="%s">%s</a></p>',
-				esc_html__( 'Submitted from', 'metafields-custom-fields' ),
+				esc_html__( 'Submitted from', 'manpreetdev-custom-fields-meta-boxes' ),
 				esc_url( $source ),
 				esc_html( $source )
 			);
@@ -160,7 +160,7 @@ final class Submissions extends Module {
 	 */
 	private function display( mixed $value ): string {
 		if ( is_bool( $value ) ) {
-			return esc_html( $value ? __( 'Yes', 'metafields-custom-fields' ) : __( 'No', 'metafields-custom-fields' ) );
+			return esc_html( $value ? __( 'Yes', 'manpreetdev-custom-fields-meta-boxes' ) : __( 'No', 'manpreetdev-custom-fields-meta-boxes' ) );
 		}
 
 		if ( is_scalar( $value ) ) {
@@ -217,11 +217,11 @@ final class Submissions extends Module {
 
 		unset( $columns['author'] );
 
-		$date = $columns['date'] ?? __( 'Date', 'metafields-custom-fields' );
+		$date = $columns['date'] ?? __( 'Date', 'manpreetdev-custom-fields-meta-boxes' );
 
 		unset( $columns['date'] );
 
-		$columns['wpcmb_from'] = __( 'From', 'metafields-custom-fields' );
+		$columns['wpcmb_from'] = __( 'From', 'manpreetdev-custom-fields-meta-boxes' );
 		$columns['date']       = $date;
 
 		return $columns;
@@ -249,6 +249,6 @@ final class Submissions extends Module {
 			return;
 		}
 
-		echo esc_html__( 'A visitor', 'metafields-custom-fields' );
+		echo esc_html__( 'A visitor', 'manpreetdev-custom-fields-meta-boxes' );
 	}
 }

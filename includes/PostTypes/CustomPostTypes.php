@@ -74,8 +74,8 @@ final class CustomPostTypes extends RecordType {
 	 */
 	public function names(): array {
 		return array(
-			'singular' => __( 'Post Type', 'metafields-custom-fields' ),
-			'plural'   => __( 'Post Types', 'metafields-custom-fields' ),
+			'singular' => __( 'Post Type', 'manpreetdev-custom-fields-meta-boxes' ),
+			'plural'   => __( 'Post Types', 'manpreetdev-custom-fields-meta-boxes' ),
 		);
 	}
 
@@ -115,17 +115,17 @@ final class CustomPostTypes extends RecordType {
 	 */
 	public static function features(): array {
 		return array(
-			'title'           => __( 'Title', 'metafields-custom-fields' ),
-			'editor'          => __( 'Editor', 'metafields-custom-fields' ),
-			'excerpt'         => __( 'Excerpt', 'metafields-custom-fields' ),
-			'thumbnail'       => __( 'Featured image', 'metafields-custom-fields' ),
-			'author'          => __( 'Author', 'metafields-custom-fields' ),
-			'comments'        => __( 'Comments', 'metafields-custom-fields' ),
-			'trackbacks'      => __( 'Trackbacks', 'metafields-custom-fields' ),
-			'revisions'       => __( 'Revisions', 'metafields-custom-fields' ),
-			'custom-fields'   => __( 'Custom fields', 'metafields-custom-fields' ),
-			'page-attributes' => __( 'Page attributes', 'metafields-custom-fields' ),
-			'post-formats'    => __( 'Post formats', 'metafields-custom-fields' ),
+			'title'           => __( 'Title', 'manpreetdev-custom-fields-meta-boxes' ),
+			'editor'          => __( 'Editor', 'manpreetdev-custom-fields-meta-boxes' ),
+			'excerpt'         => __( 'Excerpt', 'manpreetdev-custom-fields-meta-boxes' ),
+			'thumbnail'       => __( 'Featured image', 'manpreetdev-custom-fields-meta-boxes' ),
+			'author'          => __( 'Author', 'manpreetdev-custom-fields-meta-boxes' ),
+			'comments'        => __( 'Comments', 'manpreetdev-custom-fields-meta-boxes' ),
+			'trackbacks'      => __( 'Trackbacks', 'manpreetdev-custom-fields-meta-boxes' ),
+			'revisions'       => __( 'Revisions', 'manpreetdev-custom-fields-meta-boxes' ),
+			'custom-fields'   => __( 'Custom fields', 'manpreetdev-custom-fields-meta-boxes' ),
+			'page-attributes' => __( 'Page attributes', 'manpreetdev-custom-fields-meta-boxes' ),
+			'post-formats'    => __( 'Post formats', 'manpreetdev-custom-fields-meta-boxes' ),
 		);
 	}
 
@@ -246,26 +246,26 @@ final class CustomPostTypes extends RecordType {
 	 */
 	public function rejection( string $name, int $post_id = 0 ): string {
 		if ( '' === $name ) {
-			return __( 'A post type needs a name.', 'metafields-custom-fields' );
+			return __( 'A post type needs a name.', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
 		if ( in_array( $name, self::RESERVED, true ) ) {
 			return sprintf(
 				/* translators: %s: the reserved post type name. */
-				__( '"%s" is reserved by WordPress and cannot be used.', 'metafields-custom-fields' ),
+				__( '"%s" is reserved by WordPress and cannot be used.', 'manpreetdev-custom-fields-meta-boxes' ),
 				$name
 			);
 		}
 
 		if ( str_starts_with( $name, 'wp_' ) ) {
-			return __( 'Names beginning with wp_ are reserved by WordPress.', 'metafields-custom-fields' );
+			return __( 'Names beginning with wp_ are reserved by WordPress.', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
 		foreach ( $this->records( true ) as $id => $record ) {
 			if ( $id !== $post_id && ( $record['name'] ?? '' ) === $name ) {
 				return sprintf(
 					/* translators: %s: the post type name. */
-					__( 'Another record already registers "%s".', 'metafields-custom-fields' ),
+					__( 'Another record already registers "%s".', 'manpreetdev-custom-fields-meta-boxes' ),
 					$name
 				);
 			}
@@ -279,7 +279,7 @@ final class CustomPostTypes extends RecordType {
 		if ( post_type_exists( $name ) && ! $this->owns( $name ) ) {
 			return sprintf(
 				/* translators: %s: the post type name. */
-				__( '"%s" is already registered by something else on this site.', 'metafields-custom-fields' ),
+				__( '"%s" is already registered by something else on this site.', 'manpreetdev-custom-fields-meta-boxes' ),
 				$name
 			);
 		}
@@ -453,31 +453,31 @@ final class CustomPostTypes extends RecordType {
 			'menu_name'          => $plural,
 			'all_items'          => $plural,
 			/* translators: %s: singular post type name. */
-			'add_new_item'       => sprintf( __( 'Add %s', 'metafields-custom-fields' ), $singular ),
+			'add_new_item'       => sprintf( __( 'Add %s', 'manpreetdev-custom-fields-meta-boxes' ), $singular ),
 			/* translators: %s: singular post type name. */
-			'edit_item'          => sprintf( __( 'Edit %s', 'metafields-custom-fields' ), $singular ),
+			'edit_item'          => sprintf( __( 'Edit %s', 'manpreetdev-custom-fields-meta-boxes' ), $singular ),
 			/* translators: %s: singular post type name. */
-			'new_item'           => sprintf( __( 'New %s', 'metafields-custom-fields' ), $singular ),
+			'new_item'           => sprintf( __( 'New %s', 'manpreetdev-custom-fields-meta-boxes' ), $singular ),
 			/* translators: %s: singular post type name. */
-			'view_item'          => sprintf( __( 'View %s', 'metafields-custom-fields' ), $singular ),
+			'view_item'          => sprintf( __( 'View %s', 'manpreetdev-custom-fields-meta-boxes' ), $singular ),
 			/* translators: %s: plural post type name. */
-			'view_items'         => sprintf( __( 'View %s', 'metafields-custom-fields' ), $plural ),
+			'view_items'         => sprintf( __( 'View %s', 'manpreetdev-custom-fields-meta-boxes' ), $plural ),
 			/* translators: %s: plural post type name. */
-			'search_items'       => sprintf( __( 'Search %s', 'metafields-custom-fields' ), $plural ),
+			'search_items'       => sprintf( __( 'Search %s', 'manpreetdev-custom-fields-meta-boxes' ), $plural ),
 			/* translators: %s: lowercase plural post type name. */
-			'not_found'          => sprintf( __( 'No %s found.', 'metafields-custom-fields' ), strtolower( $plural ) ),
+			'not_found'          => sprintf( __( 'No %s found.', 'manpreetdev-custom-fields-meta-boxes' ), strtolower( $plural ) ),
 			/* translators: %s: lowercase plural post type name. */
-			'not_found_in_trash' => sprintf( __( 'No %s found in Trash.', 'metafields-custom-fields' ), strtolower( $plural ) ),
+			'not_found_in_trash' => sprintf( __( 'No %s found in Trash.', 'manpreetdev-custom-fields-meta-boxes' ), strtolower( $plural ) ),
 			/* translators: %s: singular post type name. */
-			'parent_item_colon'  => sprintf( __( 'Parent %s:', 'metafields-custom-fields' ), $singular ),
+			'parent_item_colon'  => sprintf( __( 'Parent %s:', 'manpreetdev-custom-fields-meta-boxes' ), $singular ),
 			/* translators: %s: lowercase singular post type name. */
-			'item_published'     => sprintf( __( '%s published.', 'metafields-custom-fields' ), $singular ),
+			'item_published'     => sprintf( __( '%s published.', 'manpreetdev-custom-fields-meta-boxes' ), $singular ),
 			/* translators: %s: singular post type name. */
-			'item_updated'       => sprintf( __( '%s updated.', 'metafields-custom-fields' ), $singular ),
+			'item_updated'       => sprintf( __( '%s updated.', 'manpreetdev-custom-fields-meta-boxes' ), $singular ),
 			/* translators: %s: plural post type name. */
-			'items_list'         => sprintf( __( '%s list', 'metafields-custom-fields' ), $plural ),
+			'items_list'         => sprintf( __( '%s list', 'manpreetdev-custom-fields-meta-boxes' ), $plural ),
 			/* translators: %s: lowercase plural post type name. */
-			'item_link'          => sprintf( __( '%s link', 'metafields-custom-fields' ), $singular ),
+			'item_link'          => sprintf( __( '%s link', 'manpreetdev-custom-fields-meta-boxes' ), $singular ),
 		);
 	}
 }

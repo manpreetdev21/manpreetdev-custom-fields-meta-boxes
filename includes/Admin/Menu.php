@@ -152,8 +152,8 @@ final class Menu extends Module {
 		$capability = FieldGroupPostType::capability();
 
 		add_menu_page(
-			__( 'Custom Meta Box', 'metafields-custom-fields' ),
-			__( 'Meta Boxes', 'metafields-custom-fields' ),
+			__( 'Custom Meta Box', 'manpreetdev-custom-fields-meta-boxes' ),
+			__( 'Meta Boxes', 'manpreetdev-custom-fields-meta-boxes' ),
 			$capability,
 			self::SLUG,
 			array( $this, 'render_overview' ),
@@ -163,8 +163,8 @@ final class Menu extends Module {
 
 		add_submenu_page(
 			self::SLUG,
-			__( 'Overview', 'metafields-custom-fields' ),
-			__( 'Overview', 'metafields-custom-fields' ),
+			__( 'Overview', 'manpreetdev-custom-fields-meta-boxes' ),
+			__( 'Overview', 'manpreetdev-custom-fields-meta-boxes' ),
 			$capability,
 			self::SLUG,
 			array( $this, 'render_overview' )
@@ -193,7 +193,7 @@ final class Menu extends Module {
 	 */
 	public function render_overview(): void {
 		if ( ! current_user_can( FieldGroupPostType::capability() ) ) {
-			wp_die( esc_html__( 'You do not have permission to view this page.', 'metafields-custom-fields' ) );
+			wp_die( esc_html__( 'You do not have permission to view this page.', 'manpreetdev-custom-fields-meta-boxes' ) );
 		}
 
 		$repository = $this->container->get( Repository::class );
@@ -202,41 +202,41 @@ final class Menu extends Module {
 
 		$cards = array(
 			array(
-				'title' => __( 'Create a field group', 'metafields-custom-fields' ),
-				'text'  => __( 'Define the fields you need, then choose the screens they appear on.', 'metafields-custom-fields' ),
+				'title' => __( 'Create a field group', 'manpreetdev-custom-fields-meta-boxes' ),
+				'text'  => __( 'Define the fields you need, then choose the screens they appear on.', 'manpreetdev-custom-fields-meta-boxes' ),
 				'url'   => admin_url( 'post-new.php?post_type=' . FieldGroupPostType::POST_TYPE ),
-				'label' => __( 'Add Field Group', 'metafields-custom-fields' ),
+				'label' => __( 'Add Field Group', 'manpreetdev-custom-fields-meta-boxes' ),
 			),
 			array(
-				'title' => __( 'Import and export', 'metafields-custom-fields' ),
-				'text'  => __( 'Move field groups between sites as JSON, or export them as PHP for version control.', 'metafields-custom-fields' ),
+				'title' => __( 'Import and export', 'manpreetdev-custom-fields-meta-boxes' ),
+				'text'  => __( 'Move field groups between sites as JSON, or export them as PHP for version control.', 'manpreetdev-custom-fields-meta-boxes' ),
 				'url'   => admin_url( 'admin.php?page=' . ToolsPage::SLUG ),
-				'label' => __( 'Open Tools', 'metafields-custom-fields' ),
+				'label' => __( 'Open Tools', 'manpreetdev-custom-fields-meta-boxes' ),
 			),
 			array(
-				'title' => __( 'Settings', 'metafields-custom-fields' ),
-				'text'  => __( 'Control the admin theme and what happens to your data when the plugin is deleted.', 'metafields-custom-fields' ),
+				'title' => __( 'Settings', 'manpreetdev-custom-fields-meta-boxes' ),
+				'text'  => __( 'Control the admin theme and what happens to your data when the plugin is deleted.', 'manpreetdev-custom-fields-meta-boxes' ),
 				'url'   => admin_url( 'admin.php?page=' . SettingsPage::SLUG ),
-				'label' => __( 'Open Settings', 'metafields-custom-fields' ),
+				'label' => __( 'Open Settings', 'manpreetdev-custom-fields-meta-boxes' ),
 			),
 		);
 
 		$inactive = count( $all ) - count( $active );
 		?>
 		<div class="wrap wpcmb-wrap">
-			<h1><?php esc_html_e( 'Custom Meta Box', 'metafields-custom-fields' ); ?></h1>
+			<h1><?php esc_html_e( 'Custom Meta Box', 'manpreetdev-custom-fields-meta-boxes' ); ?></h1>
 
 			<?php if ( array() === $all ) : ?>
 				<div class="wpcmb-empty wpcmb-empty--page">
 					<span class="wpcmb-empty__title">
-						<?php esc_html_e( 'No field groups yet', 'metafields-custom-fields' ); ?>
+						<?php esc_html_e( 'No field groups yet', 'manpreetdev-custom-fields-meta-boxes' ); ?>
 					</span>
 					<p>
-						<?php esc_html_e( 'A field group is a set of fields plus the rules for where they appear. Create one to start adding fields to your content.', 'metafields-custom-fields' ); ?>
+						<?php esc_html_e( 'A field group is a set of fields plus the rules for where they appear. Create one to start adding fields to your content.', 'manpreetdev-custom-fields-meta-boxes' ); ?>
 					</p>
 					<p>
 						<a class="wpcmb-btn wpcmb-btn--primary wpcmb-btn--lg" href="<?php echo esc_url( admin_url( 'post-new.php?post_type=' . FieldGroupPostType::POST_TYPE ) ); ?>">
-							<?php esc_html_e( 'Create your first field group', 'metafields-custom-fields' ); ?>
+							<?php esc_html_e( 'Create your first field group', 'manpreetdev-custom-fields-meta-boxes' ); ?>
 						</a>
 					</p>
 				</div>
@@ -252,7 +252,7 @@ final class Menu extends Module {
 								'%d field group is saved as a draft, so its fields are not showing yet.',
 								'%d field groups are saved as drafts, so their fields are not showing yet.',
 								$inactive,
-								'metafields-custom-fields'
+								'manpreetdev-custom-fields-meta-boxes'
 							),
 							$inactive
 						)
@@ -264,15 +264,15 @@ final class Menu extends Module {
 			<div class="wpcmb-stats">
 				<div class="wpcmb-stat">
 					<span class="wpcmb-stat__value"><?php echo esc_html( (string) count( $all ) ); ?></span>
-					<span class="wpcmb-stat__label"><?php esc_html_e( 'Field groups', 'metafields-custom-fields' ); ?></span>
+					<span class="wpcmb-stat__label"><?php esc_html_e( 'Field groups', 'manpreetdev-custom-fields-meta-boxes' ); ?></span>
 				</div>
 				<div class="wpcmb-stat">
 					<span class="wpcmb-stat__value"><?php echo esc_html( (string) count( $active ) ); ?></span>
-					<span class="wpcmb-stat__label"><?php esc_html_e( 'Active', 'metafields-custom-fields' ); ?></span>
+					<span class="wpcmb-stat__label"><?php esc_html_e( 'Active', 'manpreetdev-custom-fields-meta-boxes' ); ?></span>
 				</div>
 				<div class="wpcmb-stat">
 					<span class="wpcmb-stat__value"><?php echo esc_html( (string) array_sum( array_map( static fn( $g ): int => count( $g->fields ), $all ) ) ); ?></span>
-					<span class="wpcmb-stat__label"><?php esc_html_e( 'Fields', 'metafields-custom-fields' ); ?></span>
+					<span class="wpcmb-stat__label"><?php esc_html_e( 'Fields', 'manpreetdev-custom-fields-meta-boxes' ); ?></span>
 				</div>
 			</div>
 

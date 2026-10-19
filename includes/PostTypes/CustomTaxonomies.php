@@ -66,8 +66,8 @@ final class CustomTaxonomies extends RecordType {
 	 */
 	public function names(): array {
 		return array(
-			'singular' => __( 'Taxonomy', 'metafields-custom-fields' ),
-			'plural'   => __( 'Taxonomies', 'metafields-custom-fields' ),
+			'singular' => __( 'Taxonomy', 'manpreetdev-custom-fields-meta-boxes' ),
+			'plural'   => __( 'Taxonomies', 'manpreetdev-custom-fields-meta-boxes' ),
 		);
 	}
 
@@ -151,26 +151,26 @@ final class CustomTaxonomies extends RecordType {
 	 */
 	public function rejection( string $name, int $post_id = 0 ): string {
 		if ( '' === $name ) {
-			return __( 'A taxonomy needs a name.', 'metafields-custom-fields' );
+			return __( 'A taxonomy needs a name.', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
 		if ( in_array( $name, self::RESERVED, true ) ) {
 			return sprintf(
 				/* translators: %s: the reserved taxonomy name. */
-				__( '"%s" is reserved by WordPress and cannot be used.', 'metafields-custom-fields' ),
+				__( '"%s" is reserved by WordPress and cannot be used.', 'manpreetdev-custom-fields-meta-boxes' ),
 				$name
 			);
 		}
 
 		if ( str_starts_with( $name, 'wp_' ) ) {
-			return __( 'Names beginning with wp_ are reserved by WordPress.', 'metafields-custom-fields' );
+			return __( 'Names beginning with wp_ are reserved by WordPress.', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
 		foreach ( $this->records( true ) as $id => $record ) {
 			if ( $id !== $post_id && ( $record['name'] ?? '' ) === $name ) {
 				return sprintf(
 					/* translators: %s: the taxonomy name. */
-					__( 'Another record already registers "%s".', 'metafields-custom-fields' ),
+					__( 'Another record already registers "%s".', 'manpreetdev-custom-fields-meta-boxes' ),
 					$name
 				);
 			}
@@ -179,7 +179,7 @@ final class CustomTaxonomies extends RecordType {
 		if ( taxonomy_exists( $name ) && ! $this->owns( $name ) ) {
 			return sprintf(
 				/* translators: %s: the taxonomy name. */
-				__( '"%s" is already registered by something else on this site.', 'metafields-custom-fields' ),
+				__( '"%s" is already registered by something else on this site.', 'manpreetdev-custom-fields-meta-boxes' ),
 				$name
 			);
 		}
@@ -326,40 +326,40 @@ final class CustomTaxonomies extends RecordType {
 			'menu_name'     => $plural,
 			'all_items'     => $plural,
 			/* translators: %s: singular taxonomy name. */
-			'edit_item'     => sprintf( __( 'Edit %s', 'metafields-custom-fields' ), $singular ),
+			'edit_item'     => sprintf( __( 'Edit %s', 'manpreetdev-custom-fields-meta-boxes' ), $singular ),
 			/* translators: %s: singular taxonomy name. */
-			'view_item'     => sprintf( __( 'View %s', 'metafields-custom-fields' ), $singular ),
+			'view_item'     => sprintf( __( 'View %s', 'manpreetdev-custom-fields-meta-boxes' ), $singular ),
 			/* translators: %s: singular taxonomy name. */
-			'update_item'   => sprintf( __( 'Update %s', 'metafields-custom-fields' ), $singular ),
+			'update_item'   => sprintf( __( 'Update %s', 'manpreetdev-custom-fields-meta-boxes' ), $singular ),
 			/* translators: %s: singular taxonomy name. */
-			'add_new_item'  => sprintf( __( 'Add %s', 'metafields-custom-fields' ), $singular ),
+			'add_new_item'  => sprintf( __( 'Add %s', 'manpreetdev-custom-fields-meta-boxes' ), $singular ),
 			/* translators: %s: singular taxonomy name. */
-			'new_item_name' => sprintf( __( 'New %s name', 'metafields-custom-fields' ), $singular ),
+			'new_item_name' => sprintf( __( 'New %s name', 'manpreetdev-custom-fields-meta-boxes' ), $singular ),
 			/* translators: %s: plural taxonomy name. */
-			'search_items'  => sprintf( __( 'Search %s', 'metafields-custom-fields' ), $plural ),
+			'search_items'  => sprintf( __( 'Search %s', 'manpreetdev-custom-fields-meta-boxes' ), $plural ),
 			/* translators: %s: lowercase plural taxonomy name. */
-			'not_found'     => sprintf( __( 'No %s found.', 'metafields-custom-fields' ), strtolower( $plural ) ),
+			'not_found'     => sprintf( __( 'No %s found.', 'manpreetdev-custom-fields-meta-boxes' ), strtolower( $plural ) ),
 			/* translators: %s: lowercase plural taxonomy name. */
-			'back_to_items' => sprintf( __( 'Back to %s', 'metafields-custom-fields' ), strtolower( $plural ) ),
+			'back_to_items' => sprintf( __( 'Back to %s', 'manpreetdev-custom-fields-meta-boxes' ), strtolower( $plural ) ),
 		);
 
 		if ( $hierarchical ) {
 			/* translators: %s: singular taxonomy name. */
-			$labels['parent_item'] = sprintf( __( 'Parent %s', 'metafields-custom-fields' ), $singular );
+			$labels['parent_item'] = sprintf( __( 'Parent %s', 'manpreetdev-custom-fields-meta-boxes' ), $singular );
 			/* translators: %s: singular taxonomy name. */
-			$labels['parent_item_colon'] = sprintf( __( 'Parent %s:', 'metafields-custom-fields' ), $singular );
+			$labels['parent_item_colon'] = sprintf( __( 'Parent %s:', 'manpreetdev-custom-fields-meta-boxes' ), $singular );
 
 			return $labels;
 		}
 
 		/* translators: %s: lowercase plural taxonomy name. */
-		$labels['popular_items'] = sprintf( __( 'Popular %s', 'metafields-custom-fields' ), strtolower( $plural ) );
+		$labels['popular_items'] = sprintf( __( 'Popular %s', 'manpreetdev-custom-fields-meta-boxes' ), strtolower( $plural ) );
 		/* translators: %s: lowercase plural taxonomy name. */
-		$labels['separate_items_with_commas'] = sprintf( __( 'Separate %s with commas', 'metafields-custom-fields' ), strtolower( $plural ) );
+		$labels['separate_items_with_commas'] = sprintf( __( 'Separate %s with commas', 'manpreetdev-custom-fields-meta-boxes' ), strtolower( $plural ) );
 		/* translators: %s: lowercase plural taxonomy name. */
-		$labels['add_or_remove_items'] = sprintf( __( 'Add or remove %s', 'metafields-custom-fields' ), strtolower( $plural ) );
+		$labels['add_or_remove_items'] = sprintf( __( 'Add or remove %s', 'manpreetdev-custom-fields-meta-boxes' ), strtolower( $plural ) );
 		/* translators: %s: lowercase plural taxonomy name. */
-		$labels['choose_from_most_used'] = sprintf( __( 'Choose from the most used %s', 'metafields-custom-fields' ), strtolower( $plural ) );
+		$labels['choose_from_most_used'] = sprintf( __( 'Choose from the most used %s', 'manpreetdev-custom-fields-meta-boxes' ), strtolower( $plural ) );
 
 		return $labels;
 	}

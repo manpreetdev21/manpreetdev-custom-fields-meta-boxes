@@ -80,7 +80,7 @@ final class PostTypeEditor extends Module {
 	 */
 	public function title_placeholder( $text, $post ): string {
 		if ( $post instanceof \WP_Post && CustomPostTypes::POST_TYPE === $post->post_type ) {
-			return __( 'Post type name, e.g. Projects', 'metafields-custom-fields' );
+			return __( 'Post type name, e.g. Projects', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
 		return (string) $text;
@@ -92,7 +92,7 @@ final class PostTypeEditor extends Module {
 	public function add_meta_boxes(): void {
 		add_meta_box(
 			'wpcmb-pt-basic',
-			__( 'Basic Settings', 'metafields-custom-fields' ),
+			__( 'Basic Settings', 'manpreetdev-custom-fields-meta-boxes' ),
 			array( $this, 'render_basic' ),
 			CustomPostTypes::POST_TYPE,
 			'normal',
@@ -101,7 +101,7 @@ final class PostTypeEditor extends Module {
 
 		add_meta_box(
 			'wpcmb-pt-labels',
-			__( 'Labels', 'metafields-custom-fields' ),
+			__( 'Labels', 'manpreetdev-custom-fields-meta-boxes' ),
 			array( $this, 'render_labels' ),
 			CustomPostTypes::POST_TYPE,
 			'normal',
@@ -110,7 +110,7 @@ final class PostTypeEditor extends Module {
 
 		add_meta_box(
 			'wpcmb-pt-supports',
-			__( 'Features', 'metafields-custom-fields' ),
+			__( 'Features', 'manpreetdev-custom-fields-meta-boxes' ),
 			array( $this, 'render_supports' ),
 			CustomPostTypes::POST_TYPE,
 			'normal',
@@ -119,7 +119,7 @@ final class PostTypeEditor extends Module {
 
 		add_meta_box(
 			'wpcmb-pt-advanced',
-			__( 'Advanced', 'metafields-custom-fields' ),
+			__( 'Advanced', 'manpreetdev-custom-fields-meta-boxes' ),
 			array( $this, 'render_advanced' ),
 			CustomPostTypes::POST_TYPE,
 			'normal',
@@ -128,7 +128,7 @@ final class PostTypeEditor extends Module {
 
 		add_meta_box(
 			'wpcmb-pt-visibility',
-			__( 'Visibility', 'metafields-custom-fields' ),
+			__( 'Visibility', 'manpreetdev-custom-fields-meta-boxes' ),
 			array( $this, 'render_visibility' ),
 			CustomPostTypes::POST_TYPE,
 			'side',
@@ -146,13 +146,13 @@ final class PostTypeEditor extends Module {
 
 		wp_nonce_field( self::NONCE, 'wpcmb_post_type_nonce' );
 
-		echo '<p class="description">' . esc_html__( 'Publish this record to register the post type. Saving it as a draft keeps it defined but inactive.', 'metafields-custom-fields' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'Publish this record to register the post type. Saving it as a draft keeps it defined but inactive.', 'manpreetdev-custom-fields-meta-boxes' ) . '</p>';
 
 		$this->text(
 			'name',
-			__( 'Post type key', 'metafields-custom-fields' ),
+			__( 'Post type key', 'manpreetdev-custom-fields-meta-boxes' ),
 			(string) $config['name'],
-			__( 'Lowercase, up to 20 characters. This is what gets stored against every post, so changing it later orphans everything already saved.', 'metafields-custom-fields' ),
+			__( 'Lowercase, up to 20 characters. This is what gets stored against every post, so changing it later orphans everything already saved.', 'manpreetdev-custom-fields-meta-boxes' ),
 			array(
 				'placeholder' => 'project',
 				'maxlength'   => '20',
@@ -162,9 +162,9 @@ final class PostTypeEditor extends Module {
 
 		$this->text(
 			'description',
-			__( 'Description', 'metafields-custom-fields' ),
+			__( 'Description', 'manpreetdev-custom-fields-meta-boxes' ),
 			(string) $config['description'],
-			__( 'Shown to editors in a few places in the admin.', 'metafields-custom-fields' )
+			__( 'Shown to editors in a few places in the admin.', 'manpreetdev-custom-fields-meta-boxes' )
 		);
 	}
 
@@ -176,12 +176,12 @@ final class PostTypeEditor extends Module {
 	public function render_labels( \WP_Post $post ): void {
 		$config = $this->config( $post );
 
-		echo '<p class="description">' . esc_html__( 'The rest of the labels — Add New, Edit, Search, and the empty-list messages — are built from these two.', 'metafields-custom-fields' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'The rest of the labels — Add New, Edit, Search, and the empty-list messages — are built from these two.', 'manpreetdev-custom-fields-meta-boxes' ) . '</p>';
 
 		echo '<div class="wpcmb-grid-2">';
 
-		$this->text( 'singular', __( 'Singular name', 'metafields-custom-fields' ), (string) $config['singular'], '', array( 'placeholder' => __( 'Project', 'metafields-custom-fields' ) ) );
-		$this->text( 'plural', __( 'Plural name', 'metafields-custom-fields' ), (string) $config['plural'], '', array( 'placeholder' => __( 'Projects', 'metafields-custom-fields' ) ) );
+		$this->text( 'singular', __( 'Singular name', 'manpreetdev-custom-fields-meta-boxes' ), (string) $config['singular'], '', array( 'placeholder' => __( 'Project', 'manpreetdev-custom-fields-meta-boxes' ) ) );
+		$this->text( 'plural', __( 'Plural name', 'manpreetdev-custom-fields-meta-boxes' ), (string) $config['plural'], '', array( 'placeholder' => __( 'Projects', 'manpreetdev-custom-fields-meta-boxes' ) ) );
 
 		echo '</div>';
 	}
@@ -195,7 +195,7 @@ final class PostTypeEditor extends Module {
 		$config   = $this->config( $post );
 		$supports = (array) $config['supports'];
 
-		echo '<fieldset class="wpcmb-fieldset"><legend>' . esc_html__( 'Supports', 'metafields-custom-fields' ) . '</legend>';
+		echo '<fieldset class="wpcmb-fieldset"><legend>' . esc_html__( 'Supports', 'manpreetdev-custom-fields-meta-boxes' ) . '</legend>';
 
 		foreach ( CustomPostTypes::features() as $feature => $label ) {
 			printf(
@@ -210,17 +210,17 @@ final class PostTypeEditor extends Module {
 
 		$taxonomies = (array) $config['taxonomies'];
 
-		echo '<fieldset class="wpcmb-fieldset"><legend>' . esc_html__( 'Taxonomies', 'metafields-custom-fields' ) . '</legend>';
+		echo '<fieldset class="wpcmb-fieldset"><legend>' . esc_html__( 'Taxonomies', 'manpreetdev-custom-fields-meta-boxes' ) . '</legend>';
 
 		printf(
 			'<p class="description">%s</p>',
 			sprintf(
 				/* translators: %s: link to the Taxonomies screen. */
-				esc_html__( 'Categories and tags are WordPress\'s own. Anything you have defined yourself appears here too — make one on the %s screen.', 'metafields-custom-fields' ),
+				esc_html__( 'Categories and tags are WordPress\'s own. Anything you have defined yourself appears here too — make one on the %s screen.', 'manpreetdev-custom-fields-meta-boxes' ),
 				sprintf(
 					'<a href="%s">%s</a>',
 					esc_url( admin_url( 'edit.php?post_type=' . CustomTaxonomies::POST_TYPE ) ),
-					esc_html__( 'Taxonomies', 'metafields-custom-fields' )
+					esc_html__( 'Taxonomies', 'manpreetdev-custom-fields-meta-boxes' )
 				)
 			)
 		);
@@ -246,7 +246,7 @@ final class PostTypeEditor extends Module {
 					$taxonomy['registered']
 						? sprintf( '%s (%s)', $taxonomy['label'], $name )
 						/* translators: 1: taxonomy label, 2: taxonomy key. */
-						: sprintf( __( '%1$s (%2$s) — not registered yet', 'metafields-custom-fields' ), $taxonomy['label'], $name )
+						: sprintf( __( '%1$s (%2$s) — not registered yet', 'manpreetdev-custom-fields-meta-boxes' ), $taxonomy['label'], $name )
 				)
 			);
 		}
@@ -318,31 +318,31 @@ final class PostTypeEditor extends Module {
 	public function render_advanced( \WP_Post $post ): void {
 		$config = $this->config( $post );
 
-		$this->toggle( 'rewrite', __( 'Give it pretty permalinks', 'metafields-custom-fields' ), (bool) $config['rewrite'], __( 'Off stores the posts but gives them no readable URLs.', 'metafields-custom-fields' ) );
+		$this->toggle( 'rewrite', __( 'Give it pretty permalinks', 'manpreetdev-custom-fields-meta-boxes' ), (bool) $config['rewrite'], __( 'Off stores the posts but gives them no readable URLs.', 'manpreetdev-custom-fields-meta-boxes' ) );
 
 		echo '<div class="wpcmb-grid-2">';
 
 		$this->text(
 			'rewrite_slug',
-			__( 'URL slug', 'metafields-custom-fields' ),
+			__( 'URL slug', 'manpreetdev-custom-fields-meta-boxes' ),
 			(string) $config['rewrite_slug'],
-			__( 'Defaults to the post type key.', 'metafields-custom-fields' )
+			__( 'Defaults to the post type key.', 'manpreetdev-custom-fields-meta-boxes' )
 		);
 
 		$this->text(
 			'capability_type',
-			__( 'Capability type', 'metafields-custom-fields' ),
+			__( 'Capability type', 'manpreetdev-custom-fields-meta-boxes' ),
 			(string) $config['capability_type'],
-			__( 'Whose permissions apply. "post" means anyone who can edit posts can edit these.', 'metafields-custom-fields' ),
+			__( 'Whose permissions apply. "post" means anyone who can edit posts can edit these.', 'manpreetdev-custom-fields-meta-boxes' ),
 			array( 'placeholder' => 'post' )
 		);
 
 		echo '</div>';
 
-		$this->toggle( 'with_front', __( 'Prefix URLs with the permalink base', 'metafields-custom-fields' ), (bool) $config['with_front'] );
-		$this->toggle( 'has_archive', __( 'Give it an archive page', 'metafields-custom-fields' ), (bool) $config['has_archive'] );
-		$this->toggle( 'hierarchical', __( 'Allow parents, like pages', 'metafields-custom-fields' ), (bool) $config['hierarchical'], __( 'Needs the Page attributes feature to be set from the editor.', 'metafields-custom-fields' ) );
-		$this->toggle( 'exclude_from_search', __( 'Keep out of site search', 'metafields-custom-fields' ), (bool) $config['exclude_from_search'] );
+		$this->toggle( 'with_front', __( 'Prefix URLs with the permalink base', 'manpreetdev-custom-fields-meta-boxes' ), (bool) $config['with_front'] );
+		$this->toggle( 'has_archive', __( 'Give it an archive page', 'manpreetdev-custom-fields-meta-boxes' ), (bool) $config['has_archive'] );
+		$this->toggle( 'hierarchical', __( 'Allow parents, like pages', 'manpreetdev-custom-fields-meta-boxes' ), (bool) $config['hierarchical'], __( 'Needs the Page attributes feature to be set from the editor.', 'manpreetdev-custom-fields-meta-boxes' ) );
+		$this->toggle( 'exclude_from_search', __( 'Keep out of site search', 'manpreetdev-custom-fields-meta-boxes' ), (bool) $config['exclude_from_search'] );
 	}
 
 	/**
@@ -353,13 +353,13 @@ final class PostTypeEditor extends Module {
 	public function render_visibility( \WP_Post $post ): void {
 		$config = $this->config( $post );
 
-		$this->toggle( 'public', __( 'Public', 'metafields-custom-fields' ), (bool) $config['public'], __( 'Visible on the front of the site and in search.', 'metafields-custom-fields' ) );
-		$this->toggle( 'show_ui', __( 'Show in the admin', 'metafields-custom-fields' ), (bool) $config['show_ui'] );
-		$this->toggle( 'show_in_menu', __( 'Show in the admin menu', 'metafields-custom-fields' ), (bool) $config['show_in_menu'] );
-		$this->toggle( 'show_in_rest', __( 'Show in the REST API', 'metafields-custom-fields' ), (bool) $config['show_in_rest'], __( 'Required for the block editor.', 'metafields-custom-fields' ) );
+		$this->toggle( 'public', __( 'Public', 'manpreetdev-custom-fields-meta-boxes' ), (bool) $config['public'], __( 'Visible on the front of the site and in search.', 'manpreetdev-custom-fields-meta-boxes' ) );
+		$this->toggle( 'show_ui', __( 'Show in the admin', 'manpreetdev-custom-fields-meta-boxes' ), (bool) $config['show_ui'] );
+		$this->toggle( 'show_in_menu', __( 'Show in the admin menu', 'manpreetdev-custom-fields-meta-boxes' ), (bool) $config['show_in_menu'] );
+		$this->toggle( 'show_in_rest', __( 'Show in the REST API', 'manpreetdev-custom-fields-meta-boxes' ), (bool) $config['show_in_rest'], __( 'Required for the block editor.', 'manpreetdev-custom-fields-meta-boxes' ) );
 
 		$this->render_icon( (string) $config['menu_icon'] );
-		$this->text( 'menu_position', __( 'Menu position', 'metafields-custom-fields' ), (string) $config['menu_position'], __( '0 lets WordPress decide. 5 is below Posts, 20 is below Pages.', 'metafields-custom-fields' ), array( 'type' => 'number' ) );
+		$this->text( 'menu_position', __( 'Menu position', 'manpreetdev-custom-fields-meta-boxes' ), (string) $config['menu_position'], __( '0 lets WordPress decide. 5 is below Posts, 20 is below Pages.', 'manpreetdev-custom-fields-meta-boxes' ), array( 'type' => 'number' ) );
 	}
 
 	/**
@@ -374,7 +374,7 @@ final class PostTypeEditor extends Module {
 	 * @param string $value Stored icon.
 	 */
 	private function render_icon( string $value ): void {
-		printf( '<p><span class="wpcmb-label">%s</span>', esc_html__( 'Menu icon', 'metafields-custom-fields' ) );
+		printf( '<p><span class="wpcmb-label">%s</span>', esc_html__( 'Menu icon', 'manpreetdev-custom-fields-meta-boxes' ) );
 
 		$this->container->get( Registry::class )->get( 'icon' )->render(
 			array(
@@ -390,7 +390,7 @@ final class PostTypeEditor extends Module {
 
 		printf(
 			'<span class="description wpcmb-help">%s</span></p>',
-			esc_html__( 'A Dashicon, an image from the library, or a URL. Left empty, WordPress uses the pin.', 'metafields-custom-fields' )
+			esc_html__( 'A Dashicon, an image from the library, or a URL. Left empty, WordPress uses the pin.', 'manpreetdev-custom-fields-meta-boxes' )
 		);
 	}
 
@@ -513,7 +513,7 @@ final class PostTypeEditor extends Module {
 		printf(
 			'<div class="notice notice-warning"><p>%s</p><p>%s</p></div>',
 			esc_html( $notice ),
-			esc_html__( 'The record was saved, but no post type is registered from it until the key is changed.', 'metafields-custom-fields' )
+			esc_html__( 'The record was saved, but no post type is registered from it until the key is changed.', 'manpreetdev-custom-fields-meta-boxes' )
 		);
 	}
 }

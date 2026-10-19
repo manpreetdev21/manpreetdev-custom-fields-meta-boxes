@@ -63,7 +63,7 @@ abstract class RecordEditor extends Module {
 	 * What to say under a refusal, which differs by what the record builds.
 	 */
 	protected function rejection_consequence(): string {
-		return __( 'The record was saved, but it is not in use until this is fixed.', 'metafields-custom-fields' );
+		return __( 'The record was saved, but it is not in use until this is fixed.', 'manpreetdev-custom-fields-meta-boxes' );
 	}
 
 	/**
@@ -321,12 +321,12 @@ abstract class RecordEditor extends Module {
 	 * @param string $help  Description below the control.
 	 */
 	protected function field_group_select( string $value, string $help = '' ): void {
-		$choices = array( '' => __( '— Choose a field group —', 'metafields-custom-fields' ) );
+		$choices = array( '' => __( '— Choose a field group —', 'manpreetdev-custom-fields-meta-boxes' ) );
 
 		foreach ( $this->container->get( \WPCMB\Fields\Repository::class )->all( true ) as $group ) {
 			$choices[ $group->key ] = sprintf( '%s (%s)', '' !== $group->title ? $group->title : $group->key, $group->key );
 		}
 
-		$this->select( 'field_group', __( 'Field group', 'metafields-custom-fields' ), $value, $choices, $help );
+		$this->select( 'field_group', __( 'Field group', 'manpreetdev-custom-fields-meta-boxes' ), $value, $choices, $help );
 	}
 }

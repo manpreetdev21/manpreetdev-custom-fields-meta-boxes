@@ -76,7 +76,7 @@ final class Validator {
 			$error = $this->message(
 				$settings,
 				/* translators: %s: field label. */
-				sprintf( __( '%s is required.', 'metafields-custom-fields' ), $this->label( $field ) )
+				sprintf( __( '%s is required.', 'manpreetdev-custom-fields-meta-boxes' ), $this->label( $field ) )
 			);
 
 			return $this->filter( $error, $field, $value );
@@ -118,15 +118,15 @@ final class Validator {
 		$type   = (string) ( $field['type'] ?? '' );
 
 		if ( 'email' === $type && ! is_email( $string ) ) {
-			return __( 'Enter a valid email address.', 'metafields-custom-fields' );
+			return __( 'Enter a valid email address.', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
 		if ( 'url' === $type && filter_var( $string, FILTER_VALIDATE_URL ) !== $string ) {
-			return __( 'Enter a valid URL.', 'metafields-custom-fields' );
+			return __( 'Enter a valid URL.', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
 		if ( in_array( $type, array( 'number', 'range' ), true ) && ! is_numeric( $string ) ) {
-			return __( 'Enter a number.', 'metafields-custom-fields' );
+			return __( 'Enter a number.', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
 		return '';
@@ -149,14 +149,14 @@ final class Validator {
 
 		if ( '' !== $max && $length > (int) $max ) {
 			/* translators: %d: maximum number of characters. */
-			return sprintf( __( 'Enter no more than %d characters.', 'metafields-custom-fields' ), (int) $max );
+			return sprintf( __( 'Enter no more than %d characters.', 'manpreetdev-custom-fields-meta-boxes' ), (int) $max );
 		}
 
 		$min = $settings['minlength'] ?? '';
 
 		if ( '' !== $min && $length < (int) $min ) {
 			/* translators: %d: minimum number of characters. */
-			return sprintf( __( 'Enter at least %d characters.', 'metafields-custom-fields' ), (int) $min );
+			return sprintf( __( 'Enter at least %d characters.', 'manpreetdev-custom-fields-meta-boxes' ), (int) $min );
 		}
 
 		return '';
@@ -185,12 +185,12 @@ final class Validator {
 
 			if ( '' !== $min && $count < (int) $min ) {
 				/* translators: %d: minimum number of selections. */
-				return sprintf( __( 'Select at least %d items.', 'metafields-custom-fields' ), (int) $min );
+				return sprintf( __( 'Select at least %d items.', 'manpreetdev-custom-fields-meta-boxes' ), (int) $min );
 			}
 
 			if ( '' !== $max && $count > (int) $max ) {
 				/* translators: %d: maximum number of selections. */
-				return sprintf( __( 'Select no more than %d items.', 'metafields-custom-fields' ), (int) $max );
+				return sprintf( __( 'Select no more than %d items.', 'manpreetdev-custom-fields-meta-boxes' ), (int) $max );
 			}
 
 			return '';
@@ -202,12 +202,12 @@ final class Validator {
 
 		if ( '' !== $min && (float) $value < (float) $min ) {
 			/* translators: %s: minimum value. */
-			return sprintf( __( 'Enter a value of %s or more.', 'metafields-custom-fields' ), (string) $min );
+			return sprintf( __( 'Enter a value of %s or more.', 'manpreetdev-custom-fields-meta-boxes' ), (string) $min );
 		}
 
 		if ( '' !== $max && (float) $value > (float) $max ) {
 			/* translators: %s: maximum value. */
-			return sprintf( __( 'Enter a value of %s or less.', 'metafields-custom-fields' ), (string) $max );
+			return sprintf( __( 'Enter a value of %s or less.', 'manpreetdev-custom-fields-meta-boxes' ), (string) $max );
 		}
 
 		return '';
@@ -234,10 +234,10 @@ final class Validator {
 		$result = @preg_match( Conditional::delimit( $pattern ), (string) $value ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- A malformed pattern is reported below, not surfaced as a PHP warning.
 
 		if ( false === $result ) {
-			return __( 'This field has an invalid validation pattern. Check the field settings.', 'metafields-custom-fields' );
+			return __( 'This field has an invalid validation pattern. Check the field settings.', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
-		return 1 === $result ? '' : $this->message( $settings, __( 'This value is not in the expected format.', 'metafields-custom-fields' ) );
+		return 1 === $result ? '' : $this->message( $settings, __( 'This value is not in the expected format.', 'manpreetdev-custom-fields-meta-boxes' ) );
 	}
 
 	/**
@@ -327,7 +327,7 @@ final class Validator {
 			return 0 === $number
 				? $error
 				/* translators: 1: row number, 2: the problem with that row. */
-				: sprintf( __( 'Row %1$d: %2$s', 'metafields-custom-fields' ), $number, $error );
+				: sprintf( __( 'Row %1$d: %2$s', 'manpreetdev-custom-fields-meta-boxes' ), $number, $error );
 		}
 
 		return '';

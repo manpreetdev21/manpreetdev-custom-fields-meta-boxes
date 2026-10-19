@@ -47,8 +47,8 @@ final class CustomOptionsPages extends RecordType {
 	 */
 	public function names(): array {
 		return array(
-			'singular' => __( 'Options Page', 'metafields-custom-fields' ),
-			'plural'   => __( 'Options Pages', 'metafields-custom-fields' ),
+			'singular' => __( 'Options Page', 'manpreetdev-custom-fields-meta-boxes' ),
+			'plural'   => __( 'Options Pages', 'manpreetdev-custom-fields-meta-boxes' ),
 		);
 	}
 
@@ -83,19 +83,19 @@ final class CustomOptionsPages extends RecordType {
 	 */
 	public static function parents( array $pages = array() ): array {
 		$parents = array(
-			''                    => __( 'Its own top-level menu', 'metafields-custom-fields' ),
-			Menu::SLUG            => __( 'Under Meta Boxes', 'metafields-custom-fields' ),
-			'options-general.php' => __( 'Under Settings', 'metafields-custom-fields' ),
-			'tools.php'           => __( 'Under Tools', 'metafields-custom-fields' ),
-			'themes.php'          => __( 'Under Appearance', 'metafields-custom-fields' ),
-			'edit.php'            => __( 'Under Posts', 'metafields-custom-fields' ),
-			'upload.php'          => __( 'Under Media', 'metafields-custom-fields' ),
-			'users.php'           => __( 'Under Users', 'metafields-custom-fields' ),
+			''                    => __( 'Its own top-level menu', 'manpreetdev-custom-fields-meta-boxes' ),
+			Menu::SLUG            => __( 'Under Meta Boxes', 'manpreetdev-custom-fields-meta-boxes' ),
+			'options-general.php' => __( 'Under Settings', 'manpreetdev-custom-fields-meta-boxes' ),
+			'tools.php'           => __( 'Under Tools', 'manpreetdev-custom-fields-meta-boxes' ),
+			'themes.php'          => __( 'Under Appearance', 'manpreetdev-custom-fields-meta-boxes' ),
+			'edit.php'            => __( 'Under Posts', 'manpreetdev-custom-fields-meta-boxes' ),
+			'upload.php'          => __( 'Under Media', 'manpreetdev-custom-fields-meta-boxes' ),
+			'users.php'           => __( 'Under Users', 'manpreetdev-custom-fields-meta-boxes' ),
 		);
 
 		foreach ( $pages as $slug => $label ) {
 			/* translators: %s: another options page's title. */
-			$parents[ 'wpcmb-options-' . $slug ] = sprintf( __( 'Under "%s"', 'metafields-custom-fields' ), $label );
+			$parents[ 'wpcmb-options-' . $slug ] = sprintf( __( 'Under "%s"', 'manpreetdev-custom-fields-meta-boxes' ), $label );
 		}
 
 		return $parents;
@@ -146,14 +146,14 @@ final class CustomOptionsPages extends RecordType {
 		$slug = (string) ( $config['slug'] ?? '' );
 
 		if ( '' === $slug ) {
-			return __( 'An options page needs a slug.', 'metafields-custom-fields' );
+			return __( 'An options page needs a slug.', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
 		foreach ( $this->records( true ) as $id => $record ) {
 			if ( $id !== $post_id && ( $record['slug'] ?? '' ) === $slug ) {
 				return sprintf(
 					/* translators: %s: the options page slug. */
-					__( 'Another record already builds the page "%s".', 'metafields-custom-fields' ),
+					__( 'Another record already builds the page "%s".', 'manpreetdev-custom-fields-meta-boxes' ),
 					$slug
 				);
 			}
@@ -162,7 +162,7 @@ final class CustomOptionsPages extends RecordType {
 		// A page cannot be its own parent, which is an easy thing to do from
 		// a dropdown that lists every other page.
 		if ( (string) ( $config['parent'] ?? '' ) === 'wpcmb-options-' . $slug ) {
-			return __( 'A page cannot be placed inside itself.', 'metafields-custom-fields' );
+			return __( 'A page cannot be placed inside itself.', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
 		return '';

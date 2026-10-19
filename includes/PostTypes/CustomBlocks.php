@@ -48,8 +48,8 @@ final class CustomBlocks extends RecordType {
 	 */
 	public function names(): array {
 		return array(
-			'singular' => __( 'Block Type', 'metafields-custom-fields' ),
-			'plural'   => __( 'Block Types', 'metafields-custom-fields' ),
+			'singular' => __( 'Block Type', 'manpreetdev-custom-fields-meta-boxes' ),
+			'plural'   => __( 'Block Types', 'manpreetdev-custom-fields-meta-boxes' ),
 		);
 	}
 
@@ -82,12 +82,12 @@ final class CustomBlocks extends RecordType {
 	 */
 	public static function features(): array {
 		return array(
-			'align'      => __( 'Alignment', 'metafields-custom-fields' ),
-			'anchor'     => __( 'HTML anchor', 'metafields-custom-fields' ),
-			'className'  => __( 'Additional CSS class', 'metafields-custom-fields' ),
-			'color'      => __( 'Colour settings', 'metafields-custom-fields' ),
-			'spacing'    => __( 'Spacing controls', 'metafields-custom-fields' ),
-			'typography' => __( 'Typography controls', 'metafields-custom-fields' ),
+			'align'      => __( 'Alignment', 'manpreetdev-custom-fields-meta-boxes' ),
+			'anchor'     => __( 'HTML anchor', 'manpreetdev-custom-fields-meta-boxes' ),
+			'className'  => __( 'Additional CSS class', 'manpreetdev-custom-fields-meta-boxes' ),
+			'color'      => __( 'Colour settings', 'manpreetdev-custom-fields-meta-boxes' ),
+			'spacing'    => __( 'Spacing controls', 'manpreetdev-custom-fields-meta-boxes' ),
+			'typography' => __( 'Typography controls', 'manpreetdev-custom-fields-meta-boxes' ),
 		);
 	}
 
@@ -136,18 +136,18 @@ final class CustomBlocks extends RecordType {
 		$name = (string) ( $config['name'] ?? '' );
 
 		if ( '' === $name ) {
-			return __( 'A block needs a name.', 'metafields-custom-fields' );
+			return __( 'A block needs a name.', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
 		if ( '' === (string) ( $config['field_group'] ?? '' ) ) {
-			return __( 'A block needs a field group to take its fields from.', 'metafields-custom-fields' );
+			return __( 'A block needs a field group to take its fields from.', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
 		foreach ( $this->records( true ) as $id => $record ) {
 			if ( $id !== $post_id && ( $record['name'] ?? '' ) === $name ) {
 				return sprintf(
 					/* translators: %s: the block name. */
-					__( 'Another record already registers the block "%s".', 'metafields-custom-fields' ),
+					__( 'Another record already registers the block "%s".', 'manpreetdev-custom-fields-meta-boxes' ),
 					$name
 				);
 			}

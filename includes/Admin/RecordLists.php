@@ -60,9 +60,9 @@ final class RecordLists extends Module {
 		return array_merge(
 			$columns,
 			array(
-				'wpcmb_identity' => __( 'Identifier', 'metafields-custom-fields' ),
-				'wpcmb_group'    => __( 'Field group', 'metafields-custom-fields' ),
-				'wpcmb_detail'   => __( 'Details', 'metafields-custom-fields' ),
+				'wpcmb_identity' => __( 'Identifier', 'manpreetdev-custom-fields-meta-boxes' ),
+				'wpcmb_group'    => __( 'Field group', 'manpreetdev-custom-fields-meta-boxes' ),
+				'wpcmb_detail'   => __( 'Details', 'manpreetdev-custom-fields-meta-boxes' ),
 			)
 		);
 	}
@@ -137,7 +137,7 @@ final class RecordLists extends Module {
 		$group = $this->container->get( Repository::class )->get( $key );
 
 		if ( null === $group ) {
-			printf( '<em>%s</em>', esc_html__( 'missing', 'metafields-custom-fields' ) );
+			printf( '<em>%s</em>', esc_html__( 'missing', 'manpreetdev-custom-fields-meta-boxes' ) );
 
 			return;
 		}
@@ -167,8 +167,8 @@ final class RecordLists extends Module {
 		if ( CustomForms::POST_TYPE === $post_type ) {
 			echo esc_html(
 				'1' === (string) ( $record['guests'] ?? '0' )
-					? __( 'Open to anyone', 'metafields-custom-fields' )
-					: __( 'Signed-in visitors', 'metafields-custom-fields' )
+					? __( 'Open to anyone', 'manpreetdev-custom-fields-meta-boxes' )
+					: __( 'Signed-in visitors', 'manpreetdev-custom-fields-meta-boxes' )
 			);
 
 			return;
@@ -176,7 +176,7 @@ final class RecordLists extends Module {
 
 		$parent = (string) ( $record['parent'] ?? '' );
 
-		echo esc_html( '' !== $parent ? $parent : __( 'Top-level menu', 'metafields-custom-fields' ) );
+		echo esc_html( '' !== $parent ? $parent : __( 'Top-level menu', 'manpreetdev-custom-fields-meta-boxes' ) );
 	}
 
 	/**
@@ -204,21 +204,21 @@ final class RecordLists extends Module {
 		// Every one of these three draws a field group. Pointing at one that
 		// has been deleted is the failure somebody will be hunting for.
 		if ( '' !== $key && null === $this->container->get( Repository::class )->get( $key ) ) {
-			$states['wpcmb_missing_group'] = __( 'Field group missing', 'metafields-custom-fields' );
+			$states['wpcmb_missing_group'] = __( 'Field group missing', 'manpreetdev-custom-fields-meta-boxes' );
 
 			return $states;
 		}
 
 		if ( CustomBlocks::POST_TYPE === $post->post_type && '' === (string) ( $record['name'] ?? '' ) ) {
-			$states['wpcmb_no_name'] = __( 'No name', 'metafields-custom-fields' );
+			$states['wpcmb_no_name'] = __( 'No name', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
 		if ( CustomOptionsPages::POST_TYPE === $post->post_type && '' === (string) ( $record['slug'] ?? '' ) ) {
-			$states['wpcmb_no_slug'] = __( 'No slug', 'metafields-custom-fields' );
+			$states['wpcmb_no_slug'] = __( 'No slug', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
 		if ( CustomForms::POST_TYPE === $post->post_type && '' === $key ) {
-			$states['wpcmb_no_group'] = __( 'No field group', 'metafields-custom-fields' );
+			$states['wpcmb_no_group'] = __( 'No field group', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
 		return $states;

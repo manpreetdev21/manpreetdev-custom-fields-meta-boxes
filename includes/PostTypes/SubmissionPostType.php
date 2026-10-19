@@ -156,7 +156,7 @@ final class SubmissionPostType extends Module {
 			$group = $repository->get( $group_key );
 			$title = $group instanceof FieldGroup && '' !== $group->title
 				? $group->title
-				: __( 'Form', 'metafields-custom-fields' );
+				: __( 'Form', 'manpreetdev-custom-fields-meta-boxes' );
 
 			$this->register_one( $post_type, $title );
 		}
@@ -176,9 +176,9 @@ final class SubmissionPostType extends Module {
 	private function register_one( string $post_type, string $title ): void {
 		$labels = array(
 			/* translators: %s: field group title. */
-			'name'          => sprintf( __( '%s submissions', 'metafields-custom-fields' ), $title ),
+			'name'          => sprintf( __( '%s submissions', 'manpreetdev-custom-fields-meta-boxes' ), $title ),
 			/* translators: %s: field group title. */
-			'singular_name' => sprintf( __( '%s submission', 'metafields-custom-fields' ), $title ),
+			'singular_name' => sprintf( __( '%s submission', 'manpreetdev-custom-fields-meta-boxes' ), $title ),
 			// The post type name under the title, the way an options page
 			// shows its slug: two forms can be called the same thing, and the
 			// name is what tells them apart and what a query would use.
@@ -188,9 +188,9 @@ final class SubmissionPostType extends Module {
 				esc_html( $post_type )
 			),
 			/* translators: %s: field group title. */
-			'edit_item'     => sprintf( __( '%s submission', 'metafields-custom-fields' ), $title ),
-			'search_items'  => __( 'Search submissions', 'metafields-custom-fields' ),
-			'not_found'     => __( 'No submissions yet.', 'metafields-custom-fields' ),
+			'edit_item'     => sprintf( __( '%s submission', 'manpreetdev-custom-fields-meta-boxes' ), $title ),
+			'search_items'  => __( 'Search submissions', 'manpreetdev-custom-fields-meta-boxes' ),
+			'not_found'     => __( 'No submissions yet.', 'manpreetdev-custom-fields-meta-boxes' ),
 		);
 
 		$args = array(

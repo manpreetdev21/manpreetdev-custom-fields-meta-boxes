@@ -50,8 +50,8 @@ final class CustomForms extends RecordType {
 	 */
 	public function names(): array {
 		return array(
-			'singular' => __( 'Form', 'metafields-custom-fields' ),
-			'plural'   => __( 'Forms', 'metafields-custom-fields' ),
+			'singular' => __( 'Form', 'manpreetdev-custom-fields-meta-boxes' ),
+			'plural'   => __( 'Forms', 'manpreetdev-custom-fields-meta-boxes' ),
 		);
 	}
 
@@ -116,11 +116,11 @@ final class CustomForms extends RecordType {
 	 */
 	public function rejection( array $config ): string {
 		if ( '' === (string) ( $config['field_group'] ?? '' ) ) {
-			return __( 'A form needs a field group to take its fields from.', 'metafields-custom-fields' );
+			return __( 'A form needs a field group to take its fields from.', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
 		if ( null === $this->container->get( Repository::class )->get( (string) $config['field_group'] ) ) {
-			return __( 'That field group no longer exists.', 'metafields-custom-fields' );
+			return __( 'That field group no longer exists.', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
 		return '';

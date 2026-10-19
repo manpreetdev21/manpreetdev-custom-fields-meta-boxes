@@ -120,7 +120,7 @@ final class NavMenuSettings extends Module {
 		foreach ( $groups as $group ) {
 			printf(
 				'<fieldset class="menu-settings-group wpcmb-menu-settings__group"><legend class="menu-settings-group-name howto">%s</legend>',
-				esc_html( '' !== $group->title ? $group->title : __( 'Fields', 'metafields-custom-fields' ) )
+				esc_html( '' !== $group->title ? $group->title : __( 'Fields', 'manpreetdev-custom-fields-meta-boxes' ) )
 			);
 
 			$renderer->group( $group, $ref, self::INPUT_PREFIX );
@@ -130,7 +130,7 @@ final class NavMenuSettings extends Module {
 
 		printf(
 			'<p class="wpcmb-menu-settings__fallback">%s</p>',
-			esc_html__( 'These fields need JavaScript on this screen. WordPress provides no place for them in the menu form, so they are moved into it by script; your saved values are unchanged while it is unavailable.', 'metafields-custom-fields' )
+			esc_html__( 'These fields need JavaScript on this screen. WordPress provides no place for them in the menu form, so they are moved into it by script; your saved values are unchanged while it is unavailable.', 'manpreetdev-custom-fields-meta-boxes' )
 		);
 
 		echo '</div>';

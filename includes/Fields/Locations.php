@@ -30,125 +30,125 @@ final class Locations {
 	 * @return array<string, array{label: string, group: string}>
 	 */
 	public static function params(): array {
-		$post  = __( 'Post', 'metafields-custom-fields' );
-		$page  = __( 'Page', 'metafields-custom-fields' );
-		$user  = __( 'User', 'metafields-custom-fields' );
-		$forms = __( 'Forms', 'metafields-custom-fields' );
-		$woo   = __( 'WooCommerce', 'metafields-custom-fields' );
+		$post  = __( 'Post', 'manpreetdev-custom-fields-meta-boxes' );
+		$page  = __( 'Page', 'manpreetdev-custom-fields-meta-boxes' );
+		$user  = __( 'User', 'manpreetdev-custom-fields-meta-boxes' );
+		$forms = __( 'Forms', 'manpreetdev-custom-fields-meta-boxes' );
+		$woo   = __( 'WooCommerce', 'manpreetdev-custom-fields-meta-boxes' );
 
 		$params = array(
 			'post_type'         => array(
-				'label' => __( 'Post Type', 'metafields-custom-fields' ),
+				'label' => __( 'Post Type', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-admin-post',
 				'group' => $post,
 			),
 			'post_template'     => array(
-				'label' => __( 'Post Template', 'metafields-custom-fields' ),
+				'label' => __( 'Post Template', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-layout',
 				'group' => $post,
 			),
 			'post_status'       => array(
-				'label' => __( 'Post Status', 'metafields-custom-fields' ),
+				'label' => __( 'Post Status', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-post-status',
 				'group' => $post,
 			),
 			'post_format'       => array(
-				'label' => __( 'Post Format', 'metafields-custom-fields' ),
+				'label' => __( 'Post Format', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-format-aside',
 				'group' => $post,
 			),
 			'post_category'     => array(
-				'label' => __( 'Post Category', 'metafields-custom-fields' ),
+				'label' => __( 'Post Category', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-category',
 				'group' => $post,
 			),
 			'post_taxonomy'     => array(
-				'label' => __( 'Post Taxonomy', 'metafields-custom-fields' ),
+				'label' => __( 'Post Taxonomy', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-tag',
 				'group' => $post,
 			),
 			'post'              => array(
-				'label' => __( 'Post', 'metafields-custom-fields' ),
+				'label' => __( 'Post', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-admin-post',
 				'group' => $post,
 			),
 			'page_template'     => array(
-				'label' => __( 'Page Template', 'metafields-custom-fields' ),
+				'label' => __( 'Page Template', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-layout',
 				'group' => $page,
 			),
 			'page_type'         => array(
-				'label' => __( 'Page Type', 'metafields-custom-fields' ),
+				'label' => __( 'Page Type', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-admin-page',
 				'group' => $page,
 			),
 			'page_parent'       => array(
-				'label' => __( 'Page Parent', 'metafields-custom-fields' ),
+				'label' => __( 'Page Parent', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-networking',
 				'group' => $page,
 			),
 			'page'              => array(
-				'label' => __( 'Page', 'metafields-custom-fields' ),
+				'label' => __( 'Page', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-admin-page',
 				'group' => $page,
 			),
 			'current_user'      => array(
-				'label' => __( 'Current User', 'metafields-custom-fields' ),
+				'label' => __( 'Current User', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-admin-users',
 				'group' => $user,
 			),
 			'current_user_role' => array(
-				'label' => __( 'Current User Role', 'metafields-custom-fields' ),
+				'label' => __( 'Current User Role', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-groups',
 				'group' => $user,
 			),
 			'user_form'         => array(
-				'label' => __( 'User Form', 'metafields-custom-fields' ),
+				'label' => __( 'User Form', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-id',
 				'group' => $user,
 			),
 			'user_role'         => array(
-				'label' => __( 'User Role', 'metafields-custom-fields' ),
+				'label' => __( 'User Role', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-groups',
 				'group' => $user,
 			),
 			'taxonomy'          => array(
-				'label' => __( 'Taxonomy', 'metafields-custom-fields' ),
+				'label' => __( 'Taxonomy', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-tag',
 				'group' => $forms,
 			),
 			'attachment'        => array(
-				'label' => __( 'Attachment', 'metafields-custom-fields' ),
+				'label' => __( 'Attachment', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-admin-media',
 				'group' => $forms,
 			),
 			'comment'           => array(
-				'label' => __( 'Comment', 'metafields-custom-fields' ),
+				'label' => __( 'Comment', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-admin-comments',
 				'group' => $forms,
 			),
 			'nav_menu'          => array(
-				'label' => __( 'Menu', 'metafields-custom-fields' ),
+				'label' => __( 'Menu', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-menu',
 				'group' => $forms,
 			),
 			'nav_menu_item'     => array(
-				'label' => __( 'Menu Item', 'metafields-custom-fields' ),
+				'label' => __( 'Menu Item', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-menu-alt3',
 				'group' => $forms,
 			),
 			'widget'            => array(
-				'label' => __( 'Widget', 'metafields-custom-fields' ),
+				'label' => __( 'Widget', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-screenoptions',
 				'group' => $forms,
 			),
 			'block'             => array(
-				'label' => __( 'Block', 'metafields-custom-fields' ),
+				'label' => __( 'Block', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-block-default',
 				'group' => $forms,
 			),
 			'options_page'      => array(
-				'label' => __( 'Options Page', 'metafields-custom-fields' ),
+				'label' => __( 'Options Page', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-admin-generic',
 				'group' => $forms,
 			),
@@ -156,12 +156,12 @@ final class Locations {
 
 		if ( class_exists( 'WooCommerce' ) ) {
 			$params['wc_product_type'] = array(
-				'label' => __( 'Product Type', 'metafields-custom-fields' ),
+				'label' => __( 'Product Type', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-cart',
 				'group' => $woo,
 			);
 			$params['wc_order_status'] = array(
-				'label' => __( 'Order Status', 'metafields-custom-fields' ),
+				'label' => __( 'Order Status', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-clipboard',
 				'group' => $woo,
 			);
@@ -200,30 +200,30 @@ final class Locations {
 			'post_template'     => self::templates(),
 			'page_template'     => self::templates( 'page' ),
 			'page_type'         => array(
-				'front_page' => __( 'Front Page', 'metafields-custom-fields' ),
-				'posts_page' => __( 'Posts Page', 'metafields-custom-fields' ),
-				'top_level'  => __( 'Top Level Page', 'metafields-custom-fields' ),
-				'parent'     => __( 'Parent Page', 'metafields-custom-fields' ),
-				'child'      => __( 'Child Page', 'metafields-custom-fields' ),
+				'front_page' => __( 'Front Page', 'manpreetdev-custom-fields-meta-boxes' ),
+				'posts_page' => __( 'Posts Page', 'manpreetdev-custom-fields-meta-boxes' ),
+				'top_level'  => __( 'Top Level Page', 'manpreetdev-custom-fields-meta-boxes' ),
+				'parent'     => __( 'Parent Page', 'manpreetdev-custom-fields-meta-boxes' ),
+				'child'      => __( 'Child Page', 'manpreetdev-custom-fields-meta-boxes' ),
 			),
 			'user_form'         => array(
-				'add'      => __( 'Add User', 'metafields-custom-fields' ),
-				'edit'     => __( 'Edit User', 'metafields-custom-fields' ),
-				'register' => __( 'Register User', 'metafields-custom-fields' ),
+				'add'      => __( 'Add User', 'manpreetdev-custom-fields-meta-boxes' ),
+				'edit'     => __( 'Edit User', 'manpreetdev-custom-fields-meta-boxes' ),
+				'register' => __( 'Register User', 'manpreetdev-custom-fields-meta-boxes' ),
 			),
 			'taxonomy'          => self::taxonomies(),
 			'post_taxonomy'     => self::taxonomies(),
 			'current_user'      => array(
-				'logged_in'     => __( 'Logged In', 'metafields-custom-fields' ),
-				'viewing_front' => __( 'Viewing Front End', 'metafields-custom-fields' ),
-				'viewing_back'  => __( 'Viewing Back End', 'metafields-custom-fields' ),
+				'logged_in'     => __( 'Logged In', 'manpreetdev-custom-fields-meta-boxes' ),
+				'viewing_front' => __( 'Viewing Front End', 'manpreetdev-custom-fields-meta-boxes' ),
+				'viewing_back'  => __( 'Viewing Back End', 'manpreetdev-custom-fields-meta-boxes' ),
 			),
 			'current_user_role' => self::roles(),
 			'user_role'         => self::roles(),
-			'attachment'        => array( 'all' => __( 'All', 'metafields-custom-fields' ) ),
+			'attachment'        => array( 'all' => __( 'All', 'manpreetdev-custom-fields-meta-boxes' ) ),
 			'comment'           => self::post_types(),
 			'nav_menu'          => self::nav_menus(),
-			'nav_menu_item'     => array( 'all' => __( 'All', 'metafields-custom-fields' ) ),
+			'nav_menu_item'     => array( 'all' => __( 'All', 'manpreetdev-custom-fields-meta-boxes' ) ),
 			'widget'            => self::widgets(),
 			'block'             => array(),
 			'options_page'      => array(),
@@ -269,22 +269,22 @@ final class Locations {
 			'post'          => array(
 				'kind'      => 'post',
 				'post_type' => 'any',
-				'label'     => __( 'Search posts', 'metafields-custom-fields' ),
+				'label'     => __( 'Search posts', 'manpreetdev-custom-fields-meta-boxes' ),
 			),
 			'page'          => array(
 				'kind'      => 'post',
 				'post_type' => 'page',
-				'label'     => __( 'Search pages', 'metafields-custom-fields' ),
+				'label'     => __( 'Search pages', 'manpreetdev-custom-fields-meta-boxes' ),
 			),
 			'page_parent'   => array(
 				'kind'      => 'post',
 				'post_type' => 'page',
-				'label'     => __( 'Search pages', 'metafields-custom-fields' ),
+				'label'     => __( 'Search pages', 'manpreetdev-custom-fields-meta-boxes' ),
 			),
 			'post_category' => array(
 				'kind'     => 'term',
 				'taxonomy' => 'category',
-				'label'    => __( 'Search categories', 'metafields-custom-fields' ),
+				'label'    => __( 'Search categories', 'manpreetdev-custom-fields-meta-boxes' ),
 			),
 		);
 
@@ -364,7 +364,7 @@ final class Locations {
 				'value' => (string) $post->ID,
 				'label' => sprintf(
 					/* translators: 1: post title, 2: post type label, 3: post id. */
-					__( '%1$s — %2$s (#%3$d)', 'metafields-custom-fields' ),
+					__( '%1$s — %2$s (#%3$d)', 'manpreetdev-custom-fields-meta-boxes' ),
 					self::plain_title( $post->post_title ),
 					$type instanceof \WP_Post_Type ? $type->labels->singular_name : $post->post_type,
 					$post->ID
@@ -387,7 +387,7 @@ final class Locations {
 	private static function plain_title( string $title ): string {
 		$title = wp_specialchars_decode( wp_strip_all_tags( $title ), ENT_QUOTES );
 
-		return '' !== trim( $title ) ? $title : __( '(no title)', 'metafields-custom-fields' );
+		return '' !== trim( $title ) ? $title : __( '(no title)', 'manpreetdev-custom-fields-meta-boxes' );
 	}
 
 	/**
@@ -472,7 +472,7 @@ final class Locations {
 
 		return sprintf(
 			/* translators: 1: post title, 2: post id. */
-			__( '%1$s (#%2$d)', 'metafields-custom-fields' ),
+			__( '%1$s (#%2$d)', 'manpreetdev-custom-fields-meta-boxes' ),
 			self::plain_title( $post->post_title ),
 			$post->ID
 		);
@@ -578,17 +578,17 @@ final class Locations {
 				$parts[] = sprintf(
 					'%s %s %s',
 					$label,
-					'!=' === $rule['operator'] ? __( 'is not', 'metafields-custom-fields' ) : __( 'is', 'metafields-custom-fields' ),
+					'!=' === $rule['operator'] ? __( 'is not', 'manpreetdev-custom-fields-meta-boxes' ) : __( 'is', 'manpreetdev-custom-fields-meta-boxes' ),
 					$value
 				);
 			}
 
 			if ( array() !== $parts ) {
-				$groups[] = implode( __( ' and ', 'metafields-custom-fields' ), $parts );
+				$groups[] = implode( __( ' and ', 'manpreetdev-custom-fields-meta-boxes' ), $parts );
 			}
 		}
 
-		return implode( __( ' or ', 'metafields-custom-fields' ), $groups );
+		return implode( __( ' or ', 'manpreetdev-custom-fields-meta-boxes' ), $groups );
 	}
 
 	/**
@@ -642,7 +642,7 @@ final class Locations {
 		// "All" first, as the widget and attachment rules offer it. Fields
 		// that belong on every menu are the common case, and the list held
 		// one entry per menu and no way to say all of them.
-		return array( 'all' => __( 'All menus', 'metafields-custom-fields' ) ) + $menus;
+		return array( 'all' => __( 'All menus', 'manpreetdev-custom-fields-meta-boxes' ) ) + $menus;
 	}
 
 	/**
@@ -669,7 +669,7 @@ final class Locations {
 		 * impossible to say: the list held one entry per widget type and
 		 * nothing that meant all of them.
 		 */
-		return array( 'all' => __( 'All widgets', 'metafields-custom-fields' ) ) + $widgets;
+		return array( 'all' => __( 'All widgets', 'manpreetdev-custom-fields-meta-boxes' ) ) + $widgets;
 	}
 
 	/**
@@ -709,7 +709,7 @@ final class Locations {
 	 * @return array<string, string>
 	 */
 	private static function templates( string $post_type = '' ): array {
-		$templates = array( 'default' => __( 'Default Template', 'metafields-custom-fields' ) );
+		$templates = array( 'default' => __( 'Default Template', 'manpreetdev-custom-fields-meta-boxes' ) );
 
 		// get_page_templates() lives in wp-admin and is absent on the front
 		// end, in REST requests and in WP-CLI, all of which reach choices().

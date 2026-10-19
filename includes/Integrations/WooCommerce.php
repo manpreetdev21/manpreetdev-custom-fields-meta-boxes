@@ -211,7 +211,7 @@ final class WooCommerce extends Module {
 		}
 
 		$tabs['wpcmb'] = array(
-			'label'    => __( 'Custom Fields', 'metafields-custom-fields' ),
+			'label'    => __( 'Custom Fields', 'manpreetdev-custom-fields-meta-boxes' ),
 			'target'   => 'wpcmb_product_data',
 			'class'    => array(),
 			'priority' => 80,

@@ -54,10 +54,10 @@ final class TaxonomyList extends Module {
 		return array_merge(
 			$columns,
 			array(
-				'wpcmb_key'        => __( 'Key', 'metafields-custom-fields' ),
-				'wpcmb_type'       => __( 'Terms', 'metafields-custom-fields' ),
-				'wpcmb_post_types' => __( 'Attached to', 'metafields-custom-fields' ),
-				'wpcmb_count'      => __( 'Terms used', 'metafields-custom-fields' ),
+				'wpcmb_key'        => __( 'Key', 'manpreetdev-custom-fields-meta-boxes' ),
+				'wpcmb_type'       => __( 'Terms', 'manpreetdev-custom-fields-meta-boxes' ),
+				'wpcmb_post_types' => __( 'Attached to', 'manpreetdev-custom-fields-meta-boxes' ),
+				'wpcmb_count'      => __( 'Terms used', 'manpreetdev-custom-fields-meta-boxes' ),
 			)
 		);
 	}
@@ -80,8 +80,8 @@ final class TaxonomyList extends Module {
 
 		if ( 'wpcmb_type' === $column ) {
 			echo empty( $record['hierarchical'] )
-				? esc_html__( 'Flat, like tags', 'metafields-custom-fields' )
-				: esc_html__( 'Nested, like categories', 'metafields-custom-fields' );
+				? esc_html__( 'Flat, like tags', 'manpreetdev-custom-fields-meta-boxes' )
+				: esc_html__( 'Nested, like categories', 'manpreetdev-custom-fields-meta-boxes' );
 
 			return;
 		}
@@ -137,13 +137,13 @@ final class TaxonomyList extends Module {
 		$name   = (string) ( $record['name'] ?? '' );
 
 		if ( '' === $name ) {
-			$states['wpcmb_no_key'] = __( 'No key', 'metafields-custom-fields' );
+			$states['wpcmb_no_key'] = __( 'No key', 'manpreetdev-custom-fields-meta-boxes' );
 
 			return $states;
 		}
 
 		if ( ! taxonomy_exists( $name ) ) {
-			$states['wpcmb_dormant'] = __( 'Not registered', 'metafields-custom-fields' );
+			$states['wpcmb_dormant'] = __( 'Not registered', 'manpreetdev-custom-fields-meta-boxes' );
 
 			return $states;
 		}
@@ -152,7 +152,7 @@ final class TaxonomyList extends Module {
 		// bug from the front end: the terms screen exists, and no post can
 		// use it.
 		if ( array() === (array) ( $record['post_types'] ?? array() ) ) {
-			$states['wpcmb_unattached'] = __( 'No post types', 'metafields-custom-fields' );
+			$states['wpcmb_unattached'] = __( 'No post types', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
 		return $states;
@@ -182,7 +182,7 @@ final class TaxonomyList extends Module {
 		$actions['wpcmb_terms'] = sprintf(
 			'<a href="%s">%s</a>',
 			esc_url( admin_url( 'edit-tags.php?taxonomy=' . rawurlencode( $name ) ) ),
-			esc_html__( 'Manage terms', 'metafields-custom-fields' )
+			esc_html__( 'Manage terms', 'manpreetdev-custom-fields-meta-boxes' )
 		);
 
 		return $actions;

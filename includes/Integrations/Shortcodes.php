@@ -100,7 +100,7 @@ final class Shortcodes extends Module {
 	 */
 	private function stringify( mixed $value, string $separator, string $fallback ): string {
 		if ( is_bool( $value ) ) {
-			return $value ? __( 'Yes', 'metafields-custom-fields' ) : $fallback;
+			return $value ? __( 'Yes', 'manpreetdev-custom-fields-meta-boxes' ) : $fallback;
 		}
 
 		if ( is_array( $value ) ) {

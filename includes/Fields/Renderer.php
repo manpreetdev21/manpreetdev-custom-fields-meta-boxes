@@ -197,7 +197,7 @@ final class Renderer extends Module {
 				esc_attr( $input_id ),
 				esc_html( (string) $field['label'] ),
 				! empty( $field['required'] )
-					? ' <abbr class="wpcmb-required" title="' . esc_attr__( 'Required', 'metafields-custom-fields' ) . '">*</abbr>'
+					? ' <abbr class="wpcmb-required" title="' . esc_attr__( 'Required', 'manpreetdev-custom-fields-meta-boxes' ) . '">*</abbr>'
 					: ''
 			);
 		}

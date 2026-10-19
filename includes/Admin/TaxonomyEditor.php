@@ -79,7 +79,7 @@ final class TaxonomyEditor extends Module {
 	 */
 	public function title_placeholder( $text, $post ): string {
 		if ( $post instanceof \WP_Post && CustomTaxonomies::POST_TYPE === $post->post_type ) {
-			return __( 'Taxonomy name, e.g. Project Types', 'metafields-custom-fields' );
+			return __( 'Taxonomy name, e.g. Project Types', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
 		return (string) $text;
@@ -91,7 +91,7 @@ final class TaxonomyEditor extends Module {
 	public function add_meta_boxes(): void {
 		add_meta_box(
 			'wpcmb-tax-basic',
-			__( 'Basic Settings', 'metafields-custom-fields' ),
+			__( 'Basic Settings', 'manpreetdev-custom-fields-meta-boxes' ),
 			array( $this, 'render_basic' ),
 			CustomTaxonomies::POST_TYPE,
 			'normal',
@@ -100,7 +100,7 @@ final class TaxonomyEditor extends Module {
 
 		add_meta_box(
 			'wpcmb-tax-labels',
-			__( 'Labels', 'metafields-custom-fields' ),
+			__( 'Labels', 'manpreetdev-custom-fields-meta-boxes' ),
 			array( $this, 'render_labels' ),
 			CustomTaxonomies::POST_TYPE,
 			'normal',
@@ -109,7 +109,7 @@ final class TaxonomyEditor extends Module {
 
 		add_meta_box(
 			'wpcmb-tax-post-types',
-			__( 'Post Types', 'metafields-custom-fields' ),
+			__( 'Post Types', 'manpreetdev-custom-fields-meta-boxes' ),
 			array( $this, 'render_post_types' ),
 			CustomTaxonomies::POST_TYPE,
 			'normal',
@@ -118,7 +118,7 @@ final class TaxonomyEditor extends Module {
 
 		add_meta_box(
 			'wpcmb-tax-advanced',
-			__( 'Advanced', 'metafields-custom-fields' ),
+			__( 'Advanced', 'manpreetdev-custom-fields-meta-boxes' ),
 			array( $this, 'render_advanced' ),
 			CustomTaxonomies::POST_TYPE,
 			'normal',
@@ -127,7 +127,7 @@ final class TaxonomyEditor extends Module {
 
 		add_meta_box(
 			'wpcmb-tax-visibility',
-			__( 'Visibility', 'metafields-custom-fields' ),
+			__( 'Visibility', 'manpreetdev-custom-fields-meta-boxes' ),
 			array( $this, 'render_visibility' ),
 			CustomTaxonomies::POST_TYPE,
 			'side',
@@ -145,13 +145,13 @@ final class TaxonomyEditor extends Module {
 
 		wp_nonce_field( self::NONCE, 'wpcmb_taxonomy_nonce' );
 
-		echo '<p class="description">' . esc_html__( 'Publish this record to register the taxonomy. Saving it as a draft keeps it defined but inactive.', 'metafields-custom-fields' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'Publish this record to register the taxonomy. Saving it as a draft keeps it defined but inactive.', 'manpreetdev-custom-fields-meta-boxes' ) . '</p>';
 
 		$this->text(
 			'name',
-			__( 'Taxonomy key', 'metafields-custom-fields' ),
+			__( 'Taxonomy key', 'manpreetdev-custom-fields-meta-boxes' ),
 			(string) $config['name'],
-			__( 'Lowercase, up to 32 characters. This is what every term is stored against, so changing it later orphans them all.', 'metafields-custom-fields' ),
+			__( 'Lowercase, up to 32 characters. This is what every term is stored against, so changing it later orphans them all.', 'manpreetdev-custom-fields-meta-boxes' ),
 			array(
 				'placeholder' => 'project_type',
 				'maxlength'   => '32',
@@ -161,12 +161,12 @@ final class TaxonomyEditor extends Module {
 
 		$this->toggle(
 			'hierarchical',
-			__( 'Terms can have parents, like categories', 'metafields-custom-fields' ),
+			__( 'Terms can have parents, like categories', 'manpreetdev-custom-fields-meta-boxes' ),
 			(bool) $config['hierarchical'],
-			__( 'Off behaves like tags: a flat list, entered by typing.', 'metafields-custom-fields' )
+			__( 'Off behaves like tags: a flat list, entered by typing.', 'manpreetdev-custom-fields-meta-boxes' )
 		);
 
-		$this->text( 'description', __( 'Description', 'metafields-custom-fields' ), (string) $config['description'] );
+		$this->text( 'description', __( 'Description', 'manpreetdev-custom-fields-meta-boxes' ), (string) $config['description'] );
 	}
 
 	/**
@@ -177,12 +177,12 @@ final class TaxonomyEditor extends Module {
 	public function render_labels( \WP_Post $post ): void {
 		$config = $this->config( $post );
 
-		echo '<p class="description">' . esc_html__( 'Everything else — Add New, Search, Parent, and the tag-style wording for a flat taxonomy — is built from these two.', 'metafields-custom-fields' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'Everything else — Add New, Search, Parent, and the tag-style wording for a flat taxonomy — is built from these two.', 'manpreetdev-custom-fields-meta-boxes' ) . '</p>';
 
 		echo '<div class="wpcmb-grid-2">';
 
-		$this->text( 'singular', __( 'Singular name', 'metafields-custom-fields' ), (string) $config['singular'], '', array( 'placeholder' => __( 'Project Type', 'metafields-custom-fields' ) ) );
-		$this->text( 'plural', __( 'Plural name', 'metafields-custom-fields' ), (string) $config['plural'], '', array( 'placeholder' => __( 'Project Types', 'metafields-custom-fields' ) ) );
+		$this->text( 'singular', __( 'Singular name', 'manpreetdev-custom-fields-meta-boxes' ), (string) $config['singular'], '', array( 'placeholder' => __( 'Project Type', 'manpreetdev-custom-fields-meta-boxes' ) ) );
+		$this->text( 'plural', __( 'Plural name', 'manpreetdev-custom-fields-meta-boxes' ), (string) $config['plural'], '', array( 'placeholder' => __( 'Project Types', 'manpreetdev-custom-fields-meta-boxes' ) ) );
 
 		echo '</div>';
 	}
@@ -197,7 +197,7 @@ final class TaxonomyEditor extends Module {
 		$attached  = (array) $config['post_types'];
 		$available = $this->available_post_types();
 
-		echo '<p class="description">' . esc_html__( 'Where this taxonomy appears. A post type can also claim it from its own screen — either side of the join works.', 'metafields-custom-fields' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'Where this taxonomy appears. A post type can also claim it from its own screen — either side of the join works.', 'manpreetdev-custom-fields-meta-boxes' ) . '</p>';
 
 		echo '<fieldset class="wpcmb-fieldset">';
 
@@ -208,7 +208,7 @@ final class TaxonomyEditor extends Module {
 				checked( in_array( $name, $attached, true ), true, false ),
 				esc_html( $label ),
 				esc_html( $name ),
-				post_type_exists( $name ) ? '' : ' <em>' . esc_html__( '(not registered yet)', 'metafields-custom-fields' ) . '</em>'
+				post_type_exists( $name ) ? '' : ' <em>' . esc_html__( '(not registered yet)', 'manpreetdev-custom-fields-meta-boxes' ) . '</em>'
 			);
 		}
 
@@ -272,23 +272,23 @@ final class TaxonomyEditor extends Module {
 	public function render_advanced( \WP_Post $post ): void {
 		$config = $this->config( $post );
 
-		$this->toggle( 'rewrite', __( 'Give terms pretty permalinks', 'metafields-custom-fields' ), (bool) $config['rewrite'] );
+		$this->toggle( 'rewrite', __( 'Give terms pretty permalinks', 'manpreetdev-custom-fields-meta-boxes' ), (bool) $config['rewrite'] );
 
 		echo '<div class="wpcmb-grid-2">';
 
 		$this->text(
 			'rewrite_slug',
-			__( 'URL slug', 'metafields-custom-fields' ),
+			__( 'URL slug', 'manpreetdev-custom-fields-meta-boxes' ),
 			(string) $config['rewrite_slug'],
-			__( 'Defaults to the taxonomy key.', 'metafields-custom-fields' )
+			__( 'Defaults to the taxonomy key.', 'manpreetdev-custom-fields-meta-boxes' )
 		);
 
 		echo '</div>';
 
-		$this->toggle( 'with_front', __( 'Prefix URLs with the permalink base', 'metafields-custom-fields' ), (bool) $config['with_front'] );
-		$this->toggle( 'show_admin_column', __( 'Show a column on the post list', 'metafields-custom-fields' ), (bool) $config['show_admin_column'] );
-		$this->toggle( 'show_tagcloud', __( 'Allow it in the tag cloud widget', 'metafields-custom-fields' ), (bool) $config['show_tagcloud'] );
-		$this->toggle( 'sort', __( 'Remember the order terms were added in', 'metafields-custom-fields' ), (bool) $config['sort'] );
+		$this->toggle( 'with_front', __( 'Prefix URLs with the permalink base', 'manpreetdev-custom-fields-meta-boxes' ), (bool) $config['with_front'] );
+		$this->toggle( 'show_admin_column', __( 'Show a column on the post list', 'manpreetdev-custom-fields-meta-boxes' ), (bool) $config['show_admin_column'] );
+		$this->toggle( 'show_tagcloud', __( 'Allow it in the tag cloud widget', 'manpreetdev-custom-fields-meta-boxes' ), (bool) $config['show_tagcloud'] );
+		$this->toggle( 'sort', __( 'Remember the order terms were added in', 'manpreetdev-custom-fields-meta-boxes' ), (bool) $config['sort'] );
 	}
 
 	/**
@@ -299,10 +299,10 @@ final class TaxonomyEditor extends Module {
 	public function render_visibility( \WP_Post $post ): void {
 		$config = $this->config( $post );
 
-		$this->toggle( 'public', __( 'Public', 'metafields-custom-fields' ), (bool) $config['public'], __( 'Terms have archive pages on the front of the site.', 'metafields-custom-fields' ) );
-		$this->toggle( 'show_ui', __( 'Show in the admin', 'metafields-custom-fields' ), (bool) $config['show_ui'] );
-		$this->toggle( 'show_in_menu', __( 'Show in the admin menu', 'metafields-custom-fields' ), (bool) $config['show_in_menu'] );
-		$this->toggle( 'show_in_rest', __( 'Show in the REST API', 'metafields-custom-fields' ), (bool) $config['show_in_rest'], __( 'Required for the block editor.', 'metafields-custom-fields' ) );
+		$this->toggle( 'public', __( 'Public', 'manpreetdev-custom-fields-meta-boxes' ), (bool) $config['public'], __( 'Terms have archive pages on the front of the site.', 'manpreetdev-custom-fields-meta-boxes' ) );
+		$this->toggle( 'show_ui', __( 'Show in the admin', 'manpreetdev-custom-fields-meta-boxes' ), (bool) $config['show_ui'] );
+		$this->toggle( 'show_in_menu', __( 'Show in the admin menu', 'manpreetdev-custom-fields-meta-boxes' ), (bool) $config['show_in_menu'] );
+		$this->toggle( 'show_in_rest', __( 'Show in the REST API', 'manpreetdev-custom-fields-meta-boxes' ), (bool) $config['show_in_rest'], __( 'Required for the block editor.', 'manpreetdev-custom-fields-meta-boxes' ) );
 	}
 
 	/**
@@ -416,7 +416,7 @@ final class TaxonomyEditor extends Module {
 		printf(
 			'<div class="notice notice-warning"><p>%s</p><p>%s</p></div>',
 			esc_html( $notice ),
-			esc_html__( 'The record was saved, but no taxonomy is registered from it until the key is changed.', 'metafields-custom-fields' )
+			esc_html__( 'The record was saved, but no taxonomy is registered from it until the key is changed.', 'manpreetdev-custom-fields-meta-boxes' )
 		);
 	}
 }

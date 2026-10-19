@@ -147,17 +147,17 @@ abstract class RecordType extends Module {
 					'name'               => $names['plural'],
 					'singular_name'      => $names['singular'],
 					/* translators: %s: singular record name, e.g. "Post Type". */
-					'add_new_item'       => sprintf( __( 'Add %s', 'metafields-custom-fields' ), $names['singular'] ),
+					'add_new_item'       => sprintf( __( 'Add %s', 'manpreetdev-custom-fields-meta-boxes' ), $names['singular'] ),
 					/* translators: %s: singular record name. */
-					'edit_item'          => sprintf( __( 'Edit %s', 'metafields-custom-fields' ), $names['singular'] ),
+					'edit_item'          => sprintf( __( 'Edit %s', 'manpreetdev-custom-fields-meta-boxes' ), $names['singular'] ),
 					/* translators: %s: singular record name. */
-					'new_item'           => sprintf( __( 'New %s', 'metafields-custom-fields' ), $names['singular'] ),
+					'new_item'           => sprintf( __( 'New %s', 'manpreetdev-custom-fields-meta-boxes' ), $names['singular'] ),
 					/* translators: %s: plural record name. */
-					'search_items'       => sprintf( __( 'Search %s', 'metafields-custom-fields' ), $names['plural'] ),
+					'search_items'       => sprintf( __( 'Search %s', 'manpreetdev-custom-fields-meta-boxes' ), $names['plural'] ),
 					/* translators: %s: lowercase plural record name. */
-					'not_found'          => sprintf( __( 'No %s yet.', 'metafields-custom-fields' ), strtolower( $names['plural'] ) ),
+					'not_found'          => sprintf( __( 'No %s yet.', 'manpreetdev-custom-fields-meta-boxes' ), strtolower( $names['plural'] ) ),
 					/* translators: %s: lowercase plural record name. */
-					'not_found_in_trash' => sprintf( __( 'No %s in Trash.', 'metafields-custom-fields' ), strtolower( $names['plural'] ) ),
+					'not_found_in_trash' => sprintf( __( 'No %s in Trash.', 'manpreetdev-custom-fields-meta-boxes' ), strtolower( $names['plural'] ) ),
 					'menu_name'          => $names['plural'],
 				),
 				'public'           => false,

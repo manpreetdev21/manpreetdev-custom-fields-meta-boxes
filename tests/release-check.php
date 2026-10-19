@@ -84,7 +84,7 @@ $wpcmb_slug = wpcmb_slug();
 $wpcmb_main = wpcmb_file( $wpcmb_slug . '.php' );
 $wpcmb_read = wpcmb_file( 'readme.txt' );
 
-printf( "Packaging MetaFields as \"%s\"\n\n", $wpcmb_slug );
+printf( "Packaging the plugin as \"%s\"\n\n", $wpcmb_slug );
 
 /* What the package contains, which four rules below read. */
 $wpcmb_shipped_php = array_merge(

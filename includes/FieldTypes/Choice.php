@@ -56,15 +56,15 @@ final class Choice extends FieldType {
 	 */
 	public function types(): array {
 		return array(
-			'select'       => __( 'Select', 'metafields-custom-fields' ),
-			'checkbox'     => __( 'Checkbox', 'metafields-custom-fields' ),
-			'radio'        => __( 'Radio', 'metafields-custom-fields' ),
-			'toggle'       => __( 'Toggle', 'metafields-custom-fields' ),
-			'true_false'   => __( 'True / False', 'metafields-custom-fields' ),
-			'button_group' => __( 'Button Group', 'metafields-custom-fields' ),
-			'rating'       => __( 'Rating', 'metafields-custom-fields' ),
-			'country'      => __( 'Country', 'metafields-custom-fields' ),
-			'state'        => __( 'State / Region', 'metafields-custom-fields' ),
+			'select'       => __( 'Select', 'manpreetdev-custom-fields-meta-boxes' ),
+			'checkbox'     => __( 'Checkbox', 'manpreetdev-custom-fields-meta-boxes' ),
+			'radio'        => __( 'Radio', 'manpreetdev-custom-fields-meta-boxes' ),
+			'toggle'       => __( 'Toggle', 'manpreetdev-custom-fields-meta-boxes' ),
+			'true_false'   => __( 'True / False', 'manpreetdev-custom-fields-meta-boxes' ),
+			'button_group' => __( 'Button Group', 'manpreetdev-custom-fields-meta-boxes' ),
+			'rating'       => __( 'Rating', 'manpreetdev-custom-fields-meta-boxes' ),
+			'country'      => __( 'Country', 'manpreetdev-custom-fields-meta-boxes' ),
+			'state'        => __( 'State / Region', 'manpreetdev-custom-fields-meta-boxes' ),
 		);
 	}
 
@@ -72,7 +72,7 @@ final class Choice extends FieldType {
 	 * Editor group label.
 	 */
 	public function group_label(): string {
-		return __( 'Choice', 'metafields-custom-fields' );
+		return __( 'Choice', 'manpreetdev-custom-fields-meta-boxes' );
 	}
 
 	/**
@@ -154,7 +154,7 @@ final class Choice extends FieldType {
 		if ( ! $multiple && '0' !== (string) $this->setting( $field, 'allow_null', '1' ) ) {
 			printf(
 				'<option value="">%s</option>',
-				esc_html( (string) $this->setting( $field, 'empty_label', __( '— Select —', 'metafields-custom-fields' ) ) )
+				esc_html( (string) $this->setting( $field, 'empty_label', __( '— Select —', 'manpreetdev-custom-fields-meta-boxes' ) ) )
 			);
 		}
 
@@ -216,7 +216,7 @@ final class Choice extends FieldType {
 		if ( 'checkbox' === $control && $multiple && ! empty( $this->setting( $field, 'toggle_all', '' ) ) ) {
 			printf(
 				'<label class="wpcmb-choice wpcmb-choice--toggle-all"><input type="checkbox" data-wpcmb-toggle-all="1" /> <span>%s</span></label>',
-				esc_html__( 'Select all', 'metafields-custom-fields' )
+				esc_html__( 'Select all', 'manpreetdev-custom-fields-meta-boxes' )
 			);
 		}
 
@@ -258,10 +258,10 @@ final class Choice extends FieldType {
 					<input type="text" class="wpcmb-input wpcmb-choice-other__text" id="%1$s-other" name="%3$s" value="%4$s" placeholder="%5$s" />
 				</div>',
 				esc_attr( $input_id ),
-				esc_html__( 'Other', 'metafields-custom-fields' ),
+				esc_html__( 'Other', 'manpreetdev-custom-fields-meta-boxes' ),
 				esc_attr( $input_name . '[]' ),
 				esc_attr( implode( ', ', $custom ) ),
-				esc_attr__( 'Separate several with a comma', 'metafields-custom-fields' )
+				esc_attr__( 'Separate several with a comma', 'manpreetdev-custom-fields-meta-boxes' )
 			);
 		}
 
@@ -290,7 +290,7 @@ final class Choice extends FieldType {
 		$on = in_array( '1', $selected, true );
 
 		$label = 'true_false' === $type
-			? (string) $this->setting( $field, $on ? 'on_label' : 'off_label', $on ? __( 'True', 'metafields-custom-fields' ) : __( 'False', 'metafields-custom-fields' ) )
+			? (string) $this->setting( $field, $on ? 'on_label' : 'off_label', $on ? __( 'True', 'manpreetdev-custom-fields-meta-boxes' ) : __( 'False', 'manpreetdev-custom-fields-meta-boxes' ) )
 			: (string) $this->setting( $field, 'toggle_label', '' );
 
 		// An unchecked checkbox posts nothing, which is indistinguishable from
@@ -303,8 +303,8 @@ final class Choice extends FieldType {
 			esc_attr( $input_id ),
 			esc_attr( $input_name ),
 			$on ? ' checked' : '',
-			esc_attr( 'true_false' === $type ? (string) $this->setting( $field, 'on_label', __( 'True', 'metafields-custom-fields' ) ) : '' ),
-			esc_attr( 'true_false' === $type ? (string) $this->setting( $field, 'off_label', __( 'False', 'metafields-custom-fields' ) ) : '' ),
+			esc_attr( 'true_false' === $type ? (string) $this->setting( $field, 'on_label', __( 'True', 'manpreetdev-custom-fields-meta-boxes' ) ) : '' ),
+			esc_attr( 'true_false' === $type ? (string) $this->setting( $field, 'off_label', __( 'False', 'manpreetdev-custom-fields-meta-boxes' ) ) : '' ),
 			esc_html( $label )
 		);
 	}
@@ -410,7 +410,7 @@ final class Choice extends FieldType {
 		if ( 'toggle' === $type ) {
 			return array(
 				'toggle_label' => array(
-					'label' => __( 'Toggle label', 'metafields-custom-fields' ),
+					'label' => __( 'Toggle label', 'manpreetdev-custom-fields-meta-boxes' ),
 					'type'  => 'text',
 				),
 			);
@@ -419,14 +419,14 @@ final class Choice extends FieldType {
 		if ( 'true_false' === $type ) {
 			return array(
 				'on_label'  => array(
-					'label' => __( 'Label when on', 'metafields-custom-fields' ),
+					'label' => __( 'Label when on', 'manpreetdev-custom-fields-meta-boxes' ),
 					'type'  => 'text',
-					'help'  => __( 'Defaults to True.', 'metafields-custom-fields' ),
+					'help'  => __( 'Defaults to True.', 'manpreetdev-custom-fields-meta-boxes' ),
 				),
 				'off_label' => array(
-					'label' => __( 'Label when off', 'metafields-custom-fields' ),
+					'label' => __( 'Label when off', 'manpreetdev-custom-fields-meta-boxes' ),
 					'type'  => 'text',
-					'help'  => __( 'Defaults to False.', 'metafields-custom-fields' ),
+					'help'  => __( 'Defaults to False.', 'manpreetdev-custom-fields-meta-boxes' ),
 				),
 			);
 		}
@@ -435,30 +435,30 @@ final class Choice extends FieldType {
 
 		if ( ! in_array( $type, array( 'country', 'state', 'rating' ), true ) ) {
 			$schema['choices'] = array(
-				'label' => __( 'Choices', 'metafields-custom-fields' ),
+				'label' => __( 'Choices', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'choices',
-				'help'  => __( 'One per line. Use value : Label to set a value separately from its label.', 'metafields-custom-fields' ),
+				'help'  => __( 'One per line. Use value : Label to set a value separately from its label.', 'manpreetdev-custom-fields-meta-boxes' ),
 			);
 		}
 
 		if ( 'rating' === $type ) {
 			$schema['max'] = array(
-				'label' => __( 'Maximum rating', 'metafields-custom-fields' ),
+				'label' => __( 'Maximum rating', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'number',
 			);
 		}
 
 		if ( in_array( $type, array( 'select', 'checkbox', 'country', 'state' ), true ) ) {
 			$schema['multiple'] = array(
-				'label' => __( 'Allow multiple', 'metafields-custom-fields' ),
+				'label' => __( 'Allow multiple', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'toggle',
 			);
 			$schema['min']      = array(
-				'label' => __( 'Minimum selections', 'metafields-custom-fields' ),
+				'label' => __( 'Minimum selections', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'number',
 			);
 			$schema['max']      = array(
-				'label' => __( 'Maximum selections', 'metafields-custom-fields' ),
+				'label' => __( 'Maximum selections', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'number',
 			);
 		}
@@ -467,12 +467,12 @@ final class Choice extends FieldType {
 		// list expresses "nothing" by having nothing ticked.
 		if ( in_array( $type, self::DROPDOWN_TYPES, true ) ) {
 			$schema['allow_null']  = array(
-				'label' => __( 'Offer an empty choice', 'metafields-custom-fields' ),
+				'label' => __( 'Offer an empty choice', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'toggle',
-				'help'  => __( 'On by default. Off needs a default value, or the browser preselects the first choice.', 'metafields-custom-fields' ),
+				'help'  => __( 'On by default. Off needs a default value, or the browser preselects the first choice.', 'manpreetdev-custom-fields-meta-boxes' ),
 			);
 			$schema['empty_label'] = array(
-				'label' => __( 'Empty choice label', 'metafields-custom-fields' ),
+				'label' => __( 'Empty choice label', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'text',
 				'tab'   => 'appearance',
 			);
@@ -480,39 +480,39 @@ final class Choice extends FieldType {
 
 		if ( in_array( $type, array( 'checkbox', 'radio', 'button_group' ), true ) ) {
 			$schema['layout'] = array(
-				'label'   => __( 'Layout', 'metafields-custom-fields' ),
+				'label'   => __( 'Layout', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'    => 'select',
 				'tab'     => 'appearance',
 				'choices' => array(
-					'vertical'   => __( 'One per line', 'metafields-custom-fields' ),
-					'horizontal' => __( 'In a row', 'metafields-custom-fields' ),
+					'vertical'   => __( 'One per line', 'manpreetdev-custom-fields-meta-boxes' ),
+					'horizontal' => __( 'In a row', 'manpreetdev-custom-fields-meta-boxes' ),
 				),
 			);
 		}
 
 		if ( 'checkbox' === $type ) {
 			$schema['toggle_all']   = array(
-				'label' => __( 'Offer "Select all"', 'metafields-custom-fields' ),
+				'label' => __( 'Offer "Select all"', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'toggle',
 			);
 			$schema['allow_custom'] = array(
-				'label' => __( 'Allow other values', 'metafields-custom-fields' ),
+				'label' => __( 'Allow other values', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'toggle',
-				'help'  => __( 'Adds a box for values that are not in the list. Multi-value lists only.', 'metafields-custom-fields' ),
+				'help'  => __( 'Adds a box for values that are not in the list. Multi-value lists only.', 'manpreetdev-custom-fields-meta-boxes' ),
 			);
 		}
 
 		$schema['return_format'] = array(
-			'label'   => __( 'Return format', 'metafields-custom-fields' ),
+			'label'   => __( 'Return format', 'manpreetdev-custom-fields-meta-boxes' ),
 			'type'    => 'select',
 			'choices' => array(
-				'value' => __( 'Value', 'metafields-custom-fields' ),
-				'label' => __( 'Label', 'metafields-custom-fields' ),
+				'value' => __( 'Value', 'manpreetdev-custom-fields-meta-boxes' ),
+				'label' => __( 'Label', 'manpreetdev-custom-fields-meta-boxes' ),
 			),
 		);
 
 		$schema['validation_message'] = array(
-			'label' => __( 'Validation message', 'metafields-custom-fields' ),
+			'label' => __( 'Validation message', 'manpreetdev-custom-fields-meta-boxes' ),
 			'type'  => 'text',
 		);
 

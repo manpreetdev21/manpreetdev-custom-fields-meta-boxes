@@ -39,14 +39,14 @@ final class OptionsPageEditor extends RecordEditor {
 	 * The placeholder for the title field.
 	 */
 	protected function title_hint(): string {
-		return __( 'Page name, e.g. Site Options', 'metafields-custom-fields' );
+		return __( 'Page name, e.g. Site Options', 'manpreetdev-custom-fields-meta-boxes' );
 	}
 
 	/**
 	 * What to say under a refusal.
 	 */
 	protected function rejection_consequence(): string {
-		return __( 'The record was saved, but no page is built from it until this is fixed.', 'metafields-custom-fields' );
+		return __( 'The record was saved, but no page is built from it until this is fixed.', 'manpreetdev-custom-fields-meta-boxes' );
 	}
 
 	/**
@@ -74,9 +74,9 @@ final class OptionsPageEditor extends RecordEditor {
 	 * Register the editor meta boxes.
 	 */
 	public function add_meta_boxes(): void {
-		add_meta_box( 'wpcmb-op-basic', __( 'Basic Settings', 'metafields-custom-fields' ), array( $this, 'render_basic' ), CustomOptionsPages::POST_TYPE, 'normal', 'high' );
-		add_meta_box( 'wpcmb-op-fields', __( 'Fields on This Page', 'metafields-custom-fields' ), array( $this, 'render_fields' ), CustomOptionsPages::POST_TYPE, 'normal', 'default' );
-		add_meta_box( 'wpcmb-op-menu', __( 'Menu', 'metafields-custom-fields' ), array( $this, 'render_menu' ), CustomOptionsPages::POST_TYPE, 'side', 'default' );
+		add_meta_box( 'wpcmb-op-basic', __( 'Basic Settings', 'manpreetdev-custom-fields-meta-boxes' ), array( $this, 'render_basic' ), CustomOptionsPages::POST_TYPE, 'normal', 'high' );
+		add_meta_box( 'wpcmb-op-fields', __( 'Fields on This Page', 'manpreetdev-custom-fields-meta-boxes' ), array( $this, 'render_fields' ), CustomOptionsPages::POST_TYPE, 'normal', 'default' );
+		add_meta_box( 'wpcmb-op-menu', __( 'Menu', 'manpreetdev-custom-fields-meta-boxes' ), array( $this, 'render_menu' ), CustomOptionsPages::POST_TYPE, 'side', 'default' );
 	}
 
 	/**
@@ -89,13 +89,13 @@ final class OptionsPageEditor extends RecordEditor {
 
 		$this->nonce_field();
 
-		echo '<p class="description">' . esc_html__( 'Publish this record to build the page. Saving it as a draft keeps it defined but inactive.', 'metafields-custom-fields' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'Publish this record to build the page. Saving it as a draft keeps it defined but inactive.', 'manpreetdev-custom-fields-meta-boxes' ) . '</p>';
 
 		$this->text(
 			'slug',
-			__( 'Slug', 'metafields-custom-fields' ),
+			__( 'Slug', 'manpreetdev-custom-fields-meta-boxes' ),
 			(string) $config['slug'],
-			__( 'Every value on the page is stored as wpcmb_{slug}_{field}, so changing it orphans what is already saved.', 'metafields-custom-fields' ),
+			__( 'Every value on the page is stored as wpcmb_{slug}_{field}, so changing it orphans what is already saved.', 'manpreetdev-custom-fields-meta-boxes' ),
 			array(
 				'placeholder' => 'site-settings',
 				'required'    => 'required',
@@ -104,8 +104,8 @@ final class OptionsPageEditor extends RecordEditor {
 
 		echo '<div class="wpcmb-grid-2">';
 
-		$this->text( 'menu_title', __( 'Menu title', 'metafields-custom-fields' ), (string) $config['menu_title'], __( 'Defaults to this record\'s name.', 'metafields-custom-fields' ) );
-		$this->text( 'page_title', __( 'Page title', 'metafields-custom-fields' ), (string) $config['page_title'], __( 'The heading on the page itself.', 'metafields-custom-fields' ) );
+		$this->text( 'menu_title', __( 'Menu title', 'manpreetdev-custom-fields-meta-boxes' ), (string) $config['menu_title'], __( 'Defaults to this record\'s name.', 'manpreetdev-custom-fields-meta-boxes' ) );
+		$this->text( 'page_title', __( 'Page title', 'manpreetdev-custom-fields-meta-boxes' ), (string) $config['page_title'], __( 'The heading on the page itself.', 'manpreetdev-custom-fields-meta-boxes' ) );
 
 		echo '</div>';
 	}
@@ -120,7 +120,7 @@ final class OptionsPageEditor extends RecordEditor {
 		$slug   = (string) $config['slug'];
 
 		if ( '' === $slug ) {
-			printf( '<p class="description">%s</p>', esc_html__( 'Give the page a slug and this will tell you which field groups appear on it.', 'metafields-custom-fields' ) );
+			printf( '<p class="description">%s</p>', esc_html__( 'Give the page a slug and this will tell you which field groups appear on it.', 'manpreetdev-custom-fields-meta-boxes' ) );
 
 			return;
 		}
@@ -130,7 +130,7 @@ final class OptionsPageEditor extends RecordEditor {
 			esc_html(
 				sprintf(
 					/* translators: %s: the options page slug. */
-					__( 'A field group appears on this page when one of its location rules says: Options Page is equal to %s. That is still how the fields get here — this record decides the page, the rules decide its contents.', 'metafields-custom-fields' ),
+					__( 'A field group appears on this page when one of its location rules says: Options Page is equal to %s. That is still how the fields get here — this record decides the page, the rules decide its contents.', 'manpreetdev-custom-fields-meta-boxes' ),
 					$slug
 				)
 			)
@@ -143,7 +143,7 @@ final class OptionsPageEditor extends RecordEditor {
 		if ( array() === $groups ) {
 			printf(
 				'<p><strong>%s</strong></p>',
-				esc_html__( 'No field group points at this page yet, so it will render empty.', 'metafields-custom-fields' )
+				esc_html__( 'No field group points at this page yet, so it will render empty.', 'manpreetdev-custom-fields-meta-boxes' )
 			);
 
 			return;
@@ -183,21 +183,21 @@ final class OptionsPageEditor extends RecordEditor {
 
 		$this->select(
 			'parent',
-			__( 'Menu location', 'metafields-custom-fields' ),
+			__( 'Menu location', 'manpreetdev-custom-fields-meta-boxes' ),
 			(string) $config['parent'],
 			CustomOptionsPages::parents( $others ),
-			__( 'Another options page can be the parent, which is how a settings area gets sub-pages.', 'metafields-custom-fields' )
+			__( 'Another options page can be the parent, which is how a settings area gets sub-pages.', 'manpreetdev-custom-fields-meta-boxes' )
 		);
 
 		$this->text(
 			'capability',
-			__( 'Capability', 'metafields-custom-fields' ),
+			__( 'Capability', 'manpreetdev-custom-fields-meta-boxes' ),
 			(string) $config['capability'],
-			__( 'Who may open and save the page.', 'metafields-custom-fields' ),
+			__( 'Who may open and save the page.', 'manpreetdev-custom-fields-meta-boxes' ),
 			array( 'placeholder' => 'manage_options' )
 		);
 
-		printf( '<p><span class="wpcmb-label">%s</span>', esc_html__( 'Menu icon', 'metafields-custom-fields' ) );
+		printf( '<p><span class="wpcmb-label">%s</span>', esc_html__( 'Menu icon', 'manpreetdev-custom-fields-meta-boxes' ) );
 
 		$this->container->get( Registry::class )->get( 'icon' )->render(
 			array(
@@ -211,8 +211,8 @@ final class OptionsPageEditor extends RecordEditor {
 			'wpcmb-op-icon'
 		);
 
-		printf( '<span class="description wpcmb-help">%s</span></p>', esc_html__( 'Only used for a top-level menu.', 'metafields-custom-fields' ) );
+		printf( '<span class="description wpcmb-help">%s</span></p>', esc_html__( 'Only used for a top-level menu.', 'manpreetdev-custom-fields-meta-boxes' ) );
 
-		$this->text( 'position', __( 'Menu position', 'metafields-custom-fields' ), (string) $config['position'], __( '0 keeps the default place, below Settings.', 'metafields-custom-fields' ), array( 'type' => 'number' ) );
+		$this->text( 'position', __( 'Menu position', 'manpreetdev-custom-fields-meta-boxes' ), (string) $config['position'], __( '0 keeps the default place, below Settings.', 'manpreetdev-custom-fields-meta-boxes' ), array( 'type' => 'number' ) );
 	}
 }

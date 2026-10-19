@@ -242,7 +242,7 @@ final class OptionsPages extends Module {
 					? (string) $page['page_title']
 					: sprintf(
 						/* translators: 1: plugin name, 2: page title, 3: options page slug. */
-						__( '%1$s: %2$s (%3$s)', 'metafields-custom-fields' ),
+						__( '%1$s: %2$s (%3$s)', 'manpreetdev-custom-fields-meta-boxes' ),
 						self::plugin_name(),
 						$page['title'],
 						$slug
@@ -325,7 +325,7 @@ final class OptionsPages extends Module {
 		$ref = new ObjectRef( ObjectRef::OPTION, $slug );
 
 		if ( ! Permissions::can_edit( $ref ) ) {
-			wp_die( esc_html__( 'You do not have permission to edit these options.', 'metafields-custom-fields' ) );
+			wp_die( esc_html__( 'You do not have permission to edit these options.', 'manpreetdev-custom-fields-meta-boxes' ) );
 		}
 
 		// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Each value is validated and then sanitized by its own field type below; a blanket sanitizer here would flatten the arrays that composite types post.
@@ -395,7 +395,7 @@ final class OptionsPages extends Module {
 		$ref = new ObjectRef( ObjectRef::OPTION, $slug );
 
 		if ( ! Permissions::can_edit( $ref ) ) {
-			wp_die( esc_html__( 'You do not have permission to view these options.', 'metafields-custom-fields' ) );
+			wp_die( esc_html__( 'You do not have permission to view these options.', 'manpreetdev-custom-fields-meta-boxes' ) );
 		}
 
 		$pages    = $this->pages();
@@ -409,18 +409,18 @@ final class OptionsPages extends Module {
 			<span class="wpcmb-eyebrow wpcmb-options-eyebrow"><?php echo esc_html( self::plugin_name() ); ?></span>
 			<h1>
 				<?php echo esc_html( $title ); ?>
-				<code class="wpcmb-options-slug" title="<?php esc_attr_e( 'The options page slug these values are stored against', 'metafields-custom-fields' ); ?>"><?php echo esc_html( $slug ); ?></code>
+				<code class="wpcmb-options-slug" title="<?php esc_attr_e( 'The options page slug these values are stored against', 'manpreetdev-custom-fields-meta-boxes' ); ?>"><?php echo esc_html( $slug ); ?></code>
 			</h1>
 
 			<?php if ( array() === $groups ) : ?>
 				<div class="wpcmb-empty wpcmb-empty--page">
-					<span class="wpcmb-empty__title"><?php esc_html_e( 'No fields here yet', 'metafields-custom-fields' ); ?></span>
+					<span class="wpcmb-empty__title"><?php esc_html_e( 'No fields here yet', 'manpreetdev-custom-fields-meta-boxes' ); ?></span>
 					<p>
 						<?php
 						echo esc_html(
 							sprintf(
 								/* translators: %s: options page slug. */
-								__( 'Add fields to a group whose location is "Options Page is %s" and they will appear here.', 'metafields-custom-fields' ),
+								__( 'Add fields to a group whose location is "Options Page is %s" and they will appear here.', 'manpreetdev-custom-fields-meta-boxes' ),
 								$slug
 							)
 						);
@@ -449,7 +449,7 @@ final class OptionsPages extends Module {
 
 					<p class="wpcmb-options-actions">
 						<button type="submit" class="wpcmb-btn wpcmb-btn--primary wpcmb-btn--lg">
-							<?php esc_html_e( 'Save options', 'metafields-custom-fields' ); ?>
+							<?php esc_html_e( 'Save options', 'manpreetdev-custom-fields-meta-boxes' ); ?>
 						</button>
 					</p>
 				</form>
@@ -480,7 +480,7 @@ final class OptionsPages extends Module {
 		if ( '1' === $saved ) {
 			printf(
 				'<div class="notice notice-success is-dismissible"><p>%s</p></div>',
-				esc_html__( 'Options saved.', 'metafields-custom-fields' )
+				esc_html__( 'Options saved.', 'manpreetdev-custom-fields-meta-boxes' )
 			);
 
 			return;
@@ -491,7 +491,7 @@ final class OptionsPages extends Module {
 		if ( array() === $errors ) {
 			printf(
 				'<div class="notice notice-warning is-dismissible"><p>%s</p></div>',
-				esc_html__( 'Your options were saved, but some fields needed attention.', 'metafields-custom-fields' )
+				esc_html__( 'Your options were saved, but some fields needed attention.', 'manpreetdev-custom-fields-meta-boxes' )
 			);
 
 			return;
@@ -499,7 +499,7 @@ final class OptionsPages extends Module {
 
 		printf(
 			'<div class="notice notice-warning"><p><strong>%s</strong></p><ul class="wpcmb-error-list">',
-			esc_html__( 'Your options were saved, but some fields need attention:', 'metafields-custom-fields' )
+			esc_html__( 'Your options were saved, but some fields need attention:', 'manpreetdev-custom-fields-meta-boxes' )
 		);
 
 		foreach ( $errors as $message ) {
@@ -584,13 +584,13 @@ final class OptionsPages extends Module {
 			return $name;
 		}
 
-		$name = __( 'Meta Boxes', 'metafields-custom-fields' );
+		$name = __( 'Meta Boxes', 'manpreetdev-custom-fields-meta-boxes' );
 
 		if ( ! function_exists( 'get_plugin_data' ) ) {
 			return $name;
 		}
 
-		$data = get_plugin_data( WPCMB_DIR . 'metafields-custom-fields.php', false, false );
+		$data = get_plugin_data( WPCMB_DIR . 'manpreetdev-custom-fields-meta-boxes.php', false, false );
 
 		if ( '' !== (string) ( $data['Name'] ?? '' ) ) {
 			$name = (string) $data['Name'];

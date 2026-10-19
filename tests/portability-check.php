@@ -82,6 +82,19 @@ $single = Portability::normalise( array( 'key' => 'group_a', 'fields' => array()
 
 assert( null !== $single && 1 === count( $single['field_groups'] ), 'one group on its own is read as a list of one' );
 
+/*
+ * And a file written before the plugin was renamed. The marker is the slug the
+ * plugin had at the time, so each rename would otherwise turn every export
+ * made before it into a file this plugin refuses — the exact thing the marker
+ * is there to avoid.
+ */
+foreach ( array( 'metafields-custom-fields', 'wp-custom-meta-box' ) as $former ) {
+	$old = Portability::normalise( array( 'format' => $former, 'post_types' => array( array( 'name' => 'project' ) ) ) );
+
+	assert( null !== $old, 'an export under the former slug ' . $former . ' is still recognised' );
+	assert( null !== $old && 1 === count( $old['post_types'] ), 'and arrives whole' );
+}
+
 /* -------------------------------------------------------------------------
  * And what is refused. An import writes to post meta, so a file that is not
  * ours has to be turned away before anything is written, not part way

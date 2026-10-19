@@ -77,7 +77,7 @@ final class Ajax extends Module {
 
 		if ( ! current_user_can( FieldGroupPostType::capability() ) ) {
 			wp_send_json_error(
-				array( 'message' => __( 'You are not allowed to edit field groups.', 'metafields-custom-fields' ) ),
+				array( 'message' => __( 'You are not allowed to edit field groups.', 'manpreetdev-custom-fields-meta-boxes' ) ),
 				403
 			);
 		}
@@ -89,7 +89,7 @@ final class Ajax extends Module {
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		if ( ! isset( Locations::object_params()[ $param ] ) ) {
-			wp_send_json_error( array( 'message' => __( 'That rule is not searchable.', 'metafields-custom-fields' ) ), 400 );
+			wp_send_json_error( array( 'message' => __( 'That rule is not searchable.', 'manpreetdev-custom-fields-meta-boxes' ) ), 400 );
 		}
 
 		$results = Locations::search( $param, $search );
@@ -123,7 +123,7 @@ final class Ajax extends Module {
 		check_ajax_referer( self::NONCE, 'nonce' );
 
 		if ( ! current_user_can( 'edit_posts' ) ) {
-			wp_send_json_error( array( 'message' => __( 'You are not allowed to edit blocks.', 'metafields-custom-fields' ) ), 403 );
+			wp_send_json_error( array( 'message' => __( 'You are not allowed to edit blocks.', 'manpreetdev-custom-fields-meta-boxes' ) ), 403 );
 		}
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Verified above.
@@ -134,7 +134,7 @@ final class Ajax extends Module {
 		$group = $this->container->get( Repository::class )->get( $key );
 
 		if ( ! $group instanceof FieldGroup ) {
-			wp_send_json_error( array( 'message' => __( 'That block no longer exists.', 'metafields-custom-fields' ) ), 404 );
+			wp_send_json_error( array( 'message' => __( 'That block no longer exists.', 'manpreetdev-custom-fields-meta-boxes' ) ), 404 );
 		}
 
 		wp_send_json_success(
@@ -166,13 +166,13 @@ final class Ajax extends Module {
 		$type       = (string) ( $definition['type'] ?? '' );
 
 		if ( ! in_array( $type, array( 'repeater', 'flexible_content' ), true ) ) {
-			wp_send_json_error( array( 'message' => __( 'That field does not have rows.', 'metafields-custom-fields' ) ), 400 );
+			wp_send_json_error( array( 'message' => __( 'That field does not have rows.', 'manpreetdev-custom-fields-meta-boxes' ) ), 400 );
 		}
 
 		$handler = $this->container->get( Registry::class )->get( $type );
 
 		if ( ! $handler instanceof Repeater ) {
-			wp_send_json_error( array( 'message' => __( 'That field type is unavailable.', 'metafields-custom-fields' ) ), 500 );
+			wp_send_json_error( array( 'message' => __( 'That field type is unavailable.', 'manpreetdev-custom-fields-meta-boxes' ) ), 500 );
 		}
 
 		$name  = $this->request_input_name();
@@ -185,7 +185,7 @@ final class Ajax extends Module {
 			$layouts     = $handler->layouts( $definition );
 
 			if ( ! isset( $layouts[ $layout_name ] ) ) {
-				wp_send_json_error( array( 'message' => __( 'That layout does not exist.', 'metafields-custom-fields' ) ), 400 );
+				wp_send_json_error( array( 'message' => __( 'That layout does not exist.', 'manpreetdev-custom-fields-meta-boxes' ) ), 400 );
 			}
 
 			$sub_fields = $layouts[ $layout_name ]['sub_fields'];
@@ -218,7 +218,7 @@ final class Ajax extends Module {
 		$handler    = $this->container->get( Registry::class )->get( 'repeater' );
 
 		if ( ! $handler instanceof Repeater ) {
-			wp_send_json_error( array( 'message' => __( 'The repeater type is unavailable.', 'metafields-custom-fields' ) ), 500 );
+			wp_send_json_error( array( 'message' => __( 'The repeater type is unavailable.', 'manpreetdev-custom-fields-meta-boxes' ) ), 500 );
 		}
 
 		$columns = array();
@@ -277,14 +277,14 @@ final class Ajax extends Module {
 		$handler    = $this->container->get( Registry::class )->get( 'repeater' );
 
 		if ( ! $handler instanceof Repeater ) {
-			wp_send_json_error( array( 'message' => __( 'The repeater type is unavailable.', 'metafields-custom-fields' ) ), 500 );
+			wp_send_json_error( array( 'message' => __( 'The repeater type is unavailable.', 'manpreetdev-custom-fields-meta-boxes' ) ), 500 );
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Verified in verified_field(); parsed and filtered below.
 		$csv = isset( $_POST['csv'] ) ? (string) wp_unslash( $_POST['csv'] ) : '';
 
 		if ( '' === trim( $csv ) ) {
-			wp_send_json_error( array( 'message' => __( 'That file was empty.', 'metafields-custom-fields' ) ), 400 );
+			wp_send_json_error( array( 'message' => __( 'That file was empty.', 'manpreetdev-custom-fields-meta-boxes' ) ), 400 );
 		}
 
 		$known = array();
@@ -299,7 +299,7 @@ final class Ajax extends Module {
 		$headers = array_shift( $parsed );
 
 		if ( null === $headers ) {
-			wp_send_json_error( array( 'message' => __( 'That file had no header row.', 'metafields-custom-fields' ) ), 400 );
+			wp_send_json_error( array( 'message' => __( 'That file had no header row.', 'manpreetdev-custom-fields-meta-boxes' ) ), 400 );
 		}
 
 		// Columns the repeater does not have are dropped rather than guessed
@@ -317,7 +317,7 @@ final class Ajax extends Module {
 
 		if ( array() === $map ) {
 			wp_send_json_error(
-				array( 'message' => __( 'None of the columns in that file match this repeater\'s fields.', 'metafields-custom-fields' ) ),
+				array( 'message' => __( 'None of the columns in that file match this repeater\'s fields.', 'manpreetdev-custom-fields-meta-boxes' ) ),
 				400
 			);
 		}
@@ -357,20 +357,20 @@ final class Ajax extends Module {
 		// Editing capability, not just being signed in: this makes an outbound
 		// request on the site's behalf, so a subscriber should not reach it.
 		if ( ! current_user_can( 'edit_posts' ) ) {
-			wp_send_json_error( array( 'message' => __( 'You cannot preview embeds.', 'metafields-custom-fields' ) ), 403 );
+			wp_send_json_error( array( 'message' => __( 'You cannot preview embeds.', 'manpreetdev-custom-fields-meta-boxes' ) ), 403 );
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- check_ajax_referer() above.
 		$url = isset( $_POST['url'] ) ? sanitize_url( wp_unslash( $_POST['url'] ) ) : '';
 
 		if ( '' === $url ) {
-			wp_send_json_error( array( 'message' => __( 'No URL was given.', 'metafields-custom-fields' ) ), 400 );
+			wp_send_json_error( array( 'message' => __( 'No URL was given.', 'manpreetdev-custom-fields-meta-boxes' ) ), 400 );
 		}
 
 		$html = wp_oembed_get( $url );
 
 		if ( ! is_string( $html ) || '' === $html ) {
-			wp_send_json_error( array( 'message' => __( 'Nothing could be embedded from that URL.', 'metafields-custom-fields' ) ), 404 );
+			wp_send_json_error( array( 'message' => __( 'Nothing could be embedded from that URL.', 'manpreetdev-custom-fields-meta-boxes' ) ), 404 );
 		}
 
 		wp_send_json_success( array( 'html' => wp_kses_post( $html ) ) );
@@ -397,7 +397,7 @@ final class Ajax extends Module {
 		$ref = ObjectRef::from( isset( $_POST['object'] ) ? sanitize_text_field( wp_unslash( $_POST['object'] ) ) : '' );
 
 		if ( ! Permissions::can_edit( $ref ) ) {
-			wp_send_json_error( array( 'message' => __( 'You are not allowed to edit this.', 'metafields-custom-fields' ) ), 403 );
+			wp_send_json_error( array( 'message' => __( 'You are not allowed to edit this.', 'manpreetdev-custom-fields-meta-boxes' ) ), 403 );
 		}
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Verified above; every value is read by the validator, never stored or echoed.
@@ -488,13 +488,13 @@ final class Ajax extends Module {
 		 * the server and there is nobody with `edit_posts` to render them.
 		 */
 		if ( ! current_user_can( self::capability() ) && ! $this->form_allows( $key ) ) {
-			wp_send_json_error( array( 'message' => __( 'You are not allowed to edit fields.', 'metafields-custom-fields' ) ), 403 );
+			wp_send_json_error( array( 'message' => __( 'You are not allowed to edit fields.', 'manpreetdev-custom-fields-meta-boxes' ) ), 403 );
 		}
 
 		$field = $this->container->get( Repository::class )->field_by_key( $key );
 
 		if ( null === $field ) {
-			wp_send_json_error( array( 'message' => __( 'That field no longer exists.', 'metafields-custom-fields' ) ), 404 );
+			wp_send_json_error( array( 'message' => __( 'That field no longer exists.', 'manpreetdev-custom-fields-meta-boxes' ) ), 404 );
 		}
 
 		return new \ArrayObject( $field );

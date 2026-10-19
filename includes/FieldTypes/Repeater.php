@@ -53,14 +53,14 @@ class Repeater extends FieldType {
 	 * @return array<string, string>
 	 */
 	public function types(): array {
-		return array( 'repeater' => __( 'Repeater', 'metafields-custom-fields' ) );
+		return array( 'repeater' => __( 'Repeater', 'manpreetdev-custom-fields-meta-boxes' ) );
 	}
 
 	/**
 	 * Editor group label.
 	 */
 	public function group_label(): string {
-		return __( 'Layout', 'metafields-custom-fields' );
+		return __( 'Layout', 'manpreetdev-custom-fields-meta-boxes' );
 	}
 
 	/**
@@ -90,7 +90,7 @@ class Repeater extends FieldType {
 		if ( array() === $sub_fields ) {
 			printf(
 				'<p class="wpcmb-field__note">%s</p>',
-				esc_html__( 'This repeater has no sub fields yet.', 'metafields-custom-fields' )
+				esc_html__( 'This repeater has no sub fields yet.', 'manpreetdev-custom-fields-meta-boxes' )
 			);
 
 			return;
@@ -140,7 +140,7 @@ class Repeater extends FieldType {
 				<button type="button" class="wpcmb-btn wpcmb-repeater__add">%s</button>
 				<span class="wpcmb-repeater__csv"></span>
 			</p></div>',
-			esc_html( (string) $this->setting( $field, 'button_label', __( 'Add row', 'metafields-custom-fields' ) ) )
+			esc_html( (string) $this->setting( $field, 'button_label', __( 'Add row', 'manpreetdev-custom-fields-meta-boxes' ) ) )
 		);
 	}
 
@@ -242,10 +242,10 @@ class Repeater extends FieldType {
 				? '<span class="wpcmb-repeater__badge dashicons ' . esc_attr( $badge ) . '" aria-hidden="true"></span>'
 				: '',
 			esc_html( $title ),
-			esc_attr__( 'Move up', 'metafields-custom-fields' ),
-			esc_attr__( 'Move down', 'metafields-custom-fields' ),
-			esc_attr__( 'Duplicate row', 'metafields-custom-fields' ),
-			esc_attr__( 'Remove row', 'metafields-custom-fields' ),
+			esc_attr__( 'Move up', 'manpreetdev-custom-fields-meta-boxes' ),
+			esc_attr__( 'Move down', 'manpreetdev-custom-fields-meta-boxes' ),
+			esc_attr__( 'Duplicate row', 'manpreetdev-custom-fields-meta-boxes' ),
+			esc_attr__( 'Remove row', 'manpreetdev-custom-fields-meta-boxes' ),
 			self::control_icon( 'grip' ),
 			self::control_icon( 'chevron' ),
 			self::control_icon( 'up' ),
@@ -402,37 +402,37 @@ class Repeater extends FieldType {
 	public function settings_schema( string $type ): array {
 		return array(
 			'min'            => array(
-				'label' => __( 'Minimum rows', 'metafields-custom-fields' ),
+				'label' => __( 'Minimum rows', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'number',
 			),
 			'max'            => array(
-				'label' => __( 'Maximum rows', 'metafields-custom-fields' ),
+				'label' => __( 'Maximum rows', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'number',
 			),
 			'layout'         => array(
-				'label'   => __( 'Layout', 'metafields-custom-fields' ),
+				'label'   => __( 'Layout', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'    => 'select',
 				'choices' => array(
-					'block' => __( 'Block', 'metafields-custom-fields' ),
-					'table' => __( 'Table', 'metafields-custom-fields' ),
+					'block' => __( 'Block', 'manpreetdev-custom-fields-meta-boxes' ),
+					'table' => __( 'Table', 'manpreetdev-custom-fields-meta-boxes' ),
 				),
 			),
 			'button_label'   => array(
-				'label' => __( 'Add row button label', 'metafields-custom-fields' ),
+				'label' => __( 'Add row button label', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'text',
 			),
 			'row_label'      => array(
-				'label' => __( 'Row label', 'metafields-custom-fields' ),
+				'label' => __( 'Row label', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'text',
-				'help'  => __( 'Use {index} for the row number. Defaults to "Row 1", "Row 2".', 'metafields-custom-fields' ),
+				'help'  => __( 'Use {index} for the row number. Defaults to "Row 1", "Row 2".', 'manpreetdev-custom-fields-meta-boxes' ),
 			),
 			'collapse_after' => array(
-				'label' => __( 'Collapse rows after', 'metafields-custom-fields' ),
+				'label' => __( 'Collapse rows after', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'number',
-				'help'  => __( 'Rows past this position start collapsed.', 'metafields-custom-fields' ),
+				'help'  => __( 'Rows past this position start collapsed.', 'manpreetdev-custom-fields-meta-boxes' ),
 			),
 			'csv'            => array(
-				'label' => __( 'Show CSV import and export', 'metafields-custom-fields' ),
+				'label' => __( 'Show CSV import and export', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'toggle',
 			),
 		);
@@ -482,7 +482,7 @@ class Repeater extends FieldType {
 
 		if ( '' === $label ) {
 			/* translators: %d: row number. */
-			return sprintf( __( 'Row %d', 'metafields-custom-fields' ), $index + 1 );
+			return sprintf( __( 'Row %d', 'manpreetdev-custom-fields-meta-boxes' ), $index + 1 );
 		}
 
 		return str_replace( '{index}', (string) ( $index + 1 ), $label );

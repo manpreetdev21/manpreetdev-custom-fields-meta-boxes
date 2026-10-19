@@ -96,7 +96,7 @@ final class Form extends Module {
 			$record = $this->container->get( CustomForms::class )->by_id( (int) $atts['id'] );
 
 			if ( null === $record ) {
-				return $this->notice( __( 'That form no longer exists.', 'metafields-custom-fields' ) );
+				return $this->notice( __( 'That form no longer exists.', 'manpreetdev-custom-fields-meta-boxes' ) );
 			}
 
 			unset( $atts['id'] );
@@ -173,11 +173,11 @@ final class Form extends Module {
 		$group  = $this->container->get( Repository::class )->get( (string) $config['group'] );
 
 		if ( ! $group instanceof FieldGroup ) {
-			return $this->notice( __( 'That field group does not exist.', 'metafields-custom-fields' ) );
+			return $this->notice( __( 'That field group does not exist.', 'manpreetdev-custom-fields-meta-boxes' ) );
 		}
 
 		if ( ! $this->may_submit( $config ) ) {
-			return $this->notice( __( 'You need to sign in to use this form.', 'metafields-custom-fields' ) );
+			return $this->notice( __( 'You need to sign in to use this form.', 'manpreetdev-custom-fields-meta-boxes' ) );
 		}
 
 		// Storing values needs something to store them against, and `new` is
@@ -185,14 +185,14 @@ final class Form extends Module {
 		// a form that looks right until the first person fills it in.
 		if ( 'values' === $config['action'] && 'new' === $config['object'] ) {
 			return $this->notice(
-				__( 'This form has nowhere to store what it collects. Use action="post" to create a post, or object="post_12" to edit something that already exists.', 'metafields-custom-fields' )
+				__( 'This form has nowhere to store what it collects. Use action="post" to create a post, or object="post_12" to edit something that already exists.', 'manpreetdev-custom-fields-meta-boxes' )
 			);
 		}
 
 		$ref = $this->object_ref( $config );
 
 		if ( 'new' !== $config['object'] && ! $this->may_edit( $config, $ref ) ) {
-			return $this->notice( __( 'You do not have permission to edit this.', 'metafields-custom-fields' ) );
+			return $this->notice( __( 'You do not have permission to edit this.', 'manpreetdev-custom-fields-meta-boxes' ) );
 		}
 
 		// Derived here, where the group is known, and signed with the rest of
@@ -222,7 +222,7 @@ final class Form extends Module {
 		/**
 		 * Filters the template used to render a front-end form.
 		 *
-		 * Themes override by placing `metafields-custom-fields/form.php` in the
+		 * Themes override by placing `manpreetdev-custom-fields-meta-boxes/form.php` in the
 		 * theme; this filter is for plugins that need to go further.
 		 *
 		 * @since 1.0.0
@@ -245,7 +245,7 @@ final class Form extends Module {
 	 * The template path, preferring one supplied by the theme.
 	 */
 	private function locate_template(): string {
-		$theme = locate_template( array( 'metafields-custom-fields/form.php' ) );
+		$theme = locate_template( array( 'manpreetdev-custom-fields-meta-boxes/form.php' ) );
 
 		return '' !== $theme ? $theme : WPCMB_DIR . 'templates/form.php';
 	}
@@ -271,18 +271,18 @@ final class Form extends Module {
 				// requires an editing capability, and the icon picker is an
 				// admin control. Both degrade to the plain input out here.
 				'i18n' => array(
-					'remove'             => __( 'Remove', 'metafields-custom-fields' ),
-					'selectMedia'        => __( 'Select media', 'metafields-custom-fields' ),
-					'qrTooLong'          => __( 'That is too long to fit in a QR code.', 'metafields-custom-fields' ),
-					'barcodeUnsupported' => __( 'A barcode can only hold plain ASCII characters.', 'metafields-custom-fields' ),
+					'remove'             => __( 'Remove', 'manpreetdev-custom-fields-meta-boxes' ),
+					'selectMedia'        => __( 'Select media', 'manpreetdev-custom-fields-meta-boxes' ),
+					'qrTooLong'          => __( 'That is too long to fit in a QR code.', 'manpreetdev-custom-fields-meta-boxes' ),
+					'barcodeUnsupported' => __( 'A barcode can only hold plain ASCII characters.', 'manpreetdev-custom-fields-meta-boxes' ),
 
 					// The multiple select draws itself from these, so a form
 					// with one reads as an unlabelled box without them.
-					'searchOptions'      => __( 'Search options', 'metafields-custom-fields' ),
-					'selectOptions'      => __( 'Select options', 'metafields-custom-fields' ),
+					'searchOptions'      => __( 'Search options', 'manpreetdev-custom-fields-meta-boxes' ),
+					'selectOptions'      => __( 'Select options', 'manpreetdev-custom-fields-meta-boxes' ),
 					/* translators: %d: number of options chosen. */
-					'selectedCount'      => __( '%d selected', 'metafields-custom-fields' ),
-					'noMatches'          => __( 'No matches. Try a different search.', 'metafields-custom-fields' ),
+					'selectedCount'      => __( '%d selected', 'manpreetdev-custom-fields-meta-boxes' ),
+					'noMatches'          => __( 'No matches. Try a different search.', 'manpreetdev-custom-fields-meta-boxes' ),
 				),
 			)
 		);
@@ -303,8 +303,8 @@ final class Form extends Module {
 				'csv'     => false,
 				'i18n'    => array(
 					/* translators: %d: row number. Kept as a literal token so the script can substitute it. */
-					'row'       => __( 'Row %d', 'metafields-custom-fields' ),
-					'rowFailed' => __( 'That row could not be added. Please try again.', 'metafields-custom-fields' ),
+					'row'       => __( 'Row %d', 'manpreetdev-custom-fields-meta-boxes' ),
+					'rowFailed' => __( 'That row could not be added. Please try again.', 'manpreetdev-custom-fields-meta-boxes' ),
 				),
 			)
 		);
@@ -315,8 +315,8 @@ final class Form extends Module {
 			array(
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
 				'i18n'    => array(
-					'submitting' => __( 'Sending…', 'metafields-custom-fields' ),
-					'failed'     => __( 'Something went wrong. Please try again.', 'metafields-custom-fields' ),
+					'submitting' => __( 'Sending…', 'manpreetdev-custom-fields-meta-boxes' ),
+					'failed'     => __( 'Something went wrong. Please try again.', 'manpreetdev-custom-fields-meta-boxes' ),
 				),
 			)
 		);

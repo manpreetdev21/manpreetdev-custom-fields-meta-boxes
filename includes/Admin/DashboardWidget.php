@@ -48,7 +48,7 @@ final class DashboardWidget extends Module {
 
 		wp_add_dashboard_widget(
 			'wpcmb_dashboard',
-			__( 'Custom Meta Box', 'metafields-custom-fields' ),
+			__( 'Custom Meta Box', 'manpreetdev-custom-fields-meta-boxes' ),
 			array( $this, 'render' )
 		);
 	}
@@ -62,9 +62,9 @@ final class DashboardWidget extends Module {
 		if ( array() === $groups ) {
 			printf(
 				'<p>%s</p><p><a class="wpcmb-btn wpcmb-btn--primary" href="%s">%s</a></p>',
-				esc_html__( 'No field groups yet.', 'metafields-custom-fields' ),
+				esc_html__( 'No field groups yet.', 'manpreetdev-custom-fields-meta-boxes' ),
 				esc_url( admin_url( 'post-new.php?post_type=' . FieldGroupPostType::POST_TYPE ) ),
-				esc_html__( 'Add Field Group', 'metafields-custom-fields' )
+				esc_html__( 'Add Field Group', 'manpreetdev-custom-fields-meta-boxes' )
 			);
 
 			return;
@@ -79,8 +79,8 @@ final class DashboardWidget extends Module {
 				'<li><a href="%s">%s</a> <span class="wpcmb-muted">%s</span>%s</li>',
 				esc_url( (string) get_edit_post_link( $group->id ) ),
 				esc_html( '' !== $group->title ? $group->title : $group->key ),
-				esc_html( '' !== $summary ? $summary : __( 'No location set', 'metafields-custom-fields' ) ),
-				$group->is_active() ? '' : ' <em>' . esc_html__( '(inactive)', 'metafields-custom-fields' ) . '</em>'
+				esc_html( '' !== $summary ? $summary : __( 'No location set', 'manpreetdev-custom-fields-meta-boxes' ) ),
+				$group->is_active() ? '' : ' <em>' . esc_html__( '(inactive)', 'manpreetdev-custom-fields-meta-boxes' ) . '</em>'
 			);
 		}
 
@@ -89,7 +89,7 @@ final class DashboardWidget extends Module {
 		printf(
 			'<p><a href="%s">%s</a></p>',
 			esc_url( admin_url( 'edit.php?post_type=' . FieldGroupPostType::POST_TYPE ) ),
-			esc_html__( 'Manage field groups', 'metafields-custom-fields' )
+			esc_html__( 'Manage field groups', 'manpreetdev-custom-fields-meta-boxes' )
 		);
 	}
 }

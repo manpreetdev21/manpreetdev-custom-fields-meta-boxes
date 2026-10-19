@@ -45,13 +45,13 @@ final class Enhanced extends FieldType {
 	 */
 	public function types(): array {
 		return array(
-			'icon'      => __( 'Icon Picker', 'metafields-custom-fields' ),
-			'map'       => __( 'Map', 'metafields-custom-fields' ),
-			'signature' => __( 'Signature', 'metafields-custom-fields' ),
-			'qr'        => __( 'QR Code', 'metafields-custom-fields' ),
-			'barcode'   => __( 'Barcode', 'metafields-custom-fields' ),
-			'embed'     => __( 'Embed', 'metafields-custom-fields' ),
-			'address'   => __( 'Address', 'metafields-custom-fields' ),
+			'icon'      => __( 'Icon Picker', 'manpreetdev-custom-fields-meta-boxes' ),
+			'map'       => __( 'Map', 'manpreetdev-custom-fields-meta-boxes' ),
+			'signature' => __( 'Signature', 'manpreetdev-custom-fields-meta-boxes' ),
+			'qr'        => __( 'QR Code', 'manpreetdev-custom-fields-meta-boxes' ),
+			'barcode'   => __( 'Barcode', 'manpreetdev-custom-fields-meta-boxes' ),
+			'embed'     => __( 'Embed', 'manpreetdev-custom-fields-meta-boxes' ),
+			'address'   => __( 'Address', 'manpreetdev-custom-fields-meta-boxes' ),
 		);
 	}
 
@@ -59,7 +59,7 @@ final class Enhanced extends FieldType {
 	 * Editor group label.
 	 */
 	public function group_label(): string {
-		return __( 'Advanced', 'metafields-custom-fields' );
+		return __( 'Advanced', 'manpreetdev-custom-fields-meta-boxes' );
 	}
 
 	/**
@@ -178,8 +178,8 @@ final class Enhanced extends FieldType {
 					<div class="wpcmb-icon__picker" id="%1$s-picker" hidden></div>
 				</div>',
 				esc_attr( $input_id ),
-				esc_html__( 'Choose icon', 'metafields-custom-fields' ),
-				esc_html__( 'Clear', 'metafields-custom-fields' ),
+				esc_html__( 'Choose icon', 'manpreetdev-custom-fields-meta-boxes' ),
+				esc_html__( 'Clear', 'manpreetdev-custom-fields-meta-boxes' ),
 				$this->icon_preview( $stored ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in icon_preview().
 				'' === $stored ? ' hidden' : ''
 			);
@@ -196,9 +196,9 @@ final class Enhanced extends FieldType {
 						<span class="wpcmb-signature__hint">%3$s</span>
 					</p>
 				</div>',
-				esc_attr__( 'Signature drawing area', 'metafields-custom-fields' ),
-				esc_html__( 'Clear', 'metafields-custom-fields' ),
-				esc_html__( 'Draw with a mouse, pen or finger.', 'metafields-custom-fields' )
+				esc_attr__( 'Signature drawing area', 'manpreetdev-custom-fields-meta-boxes' ),
+				esc_html__( 'Clear', 'manpreetdev-custom-fields-meta-boxes' ),
+				esc_html__( 'Draw with a mouse, pen or finger.', 'manpreetdev-custom-fields-meta-boxes' )
 			);
 
 			return;
@@ -226,14 +226,14 @@ final class Enhanced extends FieldType {
 				</p>
 			</div>',
 			esc_attr( $input_id ),
-			esc_html__( 'Latitude', 'metafields-custom-fields' ),
-			esc_html__( 'Longitude', 'metafields-custom-fields' ),
-			esc_html__( 'Address', 'metafields-custom-fields' ),
+			esc_html__( 'Latitude', 'manpreetdev-custom-fields-meta-boxes' ),
+			esc_html__( 'Longitude', 'manpreetdev-custom-fields-meta-boxes' ),
+			esc_html__( 'Address', 'manpreetdev-custom-fields-meta-boxes' ),
 			esc_attr( $parts[0] ?? '' ),
 			esc_attr( $parts[1] ?? '' ),
 			esc_attr( $parts[2] ?? '' ),
-			esc_html__( 'Use my location', 'metafields-custom-fields' ),
-			esc_html__( 'Open in maps', 'metafields-custom-fields' )
+			esc_html__( 'Use my location', 'manpreetdev-custom-fields-meta-boxes' ),
+			esc_html__( 'Open in maps', 'manpreetdev-custom-fields-meta-boxes' )
 		);
 	}
 
@@ -313,12 +313,12 @@ final class Enhanced extends FieldType {
 		$address = $this->normalise_address( $value );
 
 		$labels = array(
-			'line1'    => __( 'Address line 1', 'metafields-custom-fields' ),
-			'line2'    => __( 'Address line 2', 'metafields-custom-fields' ),
-			'city'     => __( 'City', 'metafields-custom-fields' ),
-			'region'   => __( 'State / Region', 'metafields-custom-fields' ),
-			'postcode' => __( 'Postcode', 'metafields-custom-fields' ),
-			'country'  => __( 'Country', 'metafields-custom-fields' ),
+			'line1'    => __( 'Address line 1', 'manpreetdev-custom-fields-meta-boxes' ),
+			'line2'    => __( 'Address line 2', 'manpreetdev-custom-fields-meta-boxes' ),
+			'city'     => __( 'City', 'manpreetdev-custom-fields-meta-boxes' ),
+			'region'   => __( 'State / Region', 'manpreetdev-custom-fields-meta-boxes' ),
+			'postcode' => __( 'Postcode', 'manpreetdev-custom-fields-meta-boxes' ),
+			'country'  => __( 'Country', 'manpreetdev-custom-fields-meta-boxes' ),
 		);
 
 		// The browser's own autofill hints, so a saved address fills in one
@@ -482,21 +482,21 @@ final class Enhanced extends FieldType {
 		if ( 'embed' === $type ) {
 			return array(
 				'return_format' => array(
-					'label'   => __( 'Return format', 'metafields-custom-fields' ),
+					'label'   => __( 'Return format', 'manpreetdev-custom-fields-meta-boxes' ),
 					'type'    => 'select',
 					'choices' => array(
-						'html' => __( 'Embed HTML', 'metafields-custom-fields' ),
-						'url'  => __( 'URL', 'metafields-custom-fields' ),
+						'html' => __( 'Embed HTML', 'manpreetdev-custom-fields-meta-boxes' ),
+						'url'  => __( 'URL', 'manpreetdev-custom-fields-meta-boxes' ),
 					),
 				),
 				'width'         => array(
-					'label' => __( 'Embed width', 'metafields-custom-fields' ),
+					'label' => __( 'Embed width', 'manpreetdev-custom-fields-meta-boxes' ),
 					'type'  => 'number',
 					'tab'   => 'appearance',
-					'help'  => __( 'Asked of the provider as a preferred size. Most treat it as a maximum and keep their own aspect ratio.', 'metafields-custom-fields' ),
+					'help'  => __( 'Asked of the provider as a preferred size. Most treat it as a maximum and keep their own aspect ratio.', 'manpreetdev-custom-fields-meta-boxes' ),
 				),
 				'height'        => array(
-					'label' => __( 'Embed height', 'metafields-custom-fields' ),
+					'label' => __( 'Embed height', 'manpreetdev-custom-fields-meta-boxes' ),
 					'type'  => 'number',
 					'tab'   => 'appearance',
 				),
@@ -506,9 +506,9 @@ final class Enhanced extends FieldType {
 		if ( 'icon' === $type ) {
 			return array(
 				'icon_set' => array(
-					'label' => __( 'Icon set', 'metafields-custom-fields' ),
+					'label' => __( 'Icon set', 'manpreetdev-custom-fields-meta-boxes' ),
 					'type'  => 'text',
-					'help'  => __( 'Passed to the enhancement script. Dashicons are used when empty.', 'metafields-custom-fields' ),
+					'help'  => __( 'Passed to the enhancement script. Dashicons are used when empty.', 'manpreetdev-custom-fields-meta-boxes' ),
 				),
 			);
 		}

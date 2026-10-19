@@ -1,8 +1,8 @@
 {
-	"name": "manpreetsingh/metafields-custom-fields",
+	"name": "manpreetsingh/manpreetdev-custom-fields-meta-boxes",
 	"description": "Field groups, meta boxes and a developer-friendly field API for WordPress.",
 	"type": "wordpress-plugin",
-	"version": "1.15.0",
+	"version": "1.16.0",
 	"license": "GPL-2.0-or-later",
 	"authors": [
 		{

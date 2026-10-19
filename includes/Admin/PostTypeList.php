@@ -57,9 +57,9 @@ final class PostTypeList extends Module {
 		return array_merge(
 			$columns,
 			array(
-				'wpcmb_key'      => __( 'Key', 'metafields-custom-fields' ),
-				'wpcmb_supports' => __( 'Supports', 'metafields-custom-fields' ),
-				'wpcmb_count'    => __( 'Items', 'metafields-custom-fields' ),
+				'wpcmb_key'      => __( 'Key', 'manpreetdev-custom-fields-meta-boxes' ),
+				'wpcmb_supports' => __( 'Supports', 'manpreetdev-custom-fields-meta-boxes' ),
+				'wpcmb_count'    => __( 'Items', 'manpreetdev-custom-fields-meta-boxes' ),
 			)
 		);
 	}
@@ -136,13 +136,13 @@ final class PostTypeList extends Module {
 		$name   = (string) ( $record['name'] ?? '' );
 
 		if ( '' === $name ) {
-			$states['wpcmb_no_key'] = __( 'No key', 'metafields-custom-fields' );
+			$states['wpcmb_no_key'] = __( 'No key', 'manpreetdev-custom-fields-meta-boxes' );
 
 			return $states;
 		}
 
 		if ( ! post_type_exists( $name ) ) {
-			$states['wpcmb_dormant'] = __( 'Not registered', 'metafields-custom-fields' );
+			$states['wpcmb_dormant'] = __( 'Not registered', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
 		return $states;
@@ -172,7 +172,7 @@ final class PostTypeList extends Module {
 		$actions['wpcmb_view'] = sprintf(
 			'<a href="%s">%s</a>',
 			esc_url( admin_url( 'edit.php?post_type=' . rawurlencode( $name ) ) ),
-			esc_html__( 'Open', 'metafields-custom-fields' )
+			esc_html__( 'Open', 'manpreetdev-custom-fields-meta-boxes' )
 		);
 
 		return $actions;

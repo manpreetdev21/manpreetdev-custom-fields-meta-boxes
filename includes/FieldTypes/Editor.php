@@ -35,10 +35,10 @@ final class Editor extends FieldType {
 	 */
 	public function types(): array {
 		return array(
-			'wysiwyg' => __( 'Rich Text', 'metafields-custom-fields' ),
-			'code'    => __( 'Code', 'metafields-custom-fields' ),
-			'json'    => __( 'JSON', 'metafields-custom-fields' ),
-			'html'    => __( 'HTML', 'metafields-custom-fields' ),
+			'wysiwyg' => __( 'Rich Text', 'manpreetdev-custom-fields-meta-boxes' ),
+			'code'    => __( 'Code', 'manpreetdev-custom-fields-meta-boxes' ),
+			'json'    => __( 'JSON', 'manpreetdev-custom-fields-meta-boxes' ),
+			'html'    => __( 'HTML', 'manpreetdev-custom-fields-meta-boxes' ),
 		);
 	}
 
@@ -46,7 +46,7 @@ final class Editor extends FieldType {
 	 * Editor group label.
 	 */
 	public function group_label(): string {
-		return __( 'Content', 'metafields-custom-fields' );
+		return __( 'Content', 'manpreetdev-custom-fields-meta-boxes' );
 	}
 
 	/**
@@ -184,46 +184,46 @@ final class Editor extends FieldType {
 	public function settings_schema( string $type ): array {
 		$schema = array(
 			'rows' => array(
-				'label' => __( 'Rows', 'metafields-custom-fields' ),
+				'label' => __( 'Rows', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'number',
 			),
 		);
 
 		if ( 'wysiwyg' === $type ) {
 			$schema['toolbar']       = array(
-				'label'   => __( 'Toolbar', 'metafields-custom-fields' ),
+				'label'   => __( 'Toolbar', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'    => 'select',
 				'choices' => array(
-					'full'  => __( 'Full', 'metafields-custom-fields' ),
-					'teeny' => __( 'Minimal', 'metafields-custom-fields' ),
+					'full'  => __( 'Full', 'manpreetdev-custom-fields-meta-boxes' ),
+					'teeny' => __( 'Minimal', 'manpreetdev-custom-fields-meta-boxes' ),
 				),
 			);
 			$schema['tabs']          = array(
-				'label'   => __( 'Tabs', 'metafields-custom-fields' ),
+				'label'   => __( 'Tabs', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'    => 'select',
 				'choices' => array(
-					'all'    => __( 'Visual and Text', 'metafields-custom-fields' ),
-					'visual' => __( 'Visual only', 'metafields-custom-fields' ),
-					'text'   => __( 'Text only', 'metafields-custom-fields' ),
+					'all'    => __( 'Visual and Text', 'manpreetdev-custom-fields-meta-boxes' ),
+					'visual' => __( 'Visual only', 'manpreetdev-custom-fields-meta-boxes' ),
+					'text'   => __( 'Text only', 'manpreetdev-custom-fields-meta-boxes' ),
 				),
 			);
 			$schema['media_buttons'] = array(
-				'label' => __( 'Media buttons', 'metafields-custom-fields' ),
+				'label' => __( 'Media buttons', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'toggle',
 			);
 			$schema['return_format'] = array(
-				'label'   => __( 'Return format', 'metafields-custom-fields' ),
+				'label'   => __( 'Return format', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'    => 'select',
 				'choices' => array(
-					'html' => __( 'Apply content filters', 'metafields-custom-fields' ),
-					'raw'  => __( 'Raw stored value', 'metafields-custom-fields' ),
+					'html' => __( 'Apply content filters', 'manpreetdev-custom-fields-meta-boxes' ),
+					'raw'  => __( 'Raw stored value', 'manpreetdev-custom-fields-meta-boxes' ),
 				),
 			);
 		}
 
 		if ( 'json' === $type ) {
 			$schema['decode'] = array(
-				'label' => __( 'Return decoded array', 'metafields-custom-fields' ),
+				'label' => __( 'Return decoded array', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'toggle',
 			);
 		}

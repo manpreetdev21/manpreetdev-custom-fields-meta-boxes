@@ -252,7 +252,7 @@ final class Migrations extends Module {
 				// A record for something that was switched off stays switched
 				// off, so a migration cannot turn anything on.
 				'post_status' => $active ? 'publish' : 'draft',
-				'post_title'  => '' !== $title ? $title : __( 'Untitled', 'metafields-custom-fields' ),
+				'post_title'  => '' !== $title ? $title : __( 'Untitled', 'manpreetdev-custom-fields-meta-boxes' ),
 			),
 			true
 		);

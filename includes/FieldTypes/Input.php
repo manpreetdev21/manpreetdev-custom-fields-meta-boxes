@@ -52,21 +52,21 @@ final class Input extends FieldType {
 	 */
 	public function types(): array {
 		return array(
-			'text'     => __( 'Text', 'metafields-custom-fields' ),
-			'number'   => __( 'Number', 'metafields-custom-fields' ),
-			'email'    => __( 'Email', 'metafields-custom-fields' ),
-			'url'      => __( 'URL', 'metafields-custom-fields' ),
-			'password' => __( 'Password', 'metafields-custom-fields' ),
-			'hidden'   => __( 'Hidden', 'metafields-custom-fields' ),
-			'range'    => __( 'Range', 'metafields-custom-fields' ),
-			'color'    => __( 'Colour', 'metafields-custom-fields' ),
-			'date'     => __( 'Date', 'metafields-custom-fields' ),
-			'time'     => __( 'Time', 'metafields-custom-fields' ),
-			'datetime' => __( 'Date & Time', 'metafields-custom-fields' ),
-			'phone'    => __( 'Phone', 'metafields-custom-fields' ),
-			'slug'     => __( 'Slug', 'metafields-custom-fields' ),
-			'uuid'     => __( 'UUID', 'metafields-custom-fields' ),
-			'currency' => __( 'Currency', 'metafields-custom-fields' ),
+			'text'     => __( 'Text', 'manpreetdev-custom-fields-meta-boxes' ),
+			'number'   => __( 'Number', 'manpreetdev-custom-fields-meta-boxes' ),
+			'email'    => __( 'Email', 'manpreetdev-custom-fields-meta-boxes' ),
+			'url'      => __( 'URL', 'manpreetdev-custom-fields-meta-boxes' ),
+			'password' => __( 'Password', 'manpreetdev-custom-fields-meta-boxes' ),
+			'hidden'   => __( 'Hidden', 'manpreetdev-custom-fields-meta-boxes' ),
+			'range'    => __( 'Range', 'manpreetdev-custom-fields-meta-boxes' ),
+			'color'    => __( 'Colour', 'manpreetdev-custom-fields-meta-boxes' ),
+			'date'     => __( 'Date', 'manpreetdev-custom-fields-meta-boxes' ),
+			'time'     => __( 'Time', 'manpreetdev-custom-fields-meta-boxes' ),
+			'datetime' => __( 'Date & Time', 'manpreetdev-custom-fields-meta-boxes' ),
+			'phone'    => __( 'Phone', 'manpreetdev-custom-fields-meta-boxes' ),
+			'slug'     => __( 'Slug', 'manpreetdev-custom-fields-meta-boxes' ),
+			'uuid'     => __( 'UUID', 'manpreetdev-custom-fields-meta-boxes' ),
+			'currency' => __( 'Currency', 'manpreetdev-custom-fields-meta-boxes' ),
 		);
 	}
 
@@ -74,7 +74,7 @@ final class Input extends FieldType {
 	 * Editor group label.
 	 */
 	public function group_label(): string {
-		return __( 'Basic', 'metafields-custom-fields' );
+		return __( 'Basic', 'manpreetdev-custom-fields-meta-boxes' );
 	}
 
 	/**
@@ -211,7 +211,7 @@ final class Input extends FieldType {
 			'class'      => 'wpcmb-color__swatch',
 			'value'      => '' !== $value ? $value : '#000000',
 			'tabindex'   => '-1',
-			'aria-label' => __( 'Pick a colour', 'metafields-custom-fields' ),
+			'aria-label' => __( 'Pick a colour', 'manpreetdev-custom-fields-meta-boxes' ),
 		);
 
 		echo '<div class="wpcmb-color">';
@@ -290,39 +290,39 @@ final class Input extends FieldType {
 
 		if ( in_array( $type, array( 'number', 'range', 'currency' ), true ) ) {
 			$schema['min']  = array(
-				'label' => __( 'Minimum', 'metafields-custom-fields' ),
+				'label' => __( 'Minimum', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'number',
 			);
 			$schema['max']  = array(
-				'label' => __( 'Maximum', 'metafields-custom-fields' ),
+				'label' => __( 'Maximum', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'number',
 			);
 			$schema['step'] = array(
-				'label' => __( 'Step', 'metafields-custom-fields' ),
+				'label' => __( 'Step', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'text',
 			);
 		}
 
 		if ( in_array( $type, array( 'text', 'password', 'phone', 'slug' ), true ) ) {
 			$schema['maxlength'] = array(
-				'label' => __( 'Maximum characters', 'metafields-custom-fields' ),
+				'label' => __( 'Maximum characters', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'number',
 			);
 			$schema['minlength'] = array(
-				'label' => __( 'Minimum characters', 'metafields-custom-fields' ),
+				'label' => __( 'Minimum characters', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'number',
 			);
 			$schema['pattern']   = array(
-				'label' => __( 'Validation pattern', 'metafields-custom-fields' ),
+				'label' => __( 'Validation pattern', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'text',
 			);
 		}
 
 		if ( in_array( $type, array( 'date', 'time', 'datetime' ), true ) ) {
 			$schema['return_format'] = array(
-				'label' => __( 'Return format', 'metafields-custom-fields' ),
+				'label' => __( 'Return format', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'text',
-				'help'  => __( 'A PHP date format. Leave empty to return the raw value.', 'metafields-custom-fields' ),
+				'help'  => __( 'A PHP date format. Leave empty to return the raw value.', 'manpreetdev-custom-fields-meta-boxes' ),
 			);
 		}
 
@@ -336,13 +336,13 @@ final class Input extends FieldType {
 		 */
 		if ( ! in_array( $type, array( 'color', 'range', 'hidden', 'date', 'time', 'datetime', 'uuid' ), true ) ) {
 			$schema['prepend'] = array(
-				'label' => __( 'Prepend', 'metafields-custom-fields' ),
+				'label' => __( 'Prepend', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'text',
 				'tab'   => 'appearance',
-				'help'  => __( 'Shown before the control. Decoration only: it is not saved with the value.', 'metafields-custom-fields' ),
+				'help'  => __( 'Shown before the control. Decoration only: it is not saved with the value.', 'manpreetdev-custom-fields-meta-boxes' ),
 			);
 			$schema['append']  = array(
-				'label' => __( 'Append', 'metafields-custom-fields' ),
+				'label' => __( 'Append', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'text',
 				'tab'   => 'appearance',
 			);
@@ -350,7 +350,7 @@ final class Input extends FieldType {
 
 		if ( array() !== $schema ) {
 			$schema['validation_message'] = array(
-				'label' => __( 'Validation message', 'metafields-custom-fields' ),
+				'label' => __( 'Validation message', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'text',
 			);
 		}

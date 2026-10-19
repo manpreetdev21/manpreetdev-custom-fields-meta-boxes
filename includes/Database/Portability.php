@@ -39,7 +39,19 @@ final class Portability {
 	/**
 	 * Marks a file as one of ours, so an import can recognise it.
 	 */
-	public const FORMAT = 'metafields-custom-fields';
+	public const FORMAT = 'manpreetdev-custom-fields-meta-boxes';
+
+	/**
+	 * Markers an import still recognises, from before the plugin was renamed.
+	 *
+	 * An export is a file somebody keeps. The marker is the slug the plugin
+	 * had when the file was written, so a rename would turn every export made
+	 * before it into a file this plugin refuses to read — which is the one
+	 * thing the format exists to prevent.
+	 *
+	 * @var array<int, string>
+	 */
+	private const FORMER_FORMATS = array( 'metafields-custom-fields', 'wp-custom-meta-box' );
 
 	/**
 	 * Service container.
@@ -167,8 +179,11 @@ final class Portability {
 			return null;
 		}
 
-		// The envelope.
-		if ( isset( $decoded['format'] ) && self::FORMAT === $decoded['format'] ) {
+		// The envelope, under this version's marker or any the plugin used
+		// before it was renamed.
+		if ( isset( $decoded['format'] )
+			&& in_array( $decoded['format'], array_merge( array( self::FORMAT ), self::FORMER_FORMATS ), true )
+		) {
 			return $decoded;
 		}
 
@@ -252,7 +267,7 @@ final class Portability {
 					array(
 						'post_type'   => FieldGroupPostType::POST_TYPE,
 						'post_status' => $status,
-						'post_title'  => '' !== $config['title'] ? $config['title'] : __( 'Imported field group', 'metafields-custom-fields' ),
+						'post_title'  => '' !== $config['title'] ? $config['title'] : __( 'Imported field group', 'manpreetdev-custom-fields-meta-boxes' ),
 					),
 					true
 				);
@@ -309,7 +324,7 @@ final class Portability {
 					array(
 						'post_type'   => $type->post_type(),
 						'post_status' => $status,
-						'post_title'  => '' !== $title ? $title : __( 'Imported', 'metafields-custom-fields' ),
+						'post_title'  => '' !== $title ? $title : __( 'Imported', 'manpreetdev-custom-fields-meta-boxes' ),
 					),
 					true
 				);

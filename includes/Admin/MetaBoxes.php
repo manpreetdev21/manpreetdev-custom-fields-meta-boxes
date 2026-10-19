@@ -177,7 +177,7 @@ final class MetaBoxes extends Module {
 		$heading = (string) ( $group->settings['display_title'] ?? '' );
 
 		if ( '' === $heading ) {
-			$heading = '' !== $group->title ? $group->title : __( 'Fields', 'metafields-custom-fields' );
+			$heading = '' !== $group->title ? $group->title : __( 'Fields', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
 		add_meta_box(
@@ -772,7 +772,7 @@ final class MetaBoxes extends Module {
 						'%d item was not published: open it and fill in its required fields first.',
 						'%d items were not published: open them and fill in their required fields first.',
 						$count,
-						'metafields-custom-fields'
+						'manpreetdev-custom-fields-meta-boxes'
 					),
 					$count
 				)
@@ -852,8 +852,8 @@ final class MetaBoxes extends Module {
 			'<div class="notice notice-%s"><p><strong>%s</strong></p><ul class="wpcmb-error-list">',
 			$blocked ? 'error' : 'warning',
 			$blocked
-				? esc_html__( 'This was not published: fill in the required fields first. Your other changes were saved.', 'metafields-custom-fields' )
-				: esc_html__( 'Your changes were saved, but some fields need attention:', 'metafields-custom-fields' )
+				? esc_html__( 'This was not published: fill in the required fields first. Your other changes were saved.', 'manpreetdev-custom-fields-meta-boxes' )
+				: esc_html__( 'Your changes were saved, but some fields need attention:', 'manpreetdev-custom-fields-meta-boxes' )
 		);
 
 		foreach ( $errors as $message ) {

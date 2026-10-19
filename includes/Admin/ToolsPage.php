@@ -56,8 +56,8 @@ final class ToolsPage extends Module {
 	public function register_page(): void {
 		add_submenu_page(
 			Menu::SLUG,
-			__( 'Tools', 'metafields-custom-fields' ),
-			__( 'Tools', 'metafields-custom-fields' ),
+			__( 'Tools', 'manpreetdev-custom-fields-meta-boxes' ),
+			__( 'Tools', 'manpreetdev-custom-fields-meta-boxes' ),
 			FieldGroupPostType::capability(),
 			self::SLUG,
 			array( $this, 'render' )
@@ -80,7 +80,7 @@ final class ToolsPage extends Module {
 		check_admin_referer( self::NONCE );
 
 		if ( ! current_user_can( FieldGroupPostType::capability() ) ) {
-			wp_die( esc_html__( 'You do not have permission to use these tools.', 'metafields-custom-fields' ) );
+			wp_die( esc_html__( 'You do not have permission to use these tools.', 'manpreetdev-custom-fields-meta-boxes' ) );
 		}
 
 		match ( $action ) {
@@ -210,7 +210,7 @@ final class ToolsPage extends Module {
 	 */
 	public function render(): void {
 		if ( ! current_user_can( FieldGroupPostType::capability() ) ) {
-			wp_die( esc_html__( 'You do not have permission to view this page.', 'metafields-custom-fields' ) );
+			wp_die( esc_html__( 'You do not have permission to view this page.', 'manpreetdev-custom-fields-meta-boxes' ) );
 		}
 
 		$groups = $this->container->get( Repository::class )->all( true );
@@ -223,17 +223,17 @@ final class ToolsPage extends Module {
 		$this->render_notice();
 		?>
 		<div class="wrap wpcmb-wrap">
-			<h1><?php esc_html_e( 'Tools', 'metafields-custom-fields' ); ?></h1>
+			<h1><?php esc_html_e( 'Tools', 'manpreetdev-custom-fields-meta-boxes' ); ?></h1>
 
 			<div class="wpcmb-cards">
 				<div class="wpcmb-card">
-					<h2><?php esc_html_e( 'Export', 'metafields-custom-fields' ); ?></h2>
-					<p><?php esc_html_e( 'Everything this plugin holds as configuration, in one file: field groups, and the post types, taxonomies, block types, forms and options pages built from them.', 'metafields-custom-fields' ); ?></p>
+					<h2><?php esc_html_e( 'Export', 'manpreetdev-custom-fields-meta-boxes' ); ?></h2>
+					<p><?php esc_html_e( 'Everything this plugin holds as configuration, in one file: field groups, and the post types, taxonomies, block types, forms and options pages built from them.', 'manpreetdev-custom-fields-meta-boxes' ); ?></p>
 
 					<form method="post">
 						<?php wp_nonce_field( self::NONCE ); ?>
 
-						<fieldset class="wpcmb-fieldset"><legend><?php esc_html_e( 'Include', 'metafields-custom-fields' ); ?></legend>
+						<fieldset class="wpcmb-fieldset"><legend><?php esc_html_e( 'Include', 'manpreetdev-custom-fields-meta-boxes' ); ?></legend>
 							<?php foreach ( $counts as $section => $count ) : ?>
 								<label class="wpcmb-checkbox">
 									<input type="checkbox" name="wpcmb_sections[]" value="<?php echo esc_attr( $section ); ?>"<?php checked( $count > 0 ); ?><?php disabled( 0 === $count ); ?> />
@@ -244,7 +244,7 @@ final class ToolsPage extends Module {
 
 						<?php if ( array() !== $groups ) : ?>
 							<details class="wpcmb-details">
-								<summary><?php esc_html_e( 'Choose which field groups', 'metafields-custom-fields' ); ?></summary>
+								<summary><?php esc_html_e( 'Choose which field groups', 'manpreetdev-custom-fields-meta-boxes' ); ?></summary>
 								<fieldset class="wpcmb-fieldset">
 									<?php foreach ( $groups as $group ) : ?>
 										<label class="wpcmb-checkbox">
@@ -258,22 +258,22 @@ final class ToolsPage extends Module {
 
 						<p>
 							<button type="submit" class="wpcmb-btn wpcmb-btn--primary" name="wpcmb_tool" value="export_json">
-								<?php esc_html_e( 'Download JSON', 'metafields-custom-fields' ); ?>
+								<?php esc_html_e( 'Download JSON', 'manpreetdev-custom-fields-meta-boxes' ); ?>
 							</button>
 						</p>
 					</form>
 				</div>
 
 				<div class="wpcmb-card">
-					<h2><?php esc_html_e( 'Import', 'metafields-custom-fields' ); ?></h2>
-					<p><?php esc_html_e( 'Upload a JSON export from this plugin, at any version. Anything already here is updated in place; anything new arrives inactive, so uploading a file never starts changing your screens on its own.', 'metafields-custom-fields' ); ?></p>
+					<h2><?php esc_html_e( 'Import', 'manpreetdev-custom-fields-meta-boxes' ); ?></h2>
+					<p><?php esc_html_e( 'Upload a JSON export from this plugin, at any version. Anything already here is updated in place; anything new arrives inactive, so uploading a file never starts changing your screens on its own.', 'manpreetdev-custom-fields-meta-boxes' ); ?></p>
 
 					<form method="post" enctype="multipart/form-data">
 						<?php wp_nonce_field( self::NONCE ); ?>
 						<p><input type="file" name="wpcmb_import" accept="application/json,.json" required /></p>
 						<p>
 							<button type="submit" class="wpcmb-btn wpcmb-btn--primary" name="wpcmb_tool" value="import_json">
-								<?php esc_html_e( 'Import', 'metafields-custom-fields' ); ?>
+								<?php esc_html_e( 'Import', 'manpreetdev-custom-fields-meta-boxes' ); ?>
 							</button>
 						</p>
 					</form>
@@ -281,8 +281,8 @@ final class ToolsPage extends Module {
 			</div>
 
 			<?php if ( array() !== array_filter( $counts ) ) : ?>
-				<h2><?php esc_html_e( 'PHP export', 'metafields-custom-fields' ); ?></h2>
-				<p class="description"><?php esc_html_e( 'The same configuration as code. Drop it into a theme or a small plugin and the records it replaces can be deleted — the screens still show everything, and it deploys with your code instead of being carried by hand.', 'metafields-custom-fields' ); ?></p>
+				<h2><?php esc_html_e( 'PHP export', 'manpreetdev-custom-fields-meta-boxes' ); ?></h2>
+				<p class="description"><?php esc_html_e( 'The same configuration as code. Drop it into a theme or a small plugin and the records it replaces can be deleted — the screens still show everything, and it deploys with your code instead of being carried by hand.', 'manpreetdev-custom-fields-meta-boxes' ); ?></p>
 				<textarea class="widefat code wpcmb-php-export" rows="16" readonly><?php echo esc_textarea( $portability->php( $portability->export() ) ); ?></textarea>
 			<?php endif; ?>
 		</div>
@@ -296,12 +296,12 @@ final class ToolsPage extends Module {
 	 */
 	private static function section_label( string $section ): string {
 		$labels = array(
-			'field_groups'  => __( 'Field groups', 'metafields-custom-fields' ),
-			'post_types'    => __( 'Post types', 'metafields-custom-fields' ),
-			'taxonomies'    => __( 'Taxonomies', 'metafields-custom-fields' ),
-			'blocks'        => __( 'Block types', 'metafields-custom-fields' ),
-			'forms'         => __( 'Forms', 'metafields-custom-fields' ),
-			'options_pages' => __( 'Options pages', 'metafields-custom-fields' ),
+			'field_groups'  => __( 'Field groups', 'manpreetdev-custom-fields-meta-boxes' ),
+			'post_types'    => __( 'Post types', 'manpreetdev-custom-fields-meta-boxes' ),
+			'taxonomies'    => __( 'Taxonomies', 'manpreetdev-custom-fields-meta-boxes' ),
+			'blocks'        => __( 'Block types', 'manpreetdev-custom-fields-meta-boxes' ),
+			'forms'         => __( 'Forms', 'manpreetdev-custom-fields-meta-boxes' ),
+			'options_pages' => __( 'Options pages', 'manpreetdev-custom-fields-meta-boxes' ),
 		);
 
 		return $labels[ $section ] ?? $section;
@@ -320,10 +320,10 @@ final class ToolsPage extends Module {
 			'imported'         => array(
 				'success',
 				/* translators: %d: number of field groups imported. */
-				sprintf( _n( '%d field group imported.', '%d field groups imported.', $count, 'metafields-custom-fields' ), $count ),
+				sprintf( _n( '%d field group imported.', '%d field groups imported.', $count, 'manpreetdev-custom-fields-meta-boxes' ), $count ),
 			),
-			'import_failed'    => array( 'error', __( 'That file could not be read as a field group export.', 'metafields-custom-fields' ) ),
-			'nothing_selected' => array( 'warning', __( 'Select at least one field group to export.', 'metafields-custom-fields' ) ),
+			'import_failed'    => array( 'error', __( 'That file could not be read as a field group export.', 'manpreetdev-custom-fields-meta-boxes' ) ),
+			'nothing_selected' => array( 'warning', __( 'Select at least one field group to export.', 'manpreetdev-custom-fields-meta-boxes' ) ),
 		);
 
 		if ( ! isset( $messages[ $result ] ) ) {

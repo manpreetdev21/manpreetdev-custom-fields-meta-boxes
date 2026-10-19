@@ -309,7 +309,7 @@ final class Rows {
 
 		// A nested loop has no object of its own: it belongs to the row it was
 		// opened inside, so an identifier is not part of its identity.
-		return '' === $open['ref'] || $open['ref'] === (string) ObjectRef::from( $identifier );
+		return '' === $open['ref'] || (string) ObjectRef::from( $identifier ) === $open['ref'];
 	}
 
 	/**
@@ -405,7 +405,7 @@ final class Rows {
 			$sub_fields = array();
 
 			foreach ( (array) ( $field['layouts'] ?? array() ) as $candidate ) {
-				if ( is_array( $candidate ) && $layout === (string) ( $candidate['name'] ?? '' ) ) {
+				if ( is_array( $candidate ) && (string) ( $candidate['name'] ?? '' ) === $layout ) {
 					$sub_fields = is_array( $candidate['sub_fields'] ?? null ) ? $candidate['sub_fields'] : array();
 					break;
 				}

@@ -30,11 +30,11 @@ final class Structure extends FieldType {
 	 */
 	public function types(): array {
 		return array(
-			'message'   => __( 'Message', 'metafields-custom-fields' ),
-			'separator' => __( 'Separator', 'metafields-custom-fields' ),
-			'tab'       => __( 'Tab', 'metafields-custom-fields' ),
-			'accordion' => __( 'Accordion', 'metafields-custom-fields' ),
-			'group'     => __( 'Group', 'metafields-custom-fields' ),
+			'message'   => __( 'Message', 'manpreetdev-custom-fields-meta-boxes' ),
+			'separator' => __( 'Separator', 'manpreetdev-custom-fields-meta-boxes' ),
+			'tab'       => __( 'Tab', 'manpreetdev-custom-fields-meta-boxes' ),
+			'accordion' => __( 'Accordion', 'manpreetdev-custom-fields-meta-boxes' ),
+			'group'     => __( 'Group', 'manpreetdev-custom-fields-meta-boxes' ),
 		);
 	}
 
@@ -42,7 +42,7 @@ final class Structure extends FieldType {
 	 * Editor group label.
 	 */
 	public function group_label(): string {
-		return __( 'Layout', 'metafields-custom-fields' );
+		return __( 'Layout', 'manpreetdev-custom-fields-meta-boxes' );
 	}
 
 	/**
@@ -161,7 +161,7 @@ final class Structure extends FieldType {
 		if ( array() === $sub_fields ) {
 			printf(
 				'<p class="wpcmb-field__note">%s</p>',
-				esc_html__( 'This group has no fields yet.', 'metafields-custom-fields' )
+				esc_html__( 'This group has no fields yet.', 'manpreetdev-custom-fields-meta-boxes' )
 			);
 
 			return;
@@ -251,13 +251,13 @@ final class Structure extends FieldType {
 		return match ( $type ) {
 			'message'   => array(
 				'message' => array(
-					'label' => __( 'Message', 'metafields-custom-fields' ),
+					'label' => __( 'Message', 'manpreetdev-custom-fields-meta-boxes' ),
 					'type'  => 'textarea',
 				),
 			),
 			'accordion' => array(
 				'open' => array(
-					'label' => __( 'Open by default', 'metafields-custom-fields' ),
+					'label' => __( 'Open by default', 'manpreetdev-custom-fields-meta-boxes' ),
 					'type'  => 'toggle',
 				),
 			),

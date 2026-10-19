@@ -102,7 +102,7 @@ final class Submission extends Module {
 		);
 
 		if ( null === $config ) {
-			return $this->failure( '', __( 'This form could not be verified. Please reload the page.', 'metafields-custom-fields' ) );
+			return $this->failure( '', __( 'This form could not be verified. Please reload the page.', 'manpreetdev-custom-fields-meta-boxes' ) );
 		}
 
 		$group_key = (string) $config['group'];
@@ -110,30 +110,30 @@ final class Submission extends Module {
 		if ( ! isset( $_POST['wpcmb_form_nonce'] )
 			|| ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['wpcmb_form_nonce'] ) ), self::NONCE )
 		) {
-			return $this->failure( $group_key, __( 'This form has expired. Please reload the page and try again.', 'metafields-custom-fields' ) );
+			return $this->failure( $group_key, __( 'This form has expired. Please reload the page and try again.', 'manpreetdev-custom-fields-meta-boxes' ) );
 		}
 
 		if ( ! $this->looks_human( $state ) ) {
 			// Deliberately the same wording a person would see for a genuine
 			// problem: telling a bot exactly which check it failed is free
 			// help for whoever wrote it.
-			return $this->failure( $group_key, __( 'This form could not be submitted. Please try again.', 'metafields-custom-fields' ) );
+			return $this->failure( $group_key, __( 'This form could not be submitted. Please try again.', 'manpreetdev-custom-fields-meta-boxes' ) );
 		}
 
 		if ( ! Form::may_submit( $config ) ) {
-			return $this->failure( $group_key, __( 'You need to sign in to use this form.', 'metafields-custom-fields' ) );
+			return $this->failure( $group_key, __( 'You need to sign in to use this form.', 'manpreetdev-custom-fields-meta-boxes' ) );
 		}
 
 		$group = $this->container->get( Repository::class )->get( $group_key );
 
 		if ( ! $group instanceof FieldGroup ) {
-			return $this->failure( $group_key, __( 'That field group no longer exists.', 'metafields-custom-fields' ) );
+			return $this->failure( $group_key, __( 'That field group no longer exists.', 'manpreetdev-custom-fields-meta-boxes' ) );
 		}
 
 		$ref = $this->container->get( Form::class )->object_ref( $config );
 
 		if ( 'new' !== $config['object'] && ! Form::may_edit( $config, $ref ) ) {
-			return $this->failure( $group_key, __( 'You do not have permission to edit this.', 'metafields-custom-fields' ) );
+			return $this->failure( $group_key, __( 'You do not have permission to edit this.', 'manpreetdev-custom-fields-meta-boxes' ) );
 		}
 
 		$submitted = $this->submitted_values();
@@ -151,14 +151,14 @@ final class Submission extends Module {
 		$title = $this->submitted_title();
 
 		if ( 'post' === $config['action'] && '1' === (string) $config['post_title'] && '' === $title ) {
-			$errors['post_title'] = __( 'A title is required.', 'metafields-custom-fields' );
+			$errors['post_title'] = __( 'A title is required.', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
 		if ( array() !== $errors ) {
 			return array(
 				'success'  => false,
 				'group'    => $group_key,
-				'message'  => __( 'Please check the highlighted fields.', 'metafields-custom-fields' ),
+				'message'  => __( 'Please check the highlighted fields.', 'manpreetdev-custom-fields-meta-boxes' ),
 				'errors'   => $errors,
 				'redirect' => '',
 			);
@@ -167,7 +167,7 @@ final class Submission extends Module {
 		$ref = $this->target( $config, $ref, $title );
 
 		if ( ! $ref->is_valid() ) {
-			return $this->failure( $group_key, __( 'That could not be saved. Please try again.', 'metafields-custom-fields' ) );
+			return $this->failure( $group_key, __( 'That could not be saved. Please try again.', 'manpreetdev-custom-fields-meta-boxes' ) );
 		}
 
 		$renderer = $this->container->get( Renderer::class );
@@ -197,7 +197,7 @@ final class Submission extends Module {
 			'group'    => $group_key,
 			'message'  => '' !== (string) $config['message']
 				? (string) $config['message']
-				: __( 'Thanks, that has been saved.', 'metafields-custom-fields' ),
+				: __( 'Thanks, that has been saved.', 'manpreetdev-custom-fields-meta-boxes' ),
 			'errors'   => array(),
 			'object'   => (string) $ref,
 			'redirect' => $this->safe_redirect( (string) $config['redirect'] ),
@@ -275,7 +275,7 @@ final class Submission extends Module {
 			array(
 				'post_type'   => $post_type,
 				'post_status' => $this->status_for( $config, $post_type ),
-				'post_title'  => '' !== $title ? $title : __( 'Untitled submission', 'metafields-custom-fields' ),
+				'post_title'  => '' !== $title ? $title : __( 'Untitled submission', 'manpreetdev-custom-fields-meta-boxes' ),
 				'post_author' => get_current_user_id(),
 			),
 			true
@@ -413,7 +413,7 @@ final class Submission extends Module {
 
 		$lines = array(
 			/* translators: %s: field group title. */
-			sprintf( __( 'A new submission of "%s".', 'metafields-custom-fields' ), $group->title ),
+			sprintf( __( 'A new submission of "%s".', 'manpreetdev-custom-fields-meta-boxes' ), $group->title ),
 			'',
 		);
 
@@ -438,7 +438,7 @@ final class Submission extends Module {
 			array(
 				'to'      => $to,
 				/* translators: %s: field group title. */
-				'subject' => sprintf( __( '[%1$s] %2$s', 'metafields-custom-fields' ), get_bloginfo( 'name' ), $group->title ),
+				'subject' => sprintf( __( '[%1$s] %2$s', 'manpreetdev-custom-fields-meta-boxes' ), get_bloginfo( 'name' ), $group->title ),
 				'body'    => implode( "\n", $lines ),
 			),
 			$stored,

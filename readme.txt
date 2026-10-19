@@ -1,10 +1,10 @@
-=== MetaFields - Custom Fields and Meta Boxes ===
+=== Manpreetdev Custom Fields and Meta Boxes ===
 Contributors: manpreetdev21
 Tags: custom fields, meta box, repeater, options page, custom post type
 Requires at least: 6.8
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.15.0
+Stable tag: 1.16.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,7 +12,7 @@ Field groups, meta boxes and a developer-friendly field API: 51 field types, rep
 
 == Description ==
 
-MetaFields adds custom fields to posts, pages, custom post types, terms, users, comments, options pages and public forms. Build a field group in the admin, choose where it appears, and read the values back with one function.
+Add custom fields to posts, pages, custom post types, terms, users, comments, options pages and public forms. Build a field group in the admin, choose where it appears, and read the values back with one function.
 
 **Fifty-one field types**, grouped by what they do rather than by name: text, number, email, URL, password, range, colour, date, time, phone, slug, UUID, currency, textarea, select, checkbox, radio, toggle, button group, rating, country, region, file, image, gallery, video, audio, post object, page link, relationship, taxonomy, user, link, rich text, code, JSON, HTML, repeater, flexible content, message, separator, tab, accordion, group, icon picker, map, signature, QR code, barcode, embed and address.
 
@@ -84,7 +84,7 @@ Only if you ask for it. `guests="1"` on the shortcode accepts submissions from a
 
 = Is it translation ready? =
 
-Yes. Every string is translatable under the `metafields-custom-fields` text domain, and the layout uses logical CSS properties so right-to-left needs no second stylesheet.
+Yes. Every string is translatable under the `manpreetdev-custom-fields-meta-boxes` text domain, and the layout uses logical CSS properties so right-to-left needs no second stylesheet.
 
 == Screenshots ==
 
@@ -95,6 +95,16 @@ Yes. Every string is translatable under the `metafields-custom-fields` text doma
 5. The field group list, with each group's key, field count and location.
 
 == Changelog ==
+
+= 1.16.0 =
+* Renamed to Manpreetdev Custom Fields and Meta Boxes, under the slug `manpreetdev-custom-fields-meta-boxes`. The code prefix is unchanged, so every stored field group, value, option and submission is untouched and nothing needs migrating.
+* The text domain is now `manpreetdev-custom-fields-meta-boxes`. Translations against the old domain need regenerating.
+* Template overrides move with the slug: a theme folder named `metafields-custom-fields` holding `form.php`, `block.php` or `blocks/{name}.php` has to be renamed `manpreetdev-custom-fields-meta-boxes`. The `wpcmb/form/template` and `wpcmb/block/template` filters are unaffected.
+* Exports written under either former slug still import. The marker inside the file is the slug the plugin had when it was written, so a rename would otherwise refuse every file made before it.
+* New: the row loop, for reading repeaters and flexible content in a template. `wpcmb_have_rows()`, `wpcmb_the_row()`, `wpcmb_get_row()`, `wpcmb_get_sub_field()`, `wpcmb_the_sub_field()`, `wpcmb_get_sub_field_object()`, `wpcmb_get_row_layout()`, `wpcmb_get_row_index()`, `wpcmb_count_rows()` and `wpcmb_reset_rows()`.
+* A repeater value was always a list of rows a foreach could walk. What that could not do is reach a sub field's definition — its label, choices or default are not in the top-level name index — or walk a repeater nested inside a repeater without nesting the loops by hand. Both now read the same two lines deep or shallow.
+* A sub field added to a repeater after its rows were saved now falls back to its default when read, instead of coming back as nothing.
+* Row writers: `wpcmb_add_row()`, `wpcmb_update_row()` and `wpcmb_delete_row()`, counting rows from one as the loop reports them. They go through the same sanitizing an edit screen does, so a script cannot store what the admin would refuse.
 
 = 1.15.0 =
 * Export and import now cover everything the plugin holds, not just field groups. Post types, taxonomies, block types, forms and options pages were added over the last five releases and none of them could leave the site they were built on, so a site built on staging had to be rebuilt by hand on production.

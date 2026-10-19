@@ -322,7 +322,7 @@ final class Repository {
 		$source = get_post( $post_id );
 
 		if ( ! $source instanceof \WP_Post || FieldGroupPostType::POST_TYPE !== $source->post_type ) {
-			return new \WP_Error( 'wpcmb_not_found', __( 'Field group not found.', 'metafields-custom-fields' ) );
+			return new \WP_Error( 'wpcmb_not_found', __( 'Field group not found.', 'manpreetdev-custom-fields-meta-boxes' ) );
 		}
 
 		$new_id = wp_insert_post(
@@ -330,7 +330,7 @@ final class Repository {
 				'post_type'   => FieldGroupPostType::POST_TYPE,
 				'post_status' => 'draft',
 				/* translators: %s: field group title. */
-				'post_title'  => sprintf( __( '%s (copy)', 'metafields-custom-fields' ), $source->post_title ),
+				'post_title'  => sprintf( __( '%s (copy)', 'manpreetdev-custom-fields-meta-boxes' ), $source->post_title ),
 			),
 			true
 		);

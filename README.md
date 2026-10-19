@@ -1,13 +1,13 @@
-# MetaFields - Custom Fields and Meta Boxes
+# Manpreetdev Custom Fields and Meta Boxes
 
 Field groups, meta boxes and a developer-friendly field API for WordPress.
 
-- **Version:** 1.15.0
+- **Version:** 1.16.0
 - **Author:** Manpreet Singh
 - **Requires PHP:** 8.1
 - **Requires WordPress:** 6.8
 - **License:** GPL-2.0-or-later
-- **Text Domain:** `metafields-custom-fields`
+- **Text Domain:** `manpreetdev-custom-fields-meta-boxes`
 - **Namespace:** `WPCMB`
 
 
@@ -33,7 +33,7 @@ Field groups, meta boxes and a developer-friendly field API for WordPress.
 Four moving parts, nothing more:
 
 ```
-metafields-custom-fields.php   Bootstrap. The only procedural file.
+manpreetdev-custom-fields-meta-boxes.php   Bootstrap. The only procedural file.
   └─ Container          Lazy service container, shared instances, auto-wiring.
   └─ Plugin             Singleton. Owns the container, collects and boots modules.
       └─ Module         Abstract base. One per feature. boot() registers hooks.
@@ -43,7 +43,7 @@ metafields-custom-fields.php   Bootstrap. The only procedural file.
 
 **Request flow**
 
-1. WordPress loads `metafields-custom-fields.php`, which defines constants and registers an autoloader (Composer's if `vendor/` exists, a PSR-4 fallback otherwise).
+1. WordPress loads `manpreetdev-custom-fields-meta-boxes.php`, which defines constants and registers an autoloader (Composer's if `vendor/` exists, a PSR-4 fallback otherwise).
 2. `wpcmb()->init()` hooks `Plugin::boot()` to `plugins_loaded` at priority 5 — early enough that other plugins can act on `wpcmb/booted`.
 3. `boot()` runs the module list through the `wpcmb/modules` filter, resolves each class from the container, skips any whose `is_enabled()` returns false, and calls `boot()` on the rest.
 4. `wpcmb/booted` fires. Add-ons build on top from here.
@@ -120,6 +120,50 @@ wpcmb_validate_values( $values, $post_id );     // errors keyed by field name
 ```
 
 These are the only global functions the plugin defines — thin wrappers over container services, so themes get a short procedural API and the implementation stays swappable.
+
+### The row loop
+
+```php
+wpcmb_have_rows( 'slides' );                    // another row coming?
+wpcmb_the_row();                                // move onto it
+wpcmb_get_row();                                // the current row, unmoved
+wpcmb_get_sub_field( 'heading' );               // a value from it
+wpcmb_the_sub_field( 'heading' );               // echoed, escaped
+wpcmb_get_sub_field_object( 'heading' );        // the sub field's definition
+wpcmb_get_row_layout();                         // flexible content's layout
+wpcmb_get_row_index();                          // position, counting from one
+wpcmb_count_rows();                             // rows in this loop
+wpcmb_reset_rows();                             // after a break
+wpcmb_add_row( 'slides', $row, $post_id );
+wpcmb_update_row( 'slides', 1, $row, $post_id );
+wpcmb_delete_row( 'slides', 1, $post_id );
+```
+
+```php
+if ( wpcmb_have_rows( 'slides' ) ) {
+	while ( wpcmb_have_rows( 'slides' ) ) {
+		wpcmb_the_row();
+
+		echo '<h2>' . esc_html( wpcmb_get_sub_field( 'heading' ) ) . '</h2>';
+
+		while ( wpcmb_have_rows( 'bullets' ) ) {   // nested, no identifier
+			wpcmb_the_row();
+			wpcmb_the_sub_field( 'text' );
+		}
+	}
+}
+```
+
+**A repeater value is already a list of rows**, so `foreach ( wpcmb_get_field( 'slides' ) as $row )` works and is shorter for a flat repeater. The loop exists for the two things a foreach cannot do:
+
+1. **Reach a sub field's definition.** A sub field is not in the top-level name index, so `wpcmb_get_field_object()` cannot find one — `wpcmb_get_sub_field_object()` is the only way to a sub field's label, choices or default. It is also why a sub field *added to a repeater after its rows were saved* reads as its default rather than as nothing.
+2. **Walk a nested repeater without nesting the loops by hand.** A loop opened while another is open belongs to the row it was opened inside, so the identifier is only passed at the top.
+
+`wpcmb_have_rows()` looks without moving, which is what makes the `if` around the `while` safe — it does not eat the first row. Moving is `wpcmb_the_row()`'s job, so a `while` body that never calls it never ends. That is ACF's contract, deliberately, because a site moving across has this spelling in every template it owns.
+
+After breaking out of a loop part way through, call `wpcmb_reset_rows()`. The pointer is still mid-list otherwise. A loop left open on one object will not answer for another, so an archive template cannot render the previous post's rows, but it will resume mid-list for the same one.
+
+The writers count rows from one, as the loop reports them, and go through the same sanitizing an edit screen does — so `wpcmb_add_row()` cannot store what the admin would refuse, and it rewrites the rows already there as they were *stored* rather than as they were formatted.
 
 ### Registering groups in code
 
@@ -627,7 +671,7 @@ A rejected submission gets the same wording as a genuine failure. Telling a bot 
 
 ### Template override
 
-Copy `templates/form.php` to `metafields-custom-fields/form.php` in your theme, or filter `wpcmb/form/template`.
+Copy `templates/form.php` to `manpreetdev-custom-fields-meta-boxes/form.php` in your theme, or filter `wpcmb/form/template`.
 
 ## REST API
 
@@ -684,8 +728,8 @@ Tick **Register this group as a block** in the field group editor and give it a 
 
 Template resolution, first match wins:
 
-1. `metafields-custom-fields/blocks/{block-name}.php` in the theme
-2. `metafields-custom-fields/block.php` in the theme
+1. `manpreetdev-custom-fields-meta-boxes/blocks/{block-name}.php` in the theme
+2. `manpreetdev-custom-fields-meta-boxes/block.php` in the theme
 3. `templates/blocks/{block-name}.php` shipped by a plugin
 4. `templates/block.php` — the generic fallback
 
@@ -1170,7 +1214,7 @@ Deleting the plugin removes nothing unless `wpcmb_delete_data_on_uninstall` is s
 ## Checks
 
 ```bash
-composer test        # all 19 PHP checks, one process each
+composer test        # all 20 PHP checks, one process each
 npm test             # 158 browser tests against the real scripts
 php tests/integration.php   # real WordPress, non-destructive
 composer lint        # WordPress Coding Standards
@@ -1203,6 +1247,7 @@ php tests/validation-check.php   # required fields, including inside repeaters
 php tests/settings-check.php     # every group and field setting, where it takes effect
 php tests/records-check.php      # post type, taxonomy, block, form and options page records
 php tests/portability-check.php  # what an export holds, and what an import accepts
+php tests/rows-check.php         # the row loop: positions, nesting, writers
 ```
 
 None of these need WordPress.
@@ -1254,11 +1299,23 @@ mv vendor vendor.off && php -r 'require "…/wp-load.php"; var_dump( function_ex
 
 ### The internal prefix is not the slug
 
-The slug is `metafields-custom-fields`. The code prefix is `WPCMB\`, `wpcmb_`,
-the `wpcmb_field_group` post type, the `_wpcmb_config` meta key and every
-`wpcmb_*` option — and it stays that way. Renaming it would orphan every field
-group, every stored value and every setting on every site already running the
-plugin, which is a migration, not a rename.
+The slug is `manpreetdev-custom-fields-meta-boxes`. The code prefix is
+`WPCMB\`, `wpcmb_`, the `wpcmb_field_group` post type, the `_wpcmb_config`
+meta key and every `wpcmb_*` option — and it stays that way. Renaming it would
+orphan every field group, every stored value and every setting on every site
+already running the plugin, which is a migration, not a rename.
+
+The plugin has been renamed twice and the prefix survived both, which is the
+point of keeping them separate. What a rename does cost:
+
+- **The text domain**, which has to match the slug for the directory to serve
+  language packs. Translations against an old domain need regenerating.
+- **Theme template overrides**, which live in a folder named after the slug.
+  A theme holding `metafields-custom-fields/form.php` has to rename that
+  folder; the `wpcmb/form/template` filter is unaffected.
+- **Nothing in the database.** An export written under a former slug still
+  imports, because the marker inside an export file is checked against the
+  slugs the plugin has had, not only the current one.
 
 
 ## Directory layout
@@ -1266,7 +1323,7 @@ plugin, which is a migration, not a rename.
 Directories are created as their phase lands, not up front. Current tree:
 
 ```
-metafields-custom-fields/
+manpreetdev-custom-fields-meta-boxes/
 ├── assets/
 │   ├── css/admin.css             plugin screens
 │   ├── css/fields.css            edit screens
@@ -1308,6 +1365,7 @@ metafields-custom-fields/
 │   │   ├── Renderer.php          wrappers, labels, naming, nesting
 │   │   ├── Repository.php        reads, writes, duplication, caching, name index
 │   │   ├── Resolver.php          which groups apply to a context
+│   │   ├── Rows.php              the row loop's pointer stack
 │   │   ├── Validator.php         server-side validation
 │   │   └── Values.php            value get/update/delete/has
 │   ├── Blocks/BlockRegistry.php  groups as blocks, PHP render
@@ -1341,5 +1399,5 @@ metafields-custom-fields/
 ├── LICENSE                      GPLv2, in full
 ├── README.md
 ├── uninstall.php
-└── metafields-custom-fields.php
+└── manpreetdev-custom-fields-meta-boxes.php
 ```

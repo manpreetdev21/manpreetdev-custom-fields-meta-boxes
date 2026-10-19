@@ -39,11 +39,11 @@ final class Media extends FieldType {
 	 */
 	public function types(): array {
 		return array(
-			'file'    => __( 'File', 'metafields-custom-fields' ),
-			'image'   => __( 'Image', 'metafields-custom-fields' ),
-			'gallery' => __( 'Gallery', 'metafields-custom-fields' ),
-			'video'   => __( 'Video', 'metafields-custom-fields' ),
-			'audio'   => __( 'Audio', 'metafields-custom-fields' ),
+			'file'    => __( 'File', 'manpreetdev-custom-fields-meta-boxes' ),
+			'image'   => __( 'Image', 'manpreetdev-custom-fields-meta-boxes' ),
+			'gallery' => __( 'Gallery', 'manpreetdev-custom-fields-meta-boxes' ),
+			'video'   => __( 'Video', 'manpreetdev-custom-fields-meta-boxes' ),
+			'audio'   => __( 'Audio', 'manpreetdev-custom-fields-meta-boxes' ),
 		);
 	}
 
@@ -51,7 +51,7 @@ final class Media extends FieldType {
 	 * Editor group label.
 	 */
 	public function group_label(): string {
-		return __( 'Media', 'metafields-custom-fields' );
+		return __( 'Media', 'manpreetdev-custom-fields-meta-boxes' );
 	}
 
 	/**
@@ -122,8 +122,8 @@ final class Media extends FieldType {
 				<button type="button" class="wpcmb-btn wpcmb-btn--quiet wpcmb-btn--danger wpcmb-media__clear">%s</button>
 			</p>
 			</div>',
-			esc_html( $multiple ? __( 'Add media', 'metafields-custom-fields' ) : __( 'Select media', 'metafields-custom-fields' ) ),
-			esc_html( __( 'Clear', 'metafields-custom-fields' ) )
+			esc_html( $multiple ? __( 'Add media', 'manpreetdev-custom-fields-meta-boxes' ) : __( 'Select media', 'manpreetdev-custom-fields-meta-boxes' ) ),
+			esc_html( __( 'Clear', 'manpreetdev-custom-fields-meta-boxes' ) )
 		);
 	}
 
@@ -143,7 +143,7 @@ final class Media extends FieldType {
 			esc_attr( (string) $id ),
 			wp_kses_post( $thumb ),
 			esc_html( '' !== $title ? $title : (string) $id ),
-			esc_attr__( 'Remove', 'metafields-custom-fields' )
+			esc_attr__( 'Remove', 'manpreetdev-custom-fields-meta-boxes' )
 		);
 	}
 
@@ -248,62 +248,62 @@ final class Media extends FieldType {
 	public function settings_schema( string $type ): array {
 		$schema = array(
 			'library'       => array(
-				'label'   => __( 'Library', 'metafields-custom-fields' ),
+				'label'   => __( 'Library', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'    => 'select',
 				'choices' => array(
-					'all'      => __( 'Everything in the media library', 'metafields-custom-fields' ),
-					'uploaded' => __( 'Only what was uploaded to this item', 'metafields-custom-fields' ),
+					'all'      => __( 'Everything in the media library', 'manpreetdev-custom-fields-meta-boxes' ),
+					'uploaded' => __( 'Only what was uploaded to this item', 'manpreetdev-custom-fields-meta-boxes' ),
 				),
 			),
 			'mime_preset'   => array(
-				'label'   => __( 'Upload type', 'metafields-custom-fields' ),
+				'label'   => __( 'Upload type', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'    => 'select',
 				'tab'     => 'validation',
-				'choices' => array( '' => __( 'Whatever this field is for', 'metafields-custom-fields' ) ) + self::upload_types(),
-				'help'    => __( 'Chosen from the list on the plugin\'s Settings screen. An image field only ever accepts images; this narrows it further.', 'metafields-custom-fields' ),
+				'choices' => array( '' => __( 'Whatever this field is for', 'manpreetdev-custom-fields-meta-boxes' ) ) + self::upload_types(),
+				'help'    => __( 'Chosen from the list on the plugin\'s Settings screen. An image field only ever accepts images; this narrows it further.', 'manpreetdev-custom-fields-meta-boxes' ),
 			),
 			'mime_types'    => array(
-				'label' => __( 'Allowed file types', 'metafields-custom-fields' ),
+				'label' => __( 'Allowed file types', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'text',
 				'tab'   => 'validation',
-				'help'  => __( 'For something the list above does not cover. Comma separated extensions or mime types, e.g. pdf, docx or image/png. Overrides the upload type.', 'metafields-custom-fields' ),
+				'help'  => __( 'For something the list above does not cover. Comma separated extensions or mime types, e.g. pdf, docx or image/png. Overrides the upload type.', 'manpreetdev-custom-fields-meta-boxes' ),
 			),
 			'min_size'      => array(
-				'label' => __( 'Minimum file size', 'metafields-custom-fields' ),
+				'label' => __( 'Minimum file size', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'text',
 				'tab'   => 'validation',
-				'help'  => __( 'Kilobytes when bare; 2MB and 500 KB also work.', 'metafields-custom-fields' ),
+				'help'  => __( 'Kilobytes when bare; 2MB and 500 KB also work.', 'manpreetdev-custom-fields-meta-boxes' ),
 			),
 			'max_size'      => array(
-				'label' => __( 'Maximum file size', 'metafields-custom-fields' ),
+				'label' => __( 'Maximum file size', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'text',
 				'tab'   => 'validation',
 			),
 			'preview_size'  => array(
-				'label' => __( 'Preview size', 'metafields-custom-fields' ),
+				'label' => __( 'Preview size', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'text',
 				'tab'   => 'appearance',
-				'help'  => __( 'A registered image size. Defaults to thumbnail.', 'metafields-custom-fields' ),
+				'help'  => __( 'A registered image size. Defaults to thumbnail.', 'manpreetdev-custom-fields-meta-boxes' ),
 			),
 			'return_format' => array(
-				'label'   => __( 'Return format', 'metafields-custom-fields' ),
+				'label'   => __( 'Return format', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'    => 'select',
 				'choices' => array(
-					'id'     => __( 'Attachment ID', 'metafields-custom-fields' ),
-					'url'    => __( 'URL', 'metafields-custom-fields' ),
-					'array'  => __( 'Array', 'metafields-custom-fields' ),
-					'object' => __( 'WP_Post object', 'metafields-custom-fields' ),
+					'id'     => __( 'Attachment ID', 'manpreetdev-custom-fields-meta-boxes' ),
+					'url'    => __( 'URL', 'manpreetdev-custom-fields-meta-boxes' ),
+					'array'  => __( 'Array', 'manpreetdev-custom-fields-meta-boxes' ),
+					'object' => __( 'WP_Post object', 'manpreetdev-custom-fields-meta-boxes' ),
 				),
 			),
 		);
 
 		if ( 'gallery' === $type ) {
 			$schema['min'] = array(
-				'label' => __( 'Minimum items', 'metafields-custom-fields' ),
+				'label' => __( 'Minimum items', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'number',
 			);
 			$schema['max'] = array(
-				'label' => __( 'Maximum items', 'metafields-custom-fields' ),
+				'label' => __( 'Maximum items', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'number',
 			);
 		}
@@ -311,10 +311,10 @@ final class Media extends FieldType {
 		// Dimensions only mean something for a type that holds an image.
 		if ( in_array( $type, array( 'image', 'gallery' ), true ) ) {
 			$dimensions = array(
-				'min_width'  => __( 'Minimum width (px)', 'metafields-custom-fields' ),
-				'max_width'  => __( 'Maximum width (px)', 'metafields-custom-fields' ),
-				'min_height' => __( 'Minimum height (px)', 'metafields-custom-fields' ),
-				'max_height' => __( 'Maximum height (px)', 'metafields-custom-fields' ),
+				'min_width'  => __( 'Minimum width (px)', 'manpreetdev-custom-fields-meta-boxes' ),
+				'max_width'  => __( 'Maximum width (px)', 'manpreetdev-custom-fields-meta-boxes' ),
+				'min_height' => __( 'Minimum height (px)', 'manpreetdev-custom-fields-meta-boxes' ),
+				'max_height' => __( 'Maximum height (px)', 'manpreetdev-custom-fields-meta-boxes' ),
 			);
 
 			foreach ( $dimensions as $name => $label ) {
@@ -484,15 +484,15 @@ final class Media extends FieldType {
 	 */
 	public static function default_upload_types(): array {
 		return array(
-			'image'                     => __( 'Any image', 'metafields-custom-fields' ),
-			'jpg, jpeg, png, webp, gif' => __( 'Web images (JPG, PNG, WebP, GIF)', 'metafields-custom-fields' ),
-			'svg'                       => __( 'SVG', 'metafields-custom-fields' ),
-			'video'                     => __( 'Any video', 'metafields-custom-fields' ),
-			'audio'                     => __( 'Any audio', 'metafields-custom-fields' ),
-			'pdf'                       => __( 'PDF', 'metafields-custom-fields' ),
-			'pdf, doc, docx, odt, rtf'  => __( 'Documents', 'metafields-custom-fields' ),
-			'csv, xls, xlsx, ods'       => __( 'Spreadsheets', 'metafields-custom-fields' ),
-			'zip, gz, rar'              => __( 'Archives', 'metafields-custom-fields' ),
+			'image'                     => __( 'Any image', 'manpreetdev-custom-fields-meta-boxes' ),
+			'jpg, jpeg, png, webp, gif' => __( 'Web images (JPG, PNG, WebP, GIF)', 'manpreetdev-custom-fields-meta-boxes' ),
+			'svg'                       => __( 'SVG', 'manpreetdev-custom-fields-meta-boxes' ),
+			'video'                     => __( 'Any video', 'manpreetdev-custom-fields-meta-boxes' ),
+			'audio'                     => __( 'Any audio', 'manpreetdev-custom-fields-meta-boxes' ),
+			'pdf'                       => __( 'PDF', 'manpreetdev-custom-fields-meta-boxes' ),
+			'pdf, doc, docx, odt, rtf'  => __( 'Documents', 'manpreetdev-custom-fields-meta-boxes' ),
+			'csv, xls, xlsx, ods'       => __( 'Spreadsheets', 'manpreetdev-custom-fields-meta-boxes' ),
+			'zip, gz, rar'              => __( 'Archives', 'manpreetdev-custom-fields-meta-boxes' ),
 		);
 	}
 
@@ -539,7 +539,7 @@ final class Media extends FieldType {
 			if ( ! $matches ) {
 				return sprintf(
 					/* translators: %s: comma-separated list of allowed file types. */
-					__( 'That file type is not allowed. Allowed: %s.', 'metafields-custom-fields' ),
+					__( 'That file type is not allowed. Allowed: %s.', 'manpreetdev-custom-fields-meta-boxes' ),
 					implode( ', ', $allowed )
 				);
 			}
@@ -562,9 +562,9 @@ final class Media extends FieldType {
 				return sprintf(
 					$is_min
 						/* translators: 1: the file's size, 2: the smallest allowed size. */
-						? __( 'That file is %1$s; the smallest allowed is %2$s.', 'metafields-custom-fields' )
+						? __( 'That file is %1$s; the smallest allowed is %2$s.', 'manpreetdev-custom-fields-meta-boxes' )
 						/* translators: 1: the file's size, 2: the largest allowed size. */
-						: __( 'That file is %1$s; the largest allowed is %2$s.', 'metafields-custom-fields' ),
+						: __( 'That file is %1$s; the largest allowed is %2$s.', 'manpreetdev-custom-fields-meta-boxes' ),
 					size_format( $size ),
 					size_format( $limit )
 				);
@@ -596,13 +596,13 @@ final class Media extends FieldType {
 
 		$limits = array(
 			/* translators: 1: the image's width in pixels, 2: the narrowest allowed width in pixels. */
-			'min_width'  => array( 'width', true, __( 'That image is %1$dpx wide; the narrowest allowed is %2$dpx.', 'metafields-custom-fields' ) ),
+			'min_width'  => array( 'width', true, __( 'That image is %1$dpx wide; the narrowest allowed is %2$dpx.', 'manpreetdev-custom-fields-meta-boxes' ) ),
 			/* translators: 1: the image's width in pixels, 2: the widest allowed width in pixels. */
-			'max_width'  => array( 'width', false, __( 'That image is %1$dpx wide; the widest allowed is %2$dpx.', 'metafields-custom-fields' ) ),
+			'max_width'  => array( 'width', false, __( 'That image is %1$dpx wide; the widest allowed is %2$dpx.', 'manpreetdev-custom-fields-meta-boxes' ) ),
 			/* translators: 1: the image's height in pixels, 2: the shortest allowed height in pixels. */
-			'min_height' => array( 'height', true, __( 'That image is %1$dpx tall; the shortest allowed is %2$dpx.', 'metafields-custom-fields' ) ),
+			'min_height' => array( 'height', true, __( 'That image is %1$dpx tall; the shortest allowed is %2$dpx.', 'manpreetdev-custom-fields-meta-boxes' ) ),
 			/* translators: 1: the image's height in pixels, 2: the tallest allowed height in pixels. */
-			'max_height' => array( 'height', false, __( 'That image is %1$dpx tall; the tallest allowed is %2$dpx.', 'metafields-custom-fields' ) ),
+			'max_height' => array( 'height', false, __( 'That image is %1$dpx tall; the tallest allowed is %2$dpx.', 'manpreetdev-custom-fields-meta-boxes' ) ),
 		);
 
 		foreach ( $limits as $setting => $rule ) {

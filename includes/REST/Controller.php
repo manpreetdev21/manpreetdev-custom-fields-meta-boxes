@@ -66,7 +66,7 @@ final class Controller extends Module {
 						'inactive' => array(
 							'type'        => 'boolean',
 							'default'     => false,
-							'description' => __( 'Include groups that are not active.', 'metafields-custom-fields' ),
+							'description' => __( 'Include groups that are not active.', 'manpreetdev-custom-fields-meta-boxes' ),
 						),
 					),
 				),
@@ -104,7 +104,7 @@ final class Controller extends Module {
 						'values' => array(
 							'type'        => 'object',
 							'required'    => true,
-							'description' => __( 'Field values keyed by field name.', 'metafields-custom-fields' ),
+							'description' => __( 'Field values keyed by field name.', 'manpreetdev-custom-fields-meta-boxes' ),
 						),
 					),
 				),
@@ -125,7 +125,7 @@ final class Controller extends Module {
 
 		return new \WP_Error(
 			'wpcmb_forbidden',
-			__( 'You are not allowed to view field groups.', 'metafields-custom-fields' ),
+			__( 'You are not allowed to view field groups.', 'manpreetdev-custom-fields-meta-boxes' ),
 			array( 'status' => rest_authorization_required_code() )
 		);
 	}
@@ -142,7 +142,7 @@ final class Controller extends Module {
 			? true
 			: new \WP_Error(
 				'wpcmb_forbidden',
-				__( 'You are not allowed to read these values.', 'metafields-custom-fields' ),
+				__( 'You are not allowed to read these values.', 'manpreetdev-custom-fields-meta-boxes' ),
 				array( 'status' => rest_authorization_required_code() )
 			);
 	}
@@ -159,7 +159,7 @@ final class Controller extends Module {
 			? true
 			: new \WP_Error(
 				'wpcmb_forbidden',
-				__( 'You are not allowed to edit these values.', 'metafields-custom-fields' ),
+				__( 'You are not allowed to edit these values.', 'manpreetdev-custom-fields-meta-boxes' ),
 				array( 'status' => rest_authorization_required_code() )
 			);
 	}
@@ -188,7 +188,7 @@ final class Controller extends Module {
 		if ( ! $group instanceof FieldGroup ) {
 			return new \WP_Error(
 				'wpcmb_not_found',
-				__( 'No field group with that key.', 'metafields-custom-fields' ),
+				__( 'No field group with that key.', 'manpreetdev-custom-fields-meta-boxes' ),
 				array( 'status' => 404 )
 			);
 		}
@@ -239,7 +239,7 @@ final class Controller extends Module {
 		if ( array() === $present ) {
 			return new \WP_Error(
 				'wpcmb_no_fields',
-				__( 'None of those field names apply to this object.', 'metafields-custom-fields' ),
+				__( 'None of those field names apply to this object.', 'manpreetdev-custom-fields-meta-boxes' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -252,7 +252,7 @@ final class Controller extends Module {
 		if ( array() !== $errors ) {
 			return new \WP_Error(
 				'wpcmb_invalid_values',
-				__( 'Some values were rejected.', 'metafields-custom-fields' ),
+				__( 'Some values were rejected.', 'manpreetdev-custom-fields-meta-boxes' ),
 				array(
 					'status' => 400,
 					'errors' => $errors,
@@ -365,7 +365,7 @@ final class Controller extends Module {
 				'schema'   => array(
 					'type'        => 'object',
 					'readonly'    => true,
-					'description' => __( 'JSON Schema for each field in this group.', 'metafields-custom-fields' ),
+					'description' => __( 'JSON Schema for each field in this group.', 'manpreetdev-custom-fields-meta-boxes' ),
 				),
 			),
 		);

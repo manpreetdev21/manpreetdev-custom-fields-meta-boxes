@@ -28,14 +28,14 @@ final class Link extends FieldType {
 	 * @return array<string, string>
 	 */
 	public function types(): array {
-		return array( 'link' => __( 'Link', 'metafields-custom-fields' ) );
+		return array( 'link' => __( 'Link', 'manpreetdev-custom-fields-meta-boxes' ) );
 	}
 
 	/**
 	 * Editor group label.
 	 */
 	public function group_label(): string {
-		return __( 'Relational', 'metafields-custom-fields' );
+		return __( 'Relational', 'manpreetdev-custom-fields-meta-boxes' );
 	}
 
 	/**
@@ -68,7 +68,7 @@ final class Link extends FieldType {
 			'<p class="wpcmb-link__row"><label class="wpcmb-label" for="%1$s-url">%2$s</label>
 			<input type="url" class="wpcmb-input" id="%1$s-url" name="%3$s[url]" value="%4$s" placeholder="https://"%5$s /></p>',
 			esc_attr( $input_id ),
-			esc_html__( 'URL', 'metafields-custom-fields' ),
+			esc_html__( 'URL', 'manpreetdev-custom-fields-meta-boxes' ),
 			esc_attr( $input_name ),
 			esc_attr( $link['url'] ),
 			! empty( $field['required'] ) ? ' required' : ''
@@ -78,7 +78,7 @@ final class Link extends FieldType {
 			'<p class="wpcmb-link__row"><label class="wpcmb-label" for="%1$s-title">%2$s</label>
 			<input type="text" class="wpcmb-input" id="%1$s-title" name="%3$s[title]" value="%4$s" /></p>',
 			esc_attr( $input_id ),
-			esc_html__( 'Link text', 'metafields-custom-fields' ),
+			esc_html__( 'Link text', 'manpreetdev-custom-fields-meta-boxes' ),
 			esc_attr( $input_name ),
 			esc_attr( $link['title'] )
 		);
@@ -89,7 +89,7 @@ final class Link extends FieldType {
 			<input type="checkbox" name="%1$s[target]" value="_blank"%2$s /> %3$s</label></p>',
 			esc_attr( $input_name ),
 			'_blank' === $link['target'] ? ' checked' : '',
-			esc_html__( 'Open in a new tab', 'metafields-custom-fields' )
+			esc_html__( 'Open in a new tab', 'manpreetdev-custom-fields-meta-boxes' )
 		);
 
 		echo '</div>';
@@ -149,11 +149,11 @@ final class Link extends FieldType {
 	public function settings_schema( string $type ): array {
 		return array(
 			'return_format' => array(
-				'label'   => __( 'Return format', 'metafields-custom-fields' ),
+				'label'   => __( 'Return format', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'    => 'select',
 				'choices' => array(
-					'array' => __( 'Array of url, title and target', 'metafields-custom-fields' ),
-					'url'   => __( 'URL only', 'metafields-custom-fields' ),
+					'array' => __( 'Array of url, title and target', 'manpreetdev-custom-fields-meta-boxes' ),
+					'url'   => __( 'URL only', 'manpreetdev-custom-fields-meta-boxes' ),
 				),
 			),
 		);

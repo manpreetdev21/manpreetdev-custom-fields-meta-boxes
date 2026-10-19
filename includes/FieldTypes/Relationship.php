@@ -42,11 +42,11 @@ final class Relationship extends FieldType {
 	 */
 	public function types(): array {
 		return array(
-			'post_object'  => __( 'Post Object', 'metafields-custom-fields' ),
-			'page_link'    => __( 'Page Link', 'metafields-custom-fields' ),
-			'relationship' => __( 'Relationship', 'metafields-custom-fields' ),
-			'taxonomy'     => __( 'Taxonomy', 'metafields-custom-fields' ),
-			'user'         => __( 'User', 'metafields-custom-fields' ),
+			'post_object'  => __( 'Post Object', 'manpreetdev-custom-fields-meta-boxes' ),
+			'page_link'    => __( 'Page Link', 'manpreetdev-custom-fields-meta-boxes' ),
+			'relationship' => __( 'Relationship', 'manpreetdev-custom-fields-meta-boxes' ),
+			'taxonomy'     => __( 'Taxonomy', 'manpreetdev-custom-fields-meta-boxes' ),
+			'user'         => __( 'User', 'manpreetdev-custom-fields-meta-boxes' ),
 		);
 	}
 
@@ -54,7 +54,7 @@ final class Relationship extends FieldType {
 	 * Editor group label.
 	 */
 	public function group_label(): string {
-		return __( 'Relational', 'metafields-custom-fields' );
+		return __( 'Relational', 'manpreetdev-custom-fields-meta-boxes' );
 	}
 
 	/**
@@ -101,7 +101,7 @@ final class Relationship extends FieldType {
 		printf( '<select %s>', $attributes ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- attributes() escapes every name and value.
 
 		if ( ! $multiple && '0' !== (string) $this->setting( $field, 'allow_null', '1' ) ) {
-			printf( '<option value="">%s</option>', esc_html__( '— Select —', 'metafields-custom-fields' ) );
+			printf( '<option value="">%s</option>', esc_html__( '— Select —', 'manpreetdev-custom-fields-meta-boxes' ) );
 		}
 
 		foreach ( $choices as $option => $label ) {
@@ -121,7 +121,7 @@ final class Relationship extends FieldType {
 				esc_html(
 					sprintf(
 						/* translators: %d: maximum number of options. */
-						__( 'Showing the first %d matches. Narrow this field\'s post type or taxonomy settings to see the rest.', 'metafields-custom-fields' ),
+						__( 'Showing the first %d matches. Narrow this field\'s post type or taxonomy settings to see the rest.', 'manpreetdev-custom-fields-meta-boxes' ),
 						self::MAX_OPTIONS
 					)
 				)
@@ -312,71 +312,71 @@ final class Relationship extends FieldType {
 
 		if ( in_array( $type, array( 'post_object', 'page_link', 'relationship' ), true ) ) {
 			$schema['post_type'] = array(
-				'label' => __( 'Post types', 'metafields-custom-fields' ),
+				'label' => __( 'Post types', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'text',
-				'help'  => __( 'Comma separated. Leave empty for all public post types.', 'metafields-custom-fields' ),
+				'help'  => __( 'Comma separated. Leave empty for all public post types.', 'manpreetdev-custom-fields-meta-boxes' ),
 			);
 		}
 
 		if ( 'taxonomy' === $type ) {
 			$schema['taxonomy'] = array(
-				'label' => __( 'Taxonomy', 'metafields-custom-fields' ),
+				'label' => __( 'Taxonomy', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'text',
 			);
 		}
 
 		if ( 'user' === $type ) {
 			$schema['role'] = array(
-				'label' => __( 'Roles', 'metafields-custom-fields' ),
+				'label' => __( 'Roles', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'text',
-				'help'  => __( 'Comma separated. Leave empty for all roles.', 'metafields-custom-fields' ),
+				'help'  => __( 'Comma separated. Leave empty for all roles.', 'manpreetdev-custom-fields-meta-boxes' ),
 			);
 		}
 
 		$schema['multiple'] = array(
-			'label' => __( 'Allow multiple', 'metafields-custom-fields' ),
+			'label' => __( 'Allow multiple', 'manpreetdev-custom-fields-meta-boxes' ),
 			'type'  => 'toggle',
 		);
 
 		$schema['min'] = array(
-			'label' => __( 'Minimum selections', 'metafields-custom-fields' ),
+			'label' => __( 'Minimum selections', 'manpreetdev-custom-fields-meta-boxes' ),
 			'type'  => 'number',
 			'tab'   => 'validation',
-			'help'  => __( 'Applies when multiple selections are allowed.', 'metafields-custom-fields' ),
+			'help'  => __( 'Applies when multiple selections are allowed.', 'manpreetdev-custom-fields-meta-boxes' ),
 		);
 
 		$schema['max'] = array(
-			'label' => __( 'Maximum selections', 'metafields-custom-fields' ),
+			'label' => __( 'Maximum selections', 'manpreetdev-custom-fields-meta-boxes' ),
 			'type'  => 'number',
 			'tab'   => 'validation',
 		);
 
 		$schema['allow_null'] = array(
-			'label' => __( 'Offer an empty choice', 'metafields-custom-fields' ),
+			'label' => __( 'Offer an empty choice', 'manpreetdev-custom-fields-meta-boxes' ),
 			'type'  => 'toggle',
-			'help'  => __( 'On by default. Off needs a default value, or the browser preselects the first item.', 'metafields-custom-fields' ),
+			'help'  => __( 'On by default. Off needs a default value, or the browser preselects the first item.', 'manpreetdev-custom-fields-meta-boxes' ),
 		);
 
 		if ( 'taxonomy' === $type ) {
 			$schema['save_terms'] = array(
-				'label' => __( 'Also assign the terms', 'metafields-custom-fields' ),
+				'label' => __( 'Also assign the terms', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'toggle',
-				'help'  => __( 'Sets the chosen terms on the post as well as storing them in this field.', 'metafields-custom-fields' ),
+				'help'  => __( 'Sets the chosen terms on the post as well as storing them in this field.', 'manpreetdev-custom-fields-meta-boxes' ),
 			);
 			$schema['load_terms'] = array(
-				'label' => __( 'Load from the post\'s terms', 'metafields-custom-fields' ),
+				'label' => __( 'Load from the post\'s terms', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'  => 'toggle',
-				'help'  => __( 'Shows the terms the post already has, rather than this field\'s stored value.', 'metafields-custom-fields' ),
+				'help'  => __( 'Shows the terms the post already has, rather than this field\'s stored value.', 'manpreetdev-custom-fields-meta-boxes' ),
 			);
 		}
 
 		if ( 'page_link' !== $type ) {
 			$schema['return_format'] = array(
-				'label'   => __( 'Return format', 'metafields-custom-fields' ),
+				'label'   => __( 'Return format', 'manpreetdev-custom-fields-meta-boxes' ),
 				'type'    => 'select',
 				'choices' => array(
-					'id'     => __( 'ID', 'metafields-custom-fields' ),
-					'object' => __( 'Object', 'metafields-custom-fields' ),
+					'id'     => __( 'ID', 'manpreetdev-custom-fields-meta-boxes' ),
+					'object' => __( 'Object', 'manpreetdev-custom-fields-meta-boxes' ),
 				),
 			);
 		}
@@ -506,7 +506,7 @@ final class Relationship extends FieldType {
 	 * @param \WP_Post $post Post.
 	 */
 	private function post_label( \WP_Post $post ): string {
-		$title = '' !== $post->post_title ? $post->post_title : __( '(no title)', 'metafields-custom-fields' );
+		$title = '' !== $post->post_title ? $post->post_title : __( '(no title)', 'manpreetdev-custom-fields-meta-boxes' );
 
 		return sprintf( '%s — %s', $title, $post->post_type );
 	}
