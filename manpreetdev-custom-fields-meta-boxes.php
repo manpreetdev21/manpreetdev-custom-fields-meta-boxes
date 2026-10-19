@@ -3,7 +3,7 @@
  * Plugin Name:       Manpreetdev Custom Fields and Meta Boxes
  * Plugin URI:        https://wordpress.org/plugins/manpreetdev-custom-fields-meta-boxes/
  * Description:       Field groups, meta boxes and a developer-friendly field API for WordPress.
- * Version:           1.16.0
+ * Version:           1.17.0
  * Requires at least: 6.8
  * Requires PHP:      8.1
  * Author:            Manpreet Singh
@@ -19,7 +19,7 @@ declare( strict_types=1 );
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'WPCMB_VERSION', '1.16.0' );
+define( 'WPCMB_VERSION', '1.17.0' );
 define( 'WPCMB_FILE', __FILE__ );
 define( 'WPCMB_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WPCMB_URL', plugin_dir_url( __FILE__ ) );

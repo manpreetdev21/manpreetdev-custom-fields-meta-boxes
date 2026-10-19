@@ -145,14 +145,15 @@
 				return;
 			}
 
-			var results = ( logic.rules || [] ).map( function ( rule ) {
-				var target = byKey[ rule.field ];
-				return target ? ruleMet( rule, valueOf( target ) ) : false;
+			// Rules within a group all have to hold; any one group holding is
+			// enough. An empty group is not a condition anybody wrote, so it
+			// counts as unmet rather than as vacuously true.
+			var satisfied = ( logic.groups || [] ).some( function ( group ) {
+				return ( group || [] ).length > 0 && group.every( function ( rule ) {
+					var target = byKey[ rule.field ];
+					return target ? ruleMet( rule, valueOf( target ) ) : false;
+				} );
 			} );
-
-			var satisfied = 'any' === logic.logic
-				? results.some( Boolean )
-				: results.length > 0 && results.every( Boolean );
 
 			var visible = 'hide' === logic.action ? ! satisfied : satisfied;
 

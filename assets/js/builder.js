@@ -271,13 +271,7 @@
 		field.settings = asObject( field.settings );
 		field.wrapper = asObject( field.wrapper );
 
-		var conditional = asObject( field.conditional );
-
-		field.conditional = {
-			action: conditional.action || 'show',
-			logic: conditional.logic || 'all',
-			rules: Array.isArray( conditional.rules ) ? conditional.rules : [],
-		};
+		field.conditional = normaliseConditional( field.conditional );
 
 		( field.sub_fields || [] ).forEach( normaliseField );
 
@@ -1349,7 +1343,36 @@
 		// A rule pointing outside the copied tree is still meaningful; one
 		// pointing inside it now names a key that no longer exists, so the
 		// copy starts without logic rather than with logic that misfires.
-		field.conditional = { action: 'show', logic: 'all', rules: [] };
+		field.conditional = { action: 'show', groups: [] };
+	}
+
+	/**
+	 * Read conditional logic into the shape the editor works in.
+	 *
+	 * Rule groups replaced a single list with one all/any switch. The old
+	 * shape converts exactly rather than being dropped: `all` becomes one
+	 * group holding every rule, `any` becomes one group per rule. A field
+	 * group saved by an earlier version therefore opens showing the condition
+	 * it already had, and saves as groups from then on.
+	 *
+	 * @param {*} raw Stored conditional logic.
+	 * @return {Object} Normalised logic.
+	 */
+	function normaliseConditional( raw ) {
+		var logic = asObject( raw );
+		var groups = [];
+
+		if ( Array.isArray( logic.groups ) ) {
+			groups = logic.groups.filter( Array.isArray );
+		} else if ( Array.isArray( logic.rules ) && logic.rules.length ) {
+			groups = 'any' === logic.logic
+				? logic.rules.map( function ( rule ) {
+					return [ rule ];
+				} )
+				: [ logic.rules ];
+		}
+
+		return { action: logic.action || 'show', groups: groups };
 	}
 
 	/**
@@ -1378,13 +1401,7 @@
 
 		// normaliseField() guarantees this shape on load and for new fields;
 		// re-checking here keeps a field injected by other code from throwing.
-		var logic = asObject( field.conditional );
-
-		field.conditional = {
-			action: logic.action || 'show',
-			logic: logic.logic || 'all',
-			rules: Array.isArray( logic.rules ) ? logic.rules : [],
-		};
+		field.conditional = normaliseConditional( field.conditional );
 
 		var targets = {};
 		others.forEach( function ( other ) {
@@ -1397,26 +1414,73 @@
 				field.conditional,
 				'action'
 			),
-			this.bind(
-				select( { all: i18n.allRules, any: i18n.anyRule }, field.conditional.logic, false ),
-				field.conditional,
-				'logic'
-			),
+			el( 'span', { class: 'description', text: i18n.ifAnyGroup } ),
 		] );
 
+		var groups = el( 'div' );
+		var total = 0;
+
+		field.conditional.groups.forEach( function ( rules, groupIndex ) {
+			total += rules.length;
+			groups.appendChild( builder.renderConditionalGroup( field, index, groupIndex, rules, targets ) );
+		} );
+
+		// A second group is the "or" — the thing a single all/any switch could
+		// never say. Offered once there is a first group to be an alternative
+		// to, because "or" with nothing on the left reads as nonsense.
+		var addGroup = el( 'button', {
+			type: 'button',
+			class: 'wpcmb-btn wpcmb-btn--sm',
+			text: field.conditional.groups.length ? i18n.addOrGroup : i18n.addCondition,
+		} );
+
+		addGroup.addEventListener( 'click', function () {
+			field.conditional.groups.push( [ { field: Object.keys( targets )[ 0 ], operator: '==', value: '' } ] );
+			builder.render();
+			builder.open( index );
+		} );
+
+		return el(
+			'details',
+			{ class: 'wpcmb-subsection', open: total ? 'open' : false },
+			[ summaryWithCount( i18n.logic, total ), header, groups, el( 'p', {}, [ addGroup ] ) ]
+		);
+	};
+
+	/**
+	 * Render one AND group of conditional rules.
+	 *
+	 * @param {Object} field      Field being edited.
+	 * @param {number} index      Field position.
+	 * @param {number} groupIndex Group position.
+	 * @param {Array}  rules      Rules in this group.
+	 * @param {Object} targets    Selectable field keys, keyed by key.
+	 * @return {HTMLElement} The group.
+	 */
+	FieldsBuilder.prototype.renderConditionalGroup = function ( field, index, groupIndex, rules, targets ) {
+		var builder = this;
 		var list = el( 'div' );
 
-		field.conditional.rules.forEach( function ( rule, ruleIndex ) {
+		rules.forEach( function ( rule, ruleIndex ) {
 			var remove = el( 'button', { type: 'button', class: 'wpcmb-iconbtn wpcmb-rule__remove', text: '×' } );
 
 			remove.addEventListener( 'click', function () {
-				field.conditional.rules.splice( ruleIndex, 1 );
+				rules.splice( ruleIndex, 1 );
+
+				// A group with no rules left is not a condition, and an empty
+				// group would read as "or nothing" — so it goes with its last
+				// rule rather than sitting there doing nothing.
+				if ( ! rules.length ) {
+					field.conditional.groups.splice( groupIndex, 1 );
+				}
+
 				builder.render();
 				builder.open( index );
 			} );
 
 			list.appendChild(
 				el( 'div', { class: 'wpcmb-rule' }, [
+					ruleIndex ? el( 'span', { class: 'wpcmb-rule__and', text: i18n.andLabel } ) : null,
 					builder.bind( select( targets, rule.field, false ), rule, 'field' ),
 					builder.bind(
 						select(
@@ -1450,16 +1514,16 @@
 		var add = el( 'button', { type: 'button', class: 'wpcmb-btn wpcmb-btn--sm', text: i18n.addCondition } );
 
 		add.addEventListener( 'click', function () {
-			field.conditional.rules.push( { field: Object.keys( targets )[ 0 ], operator: '==', value: '' } );
+			rules.push( { field: Object.keys( targets )[ 0 ], operator: '==', value: '' } );
 			builder.render();
 			builder.open( index );
 		} );
 
-		return el(
-			'details',
-			{ class: 'wpcmb-subsection', open: field.conditional.rules.length ? 'open' : false },
-			[ summaryWithCount( i18n.logic, field.conditional.rules.length ), header, list, el( 'p', {}, [ add ] ) ]
-		);
+		return el( 'div', { class: 'wpcmb-rule-group' }, [
+			groupIndex ? el( 'div', { class: 'wpcmb-rule-group__or', text: i18n.orLabel || 'or' } ) : null,
+			list,
+			el( 'p', { class: 'wpcmb-rule-group__actions' }, [ add ] ),
+		] );
 	};
 
 	/**

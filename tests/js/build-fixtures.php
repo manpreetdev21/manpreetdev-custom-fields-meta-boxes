@@ -44,9 +44,37 @@ if ( ! is_dir( $wpcmb_out ) ) {
  * @return string
  */
 function wpcmb_fixture( array $config ): string {
+	return wpcmb_render_fixture( WPCMB\Fields\FieldGroup::sanitize( $config ) );
+}
+
+/**
+ * Render a configuration exactly as it is, with no sanitizing.
+ *
+ * This is the path a stored field group actually takes: `from_post()` hands
+ * the JSON in `_wpcmb_config` straight to the model, so whatever an earlier
+ * version wrote is what the renderer is given. Sanitizing first — as the
+ * helper above does — hides anything that only goes wrong for config already
+ * in a database.
+ *
+ * @param array<string, mixed> $config Group configuration, already in storage shape.
+ *
+ * @return string
+ */
+function wpcmb_fixture_raw( array $config ): string {
+	return wpcmb_render_fixture( $config );
+}
+
+/**
+ * Render one group configuration to markup, without touching the database.
+ *
+ * @param array<string, mixed> $config Group configuration.
+ *
+ * @return string
+ */
+function wpcmb_render_fixture( array $config ): string {
 	global $wpcmb_renderer;
 
-	$group = WPCMB\Fields\FieldGroup::from_array( WPCMB\Fields\FieldGroup::sanitize( $config ) );
+	$group = WPCMB\Fields\FieldGroup::from_array( $config );
 
 	ob_start();
 	$wpcmb_renderer->group( $group, new WPCMB\Fields\ObjectRef( 'post', 0 ) );
@@ -98,6 +126,100 @@ $wpcmb_fixtures['conditional'] = wpcmb_fixture(
 				'name'  => 'always',
 				'label' => 'Always',
 				'type'  => 'text',
+			),
+			/*
+			 * "Either the toggle is on, or the code says GO" — two groups, so
+			 * one satisfied group is enough. A single all/any switch could not
+			 * express it, which is why rule groups exist.
+			 */
+			array(
+				'key'         => 'field_either00001',
+				'name'        => 'either',
+				'label'       => 'Either',
+				'type'        => 'text',
+				'conditional' => array(
+					'action' => 'show',
+					'groups' => array(
+						array( array( 'field' => 'field_toggle00001', 'operator' => '==', 'value' => '1' ) ),
+						array( array( 'field' => 'field_code000001', 'operator' => '==', 'value' => 'GO' ) ),
+					),
+				),
+			),
+			/*
+			 * And one group of two: "the toggle is on AND the code says GO".
+			 * Together with the field above, the pair pins down which way the
+			 * nesting binds — a bug that swapped AND for OR would show one of
+			 * them at the wrong time and leave the other looking right.
+			 */
+			array(
+				'key'         => 'field_both000001',
+				'name'        => 'both',
+				'label'       => 'Both',
+				'type'        => 'text',
+				'conditional' => array(
+					'action' => 'show',
+					'groups' => array(
+						array(
+							array( 'field' => 'field_toggle00001', 'operator' => '==', 'value' => '1' ),
+							array( 'field' => 'field_code000001', 'operator' => '==', 'value' => 'GO' ),
+						),
+					),
+				),
+			),
+			array(
+				'key'   => 'field_code000001',
+				'name'  => 'code',
+				'label' => 'Code',
+				'type'  => 'text',
+			),
+		),
+	)
+);
+
+/*
+ * A field group exactly as a version before rule groups stored it: one list of
+ * rules and an all/any switch, never re-sanitized on the way out. The renderer
+ * has to convert it, because the script only reads groups — and a condition
+ * that stops applying shows a field that should be hidden rather than erroring.
+ */
+$wpcmb_fixtures['legacy-conditional'] = wpcmb_fixture_raw(
+	array(
+		'key'    => 'group_legacy00001',
+		'title'  => 'Legacy conditional',
+		'fields' => array(
+			array(
+				'key'      => 'field_ltoggle0001',
+				'name'     => 'legacy_toggle',
+				'label'    => 'Legacy toggle',
+				'type'     => 'toggle',
+				'settings' => array(),
+				'wrapper'  => array( 'width' => '', 'class' => '', 'id' => '' ),
+			),
+			array(
+				'key'         => 'field_lshown00001',
+				'name'        => 'legacy_shown',
+				'label'       => 'Legacy shown',
+				'type'        => 'text',
+				'settings'    => array(),
+				'wrapper'     => array( 'width' => '', 'class' => '', 'id' => '' ),
+				'conditional' => array(
+					'action' => 'show',
+					'logic'  => 'all',
+					'rules'  => array( array( 'field' => 'field_ltoggle0001', 'operator' => '==', 'value' => '1' ) ),
+				),
+			),
+			array(
+				'key'         => 'field_lhidden0001',
+				'name'        => 'legacy_hidden',
+				'label'       => 'Legacy hidden',
+				'type'        => 'text',
+				'settings'    => array(),
+				'wrapper'     => array( 'width' => '', 'class' => '', 'id' => '' ),
+				'conditional' => array(
+					'action' => 'hide',
+					'logic'  => 'any',
+					'rules'  => array( array( 'field' => 'field_ltoggle0001', 'operator' => '==', 'value' => '1' ) ),
+				),
 			),
 		),
 	)

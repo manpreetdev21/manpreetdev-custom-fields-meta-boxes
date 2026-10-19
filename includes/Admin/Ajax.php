@@ -233,7 +233,7 @@ final class Ajax extends Module {
 		$rows = isset( $_POST['rows'] ) ? json_decode( (string) wp_unslash( $_POST['rows'] ), true ) : array();
 		$rows = is_array( $rows ) ? $rows : array();
 
-		$lines = array( $this->csv_line( $columns ) );
+		$lines = array( Csv::line( $columns ) );
 
 		foreach ( $rows as $row ) {
 			if ( ! is_array( $row ) ) {
@@ -247,7 +247,7 @@ final class Ajax extends Module {
 				$cells[] = is_scalar( $cell ) ? (string) $cell : '';
 			}
 
-			$lines[] = $this->csv_line( $cells );
+			$lines[] = Csv::line( $cells );
 		}
 
 		wp_send_json_success(
@@ -580,30 +580,6 @@ final class Ajax extends Module {
 			array( 'repeater', 'flexible_content', 'group', 'gallery', 'link', 'address', 'tab', 'accordion', 'message' ),
 			true
 		);
-	}
-
-	/**
-	 * Encode one CSV line.
-	 *
-	 * Cells starting with a formula character are prefixed with a quote so a
-	 * spreadsheet treats them as text. Without it, an exported value such as
-	 * `=1+1` becomes a live formula, and `=HYPERLINK(...)` becomes something
-	 * worse the moment somebody opens the file.
-	 *
-	 * @param array<int, string> $cells Cell values.
-	 */
-	private function csv_line( array $cells ): string {
-		$escaped = array();
-
-		foreach ( $cells as $cell ) {
-			if ( 1 === preg_match( '/^[=+\-@\t\r]/', $cell ) ) {
-				$cell = "'" . $cell;
-			}
-
-			$escaped[] = '"' . str_replace( '"', '""', $cell ) . '"';
-		}
-
-		return implode( ',', $escaped );
 	}
 
 	/**

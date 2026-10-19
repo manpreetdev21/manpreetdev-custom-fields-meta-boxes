@@ -1437,6 +1437,19 @@
 }
 
 /*
+ * The join between two conditions in the same group. Said once per rule after
+ * the first, so a group of three reads "A and B and C" rather than leaving the
+ * reader to assume which way it binds.
+ */
+.wpcmb-rule__and {
+	color: var( --wpcmb-faint );
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+/*
  * A rule reads left to right as a sentence: icon, subject, comparison, value.
  * The columns are sized to that reading rather than evenly, so the short
  * operator does not take the same room as the value it qualifies.

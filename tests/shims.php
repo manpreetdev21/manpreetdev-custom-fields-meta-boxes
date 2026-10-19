@@ -812,9 +812,11 @@ function home_url( string $path = '' ): string {
  * @param mixed  $value Value.
  */
 function update_post_meta( int $id, string $key, $value ): bool {
-	$GLOBALS['wpcmb_test_meta']['post'][ $id ][ $key ] = $value;
-
-	return true;
+	// Through update_metadata(), which unslashes. Assigning directly would
+	// store the slashes Repository::save() adds, and the JSON would then come
+	// back undecodable — which is exactly the kind of gap between a shim and
+	// WordPress that these checks exist to avoid.
+	return update_metadata( 'post', $id, $key, $value );
 }
 
 /**
@@ -829,4 +831,88 @@ function wpcmb_test_record( int $id, string $post_type, string $title, array $co
 	$GLOBALS['wpcmb_test_posts'][] = new WP_Post( $id, $title, 'publish', $post_type );
 
 	update_post_meta( $id, '_wpcmb_config', (string) wp_json_encode( $config ) );
+}
+
+$GLOBALS['wpcmb_test_post_modified'] = array();
+
+/**
+ * Theme directories. The checks filter the JSON paths, so these only have to
+ * be somewhere, not somewhere real.
+ */
+function get_stylesheet_directory(): string {
+	return sys_get_temp_dir() . '/wpcmb-child-theme';
+}
+
+/**
+ * Parent theme directory.
+ */
+function get_template_directory(): string {
+	return sys_get_temp_dir() . '/wpcmb-parent-theme';
+}
+
+/**
+ * A post's modification time, as the checks set it.
+ *
+ * @param string $format Ignored; the checks only ask for a timestamp.
+ * @param bool   $gmt    Ignored.
+ * @param int    $id     Post id.
+ */
+function get_post_modified_time( string $format = 'U', bool $gmt = false, int $id = 0 ) {
+	return $GLOBALS['wpcmb_test_post_modified'][ $id ] ?? 0;
+}
+
+/**
+ * Delete a file, as WordPress wraps unlink().
+ *
+ * @param string $path File path.
+ */
+function wp_delete_file( string $path ): void {
+	if ( is_file( $path ) ) {
+		unlink( $path );
+	}
+}
+
+/**
+ * Update a post, for the fields the checks look at.
+ *
+ * @param array<string, mixed> $post Post fields.
+ */
+function wp_update_post( array $post ): int {
+	$id = (int) ( $post['ID'] ?? 0 );
+
+	foreach ( $GLOBALS['wpcmb_test_posts'] ?? array() as $stored ) {
+		if ( $stored->ID !== $id ) {
+			continue;
+		}
+
+		if ( isset( $post['post_title'] ) ) {
+			$stored->post_title = (string) $post['post_title'];
+		}
+
+		if ( isset( $post['post_status'] ) ) {
+			$stored->post_status = (string) $post['post_status'];
+		}
+	}
+
+	return $id;
+}
+
+/**
+ * Post status getter.
+ *
+ * @param int $id Post id.
+ */
+function get_post_status( int $id = 0 ) {
+	$post = get_post( $id );
+
+	return $post instanceof WP_Post ? $post->post_status : false;
+}
+
+/**
+ * Reduce a name to something safe as a filename.
+ *
+ * @param string $name Proposed filename.
+ */
+function sanitize_file_name( string $name ): string {
+	return (string) preg_replace( '/[^A-Za-z0-9._-]/', '', $name );
 }

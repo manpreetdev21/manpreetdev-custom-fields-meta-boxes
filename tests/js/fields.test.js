@@ -437,3 +437,68 @@ test( 'an injected group is initialised once, however it is moved', async () => 
 		'a moved group is not initialised a second time'
 	);
 } );
+
+test( 'rule groups mean OR between groups and AND within one', () => {
+	const page = conditionalPage();
+
+	const toggle = page.$( '.wpcmb-field[data-wpcmb-name="show_more"] input[type="checkbox"]' );
+	const code = page.$( '.wpcmb-field[data-wpcmb-name="code"] input' );
+	const either = page.$( '.wpcmb-field[data-wpcmb-name="either"]' );
+	const both = page.$( '.wpcmb-field[data-wpcmb-name="both"]' );
+
+	// Nothing met yet.
+	assert.equal( either.hidden, true, 'two groups, neither satisfied' );
+	assert.equal( both.hidden, true, 'one group of two, unsatisfied' );
+
+	// One of the two groups holds. That is enough for "either", and not for
+	// "both" — which is the whole distinction a single all/any switch lost.
+	page.check( toggle, true );
+
+	assert.equal( either.hidden, false, 'one group satisfied is enough' );
+	assert.equal( both.hidden, true, 'but a group needs all of its own rules' );
+
+	// The other group holds instead. Still enough for "either".
+	page.check( toggle, false );
+	page.fill( code, 'GO' );
+
+	assert.equal( either.hidden, false, 'the other group satisfied is also enough' );
+	assert.equal( both.hidden, true, 'and still not both rules of the one group' );
+
+	// Both rules of the single group now hold.
+	page.check( toggle, true );
+
+	assert.equal( both.hidden, false, 'both rules in the group makes it visible' );
+
+	// And a group is not satisfied by one of its two rules.
+	page.fill( code, 'STOP' );
+
+	assert.equal( both.hidden, true, 'losing one rule of the group hides it again' );
+	assert.equal( either.hidden, false, 'while the other group keeps "either" visible' );
+} );
+
+test( 'conditional logic stored before rule groups still applies', () => {
+	// This fixture is rendered without sanitizing, which is the path a stored
+	// field group takes: from_post() hands the JSON straight to the model, so
+	// a group last saved by an earlier version arrives with its original
+	// rules and all/any switch. The renderer converts it, because the script
+	// reads groups only — and a condition that silently stops applying shows
+	// a field that should be hidden.
+	const page = setup( { html: fixture( 'legacy-conditional' ), scripts: [ 'fields.js' ], globals } );
+
+	const toggle = page.$( '.wpcmb-field[data-wpcmb-name="legacy_toggle"] input[type="checkbox"]' );
+	const shown = page.$( '.wpcmb-field[data-wpcmb-name="legacy_shown"]' );
+	const hidden = page.$( '.wpcmb-field[data-wpcmb-name="legacy_hidden"]' );
+
+	assert.equal( shown.hidden, true, 'a stored show rule starts hidden while unmet' );
+	assert.equal( hidden.hidden, false, 'and a stored hide rule starts visible' );
+
+	page.check( toggle, true );
+
+	assert.equal( shown.hidden, false, 'meeting the stored rule reveals the field' );
+	assert.equal( hidden.hidden, true, 'and hides the one with the hide action' );
+
+	page.check( toggle, false );
+
+	assert.equal( shown.hidden, true, 'and it goes back when the rule stops being met' );
+	assert.equal( hidden.hidden, false, 'both ways round' );
+} );

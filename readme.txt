@@ -4,7 +4,7 @@ Tags: custom fields, meta box, repeater, options page, custom post type
 Requires at least: 6.8
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.16.0
+Stable tag: 1.17.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -95,6 +95,20 @@ Yes. Every string is translatable under the `manpreetdev-custom-fields-meta-boxe
 5. The field group list, with each group's key, field count and location.
 
 == Changelog ==
+
+= 1.17.0 =
+* New: local JSON. Every field group you save also writes `wpcmb-json/{key}.json` in your theme, so the fields a template reads live in version control beside the template that reads them.
+* Those files are read back as groups registered in code, which means a fresh checkout works with no import step: the fields exist because the files do. A group also in the database wins over its file, so the editor stays authoritative while you are working in it.
+* Switched on by creating the `wpcmb-json` directory in your theme, and off by removing it. One less setting, and the plugin never writes into a repository it was not invited to.
+* When a file is newer than the group here — somebody else's change, newly pulled — the Field Groups screen says so and offers to import it, per group or all at once. Nothing is imported without being asked, and an existing group keeps the active state it has on this site.
+* The file carries its own modification stamp rather than relying on the filesystem, because a checkout gives every file the time it was checked out. Syncing records what it took, so a file written on a machine whose clock is ahead is not offered for ever.
+* Filters: `wpcmb/json/save_path`, `wpcmb/json/load_paths` (a child theme reads its parent's groups by default). Actions: `wpcmb/json/written`, `wpcmb/json/synced`.
+* New: conditional logic rule groups. A field's conditions were one list plus an all/any switch, which could say "A and B" or "A or B" but never "A and B, or C" — which is what most real conditions turn out to be. Conditions are now groups: all the rules in a group must hold, and any one group holding is enough. Location rules have worked this way since the first release.
+* Logic saved by an earlier version keeps the behaviour it had, with nothing to migrate: "all" becomes one group of every rule, "any" becomes one group per rule. The conversion happens when the logic is read, not only when it is saved, because a stored field group is handed to the renderer exactly as it was written.
+* New: submission CSV export. The submissions list has an "Export all to CSV" button, with one column per field, taken from the field group so every row has the same columns in the same order — including for a field added after some submissions arrived.
+* Repeater and multi-value answers are flattened rather than dropped: values within a row are joined with a pipe and rows with a semicolon, so an export of a form with a repeater in it still holds the answers.
+* Cells beginning `=`, `+`, `-`, `@`, a tab or a return are prefixed with a quote, so a submission someone filled in with `=HYPERLINK(...)` is text in a spreadsheet rather than a live formula. The repeater's own CSV export and this one now share one definition of that escaping.
+* The file is written with a byte order mark, because the main thing anyone does with it is open it in Excel, which otherwise reads UTF-8 as the local codepage.
 
 = 1.16.0 =
 * Renamed to Manpreetdev Custom Fields and Meta Boxes, under the slug `manpreetdev-custom-fields-meta-boxes`. The code prefix is unchanged, so every stored field group, value, option and submission is untouched and nothing needs migrating.

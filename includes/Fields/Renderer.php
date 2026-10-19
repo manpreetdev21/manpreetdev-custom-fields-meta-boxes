@@ -275,11 +275,28 @@ final class Renderer extends Module {
 	private function conditional_attribute( array $field ): string {
 		$conditional = $field['conditional'] ?? array();
 
-		if ( ! is_array( $conditional ) || empty( $conditional['rules'] ) ) {
+		if ( ! is_array( $conditional ) ) {
 			return '';
 		}
 
-		return (string) wp_json_encode( $conditional );
+		$groups = Conditional::groups( $conditional );
+
+		if ( array() === $groups ) {
+			return '';
+		}
+
+		/*
+		 * Normalised on the way out, so the script has one shape to read. A
+		 * group last saved by an earlier version still holds `rules` and a
+		 * logic switch, and converting it here means the browser never has to
+		 * know that shape existed.
+		 */
+		return (string) wp_json_encode(
+			array(
+				'action' => 'hide' === ( $conditional['action'] ?? 'show' ) ? 'hide' : 'show',
+				'groups' => $groups,
+			)
+		);
 	}
 
 	/**

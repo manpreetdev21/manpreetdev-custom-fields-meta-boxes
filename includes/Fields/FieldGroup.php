@@ -372,32 +372,60 @@ final class FieldGroup {
 	 * @return array<string, mixed>
 	 */
 	private static function sanitize_conditional( $raw ): array {
-		if ( ! is_array( $raw ) || empty( $raw['rules'] ) || ! is_array( $raw['rules'] ) ) {
+		if ( ! is_array( $raw ) ) {
 			return array();
 		}
 
-		$rules = array();
+		$groups = array();
 
-		foreach ( $raw['rules'] as $rule ) {
-			if ( ! is_array( $rule ) || empty( $rule['field'] ) ) {
-				continue;
+		foreach ( self::conditional_groups( $raw ) as $group ) {
+			$rules = array();
+
+			foreach ( (array) $group as $rule ) {
+				if ( ! is_array( $rule ) || empty( $rule['field'] ) ) {
+					continue;
+				}
+
+				$rules[] = array(
+					'field'    => self::sanitize_key_string( (string) $rule['field'], 'field' ),
+					'operator' => self::sanitize_operator( (string) ( $rule['operator'] ?? '==' ) ),
+					'value'    => sanitize_text_field( (string) ( $rule['value'] ?? '' ) ),
+				);
 			}
-			$rules[] = array(
-				'field'    => self::sanitize_key_string( (string) $rule['field'], 'field' ),
-				'operator' => self::sanitize_operator( (string) ( $rule['operator'] ?? '==' ) ),
-				'value'    => sanitize_text_field( (string) ( $rule['value'] ?? '' ) ),
-			);
+
+			if ( array() !== $rules ) {
+				$groups[] = $rules;
+			}
 		}
 
-		if ( array() === $rules ) {
+		if ( array() === $groups ) {
 			return array();
 		}
 
 		return array(
 			'action' => in_array( $raw['action'] ?? 'show', array( 'show', 'hide' ), true ) ? $raw['action'] : 'show',
-			'logic'  => in_array( $raw['logic'] ?? 'all', array( 'all', 'any' ), true ) ? $raw['logic'] : 'all',
-			'rules'  => $rules,
+			'groups' => $groups,
 		);
+	}
+
+	/**
+	 * Read conditional logic into an OR list of AND groups.
+	 *
+	 * Rule groups replaced a single list with one all/any switch, which could
+	 * say "A and B" or "A or B" but never "A and B, or C" — and that is what
+	 * most real conditions turn out to be. Location rules have been groups
+	 * since the first release, so this is the same shape in the same place.
+	 *
+	 * The old form converts exactly rather than being discarded: `all` is one
+	 * group holding every rule, `any` is one group per rule. Every stored
+	 * field group keeps the behaviour it had, with no migration.
+	 *
+	 * @param array<string, mixed> $raw Untrusted conditional config.
+	 *
+	 * @return array<int, array<int, mixed>>
+	 */
+	private static function conditional_groups( array $raw ): array {
+		return Conditional::groups( $raw );
 	}
 
 	/**

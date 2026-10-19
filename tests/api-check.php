@@ -161,12 +161,38 @@ assert( 3 === count( $resolver->groups( $page_context ) ), 'the resolver memo mu
  * Conditional logic.
  * ---------------------------------------------------------------------- */
 
-$conditional = static fn( string $logic, array $rules, string $action = 'show' ): array => array(
-	'key'         => 'field_target000001',
-	'name'        => 'target',
-	'type'        => 'text',
-	'conditional' => array( 'action' => $action, 'logic' => $logic, 'rules' => $rules ),
-);
+/**
+ * A field carrying conditional logic, as the sanitizer leaves it.
+ *
+ * Built in the shape earlier versions stored — one list of rules plus an
+ * all/any switch — and put through the real sanitizer, which converts it to
+ * rule groups. So every assertion below is also a check that a field group
+ * saved before rule groups existed still behaves exactly as it did.
+ *
+ * @param string                           $logic  all or any.
+ * @param array<int, array<string, mixed>> $rules  Rules.
+ * @param string                           $action show or hide.
+ *
+ * @return array<string, mixed>
+ */
+function wpcmb_legacy_conditional( string $logic, array $rules, string $action = 'show' ): array {
+	$clean = FieldGroup::sanitize(
+		array(
+			'fields' => array(
+				array(
+					'key'         => 'field_target000001',
+					'name'        => 'target',
+					'type'        => 'text',
+					'conditional' => array( 'action' => $action, 'logic' => $logic, 'rules' => $rules ),
+				),
+			),
+		)
+	);
+
+	return $clean['fields'][0];
+}
+
+$conditional = 'wpcmb_legacy_conditional';
 
 $values = array(
 	'field_a0000000001' => 'yes',
@@ -184,10 +210,15 @@ assert( ! Conditional::is_visible( $conditional( 'all', array( $c_rule( 'field_a
 assert( Conditional::is_visible( $conditional( 'all', array( $c_rule( 'field_a0000000001', '==', 'yes' ) ) ), $lookup ), 'a met rule shows the field' );
 assert( Conditional::is_visible( array( 'name' => 'plain' ), $lookup ), 'a field with no logic is always visible' );
 
-// all vs any.
+// all vs any, as the old shape meant them. `all` becomes one group of both
+// rules; `any` becomes a group each. Both keep the behaviour they had.
 $mixed = array( $c_rule( 'field_a0000000001', '==', 'yes' ), $c_rule( 'field_b0000000001', '==', '99' ) );
 assert( ! Conditional::is_visible( $conditional( 'all', $mixed ), $lookup ), 'all requires every rule' );
 assert( Conditional::is_visible( $conditional( 'any', $mixed ), $lookup ), 'any requires one rule' );
+
+assert( 1 === count( $conditional( 'all', $mixed )['conditional']['groups'] ), 'all converts to one group' );
+assert( 2 === count( $conditional( 'any', $mixed )['conditional']['groups'] ), 'any converts to a group per rule' );
+assert( ! isset( $conditional( 'all', $mixed )['conditional']['logic'] ), 'and the switch itself is not kept' );
 
 // hide inverts the outcome.
 assert( ! Conditional::is_visible( $conditional( 'all', array( $c_rule( 'field_a0000000001', '==', 'yes' ) ), 'hide' ), $lookup ), 'the hide action inverts a met rule' );
@@ -211,6 +242,94 @@ assert( ! Conditional::is_visible( $conditional( 'all', array( $c_rule( 'field_g
 
 assert( Conditional::is_visible( $conditional( 'all', array( $c_rule( 'field_a0000000001', 'contains', 'ye' ) ) ), $lookup ), 'contains matches a substring' );
 assert( Conditional::is_visible( $conditional( 'all', array( $c_rule( 'field_b0000000001', 'pattern', '^\d+$' ) ) ), $lookup ), 'pattern matches a regex' );
+
+/* -------------------------------------------------------------------------
+ * Rule groups: OR between groups, AND within one.
+ *
+ * "A and B, or C" is the condition most real forms turn out to need, and the
+ * single all/any switch could not say it. These assert which way the nesting
+ * binds — a bug swapping AND for OR passes a test that only ever uses one
+ * group of one rule.
+ * ---------------------------------------------------------------------- */
+
+$grouped = static fn( array $groups, string $action = 'show' ): array => array(
+	'key'         => 'field_target000001',
+	'name'        => 'target',
+	'type'        => 'text',
+	'conditional' => array( 'action' => $action, 'groups' => $groups ),
+);
+
+$met   = $c_rule( 'field_a0000000001', '==', 'yes' );
+$unmet = $c_rule( 'field_b0000000001', '==', '99' );
+
+assert( Conditional::is_visible( $grouped( array( array( $met, $met ) ) ), $lookup ), 'a group holds when all its rules do' );
+assert( ! Conditional::is_visible( $grouped( array( array( $met, $unmet ) ) ), $lookup ), 'and fails when any one of them does not' );
+
+assert( Conditional::is_visible( $grouped( array( array( $unmet ), array( $met ) ) ), $lookup ), 'any one satisfied group is enough' );
+assert( ! Conditional::is_visible( $grouped( array( array( $unmet ), array( $unmet ) ) ), $lookup ), 'and no satisfied group is not' );
+
+// The shape that could not be written before: A and B, or C.
+assert(
+	Conditional::is_visible( $grouped( array( array( $met, $unmet ), array( $met ) ) ), $lookup ),
+	'"A and B, or C" holds on C alone'
+);
+assert(
+	! Conditional::is_visible( $grouped( array( array( $met, $unmet ), array( $unmet ) ) ), $lookup ),
+	'and fails when neither the pair nor C holds'
+);
+
+// hide still inverts, whichever group satisfied it.
+assert( ! Conditional::is_visible( $grouped( array( array( $unmet ), array( $met ) ), 'hide' ), $lookup ), 'hide inverts a satisfied group' );
+
+/*
+ * An empty group is not a condition anybody wrote. Counting it as vacuously
+ * true would make one stray group override every real one and pin the field
+ * visible for ever.
+ */
+/*
+ * Stored config is not re-sanitized on the way out: FieldGroup::from_post()
+ * hands the JSON straight to the model. So the evaluator has to understand the
+ * old shape itself, without the sanitizer's help — otherwise every condition
+ * saved before rule groups existed would quietly stop applying, showing fields
+ * that should be hidden rather than failing in any visible way.
+ */
+$unsanitized = array(
+	'key'         => 'field_target000001',
+	'name'        => 'target',
+	'type'        => 'text',
+	'conditional' => array( 'action' => 'show', 'logic' => 'all', 'rules' => array( $met, $unmet ) ),
+);
+
+assert( ! Conditional::is_visible( $unsanitized, $lookup ), 'raw stored "all" still requires every rule' );
+
+$unsanitized['conditional']['logic'] = 'any';
+
+assert( Conditional::is_visible( $unsanitized, $lookup ), 'and raw stored "any" still requires only one' );
+
+$unsanitized['conditional'] = array( 'action' => 'show', 'logic' => 'all', 'rules' => array( $unmet ) );
+
+assert( ! Conditional::is_visible( $unsanitized, $lookup ), 'a raw stored unmet rule still hides the field' );
+
+assert( ! Conditional::is_visible( $grouped( array( array() ) ), $lookup ), 'an empty group is unmet, not vacuously true' );
+assert( ! Conditional::is_visible( $grouped( array( array(), array( $unmet ) ) ), $lookup ), 'and does not rescue an unmet one' );
+assert( Conditional::is_visible( $grouped( array() ), $lookup ), 'no groups at all is no condition' );
+
+// The sanitizer drops empty groups rather than storing them, so the guard
+// above only has to hold for config that arrived from somewhere else.
+$pruned = FieldGroup::sanitize(
+	array(
+		'fields' => array(
+			array(
+				'key'         => 'field_target000001',
+				'name'        => 'target',
+				'type'        => 'text',
+				'conditional' => array( 'action' => 'show', 'groups' => array( array(), array( $met ), array( 'nonsense' ) ) ),
+			),
+		),
+	)
+);
+
+assert( 1 === count( $pruned['fields'][0]['conditional']['groups'] ), 'empty and malformed groups are not stored' );
 
 /* -------------------------------------------------------------------------
  * Validation.

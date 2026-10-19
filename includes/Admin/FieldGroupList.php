@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace WPCMB\Admin;
 
 use WPCMB\Abstracts\Module;
+use WPCMB\Database\LocalJson;
 use WPCMB\Fields\FieldGroup;
 use WPCMB\Fields\Locations;
 use WPCMB\Fields\Repository;
@@ -33,6 +34,13 @@ final class FieldGroupList extends Module {
 	private const ACTION_DUPLICATE = 'wpcmb_duplicate';
 
 	/**
+	 * Groups whose file is ahead of the database, once resolved.
+	 *
+	 * @var array<string, string>|null
+	 */
+	private ?array $syncable = null;
+
+	/**
 	 * Only load in the admin.
 	 */
 	public function is_enabled(): bool {
@@ -54,6 +62,8 @@ final class FieldGroupList extends Module {
 		add_filter( 'post_date_column_status', array( $this, 'hide_date_status' ), 10, 2 );
 		add_action( 'admin_action_' . self::ACTION_DUPLICATE, array( $this, 'handle_duplicate' ) );
 		add_action( 'admin_notices', array( $this, 'duplicate_notice' ) );
+		add_action( 'admin_action_' . LocalJson::ACTION_SYNC, array( $this, 'handle_sync' ) );
+		add_action( 'admin_notices', array( $this, 'sync_notice' ) );
 
 		// Any write to a field group invalidates the cached group list.
 		add_action( 'save_post_' . $type, array( $this, 'flush' ) );
@@ -210,7 +220,133 @@ final class FieldGroupList extends Module {
 			esc_html__( 'Duplicate', 'manpreetdev-custom-fields-meta-boxes' )
 		);
 
+		$group = $this->container->get( Repository::class )->get( $post->ID );
+
+		if ( $group instanceof FieldGroup && isset( $this->syncable()[ $group->key ] ) ) {
+			$actions['wpcmb_sync'] = sprintf(
+				'<a href="%s">%s</a>',
+				esc_url( $this->sync_url( array( $group->key ) ) ),
+				esc_html__( 'Sync from file', 'manpreetdev-custom-fields-meta-boxes' )
+			);
+		}
+
 		return $actions;
+	}
+
+	/**
+	 * The groups whose file is ahead of the database, asked once per request.
+	 *
+	 * @return array<string, string>
+	 */
+	private function syncable(): array {
+		if ( null === $this->syncable ) {
+			$this->syncable = $this->container->get( LocalJson::class )->syncable();
+		}
+
+		return $this->syncable;
+	}
+
+	/**
+	 * A link that syncs the given groups.
+	 *
+	 * @param array<int, string> $keys Group keys.
+	 */
+	private function sync_url( array $keys ): string {
+		return wp_nonce_url(
+			add_query_arg(
+				array(
+					'action' => LocalJson::ACTION_SYNC,
+					'keys'   => implode( ',', $keys ),
+				),
+				admin_url( 'admin.php' )
+			),
+			LocalJson::ACTION_SYNC
+		);
+	}
+
+	/**
+	 * Offer to import the groups whose files are ahead.
+	 *
+	 * Shown rather than done: a file arriving from version control is somebody
+	 * else's change to this site's configuration, and overwriting what is here
+	 * without being asked is how an afternoon's work disappears.
+	 */
+	public function sync_notice(): void {
+		$screen = get_current_screen();
+
+		if ( ! $screen instanceof \WP_Screen || 'edit-' . FieldGroupPostType::POST_TYPE !== $screen->id ) {
+			return;
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only notice flag.
+		$synced = isset( $_GET['wpcmb_synced'] ) ? absint( wp_unslash( $_GET['wpcmb_synced'] ) ) : 0;
+
+		if ( $synced > 0 ) {
+			printf(
+				'<div class="notice notice-success is-dismissible"><p>%s</p></div>',
+				esc_html(
+					sprintf(
+						/* translators: %d: number of field groups. */
+						_n( '%d field group imported from its file.', '%d field groups imported from their files.', $synced, 'manpreetdev-custom-fields-meta-boxes' ),
+						$synced
+					)
+				)
+			);
+		}
+
+		$available = $this->syncable();
+
+		if ( array() === $available ) {
+			return;
+		}
+
+		printf(
+			'<div class="notice notice-info"><p>%s</p><p>%s</p><p><a class="button button-primary" href="%s">%s</a></p></div>',
+			esc_html(
+				sprintf(
+					/* translators: %d: number of field groups. */
+					_n( '%d field group has a newer version in your theme.', '%d field groups have a newer version in your theme.', count( $available ), 'manpreetdev-custom-fields-meta-boxes' ),
+					count( $available )
+				)
+			),
+			esc_html( implode( ', ', $available ) ),
+			esc_url( $this->sync_url( array_keys( $available ) ) ),
+			esc_html__( 'Sync all', 'manpreetdev-custom-fields-meta-boxes' )
+		);
+	}
+
+	/**
+	 * Handle a sync request.
+	 */
+	public function handle_sync(): void {
+		check_admin_referer( LocalJson::ACTION_SYNC );
+
+		if ( ! current_user_can( FieldGroupPostType::capability() ) ) {
+			wp_die( esc_html__( 'You do not have permission to import field groups.', 'manpreetdev-custom-fields-meta-boxes' ) );
+		}
+
+		$requested = isset( $_GET['keys'] ) ? sanitize_text_field( wp_unslash( $_GET['keys'] ) ) : '';
+		$requested = array_filter( array_map( 'sanitize_key', explode( ',', $requested ) ) );
+
+		/*
+		 * Only what is actually behind its file is imported, whatever the link
+		 * asked for. The keys travel in the URL, so without this a crafted
+		 * link could overwrite a group whose file is older than it.
+		 */
+		$synced = $this->container->get( LocalJson::class )->sync(
+			array_values( array_intersect( $requested, array_keys( $this->syncable() ) ) )
+		);
+
+		$this->flush();
+
+		wp_safe_redirect(
+			add_query_arg(
+				'wpcmb_synced',
+				$synced,
+				admin_url( 'edit.php?post_type=' . FieldGroupPostType::POST_TYPE )
+			)
+		);
+		exit;
 	}
 
 	/**

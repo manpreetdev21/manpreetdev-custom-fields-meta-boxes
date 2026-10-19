@@ -197,6 +197,7 @@ final class Plugin {
 			Fields\Renderer::class,
 			Database\Revisions::class,
 			Database\Migrations::class,
+			Database\LocalJson::class,
 			Admin\Menu::class,
 			Admin\Assets::class,
 			Admin\FieldGroupList::class,

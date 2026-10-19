@@ -80,10 +80,14 @@ assert( ! str_contains( $field['instructions'], '<script>' ), 'instructions drop
 assert( '' === $field['wrapper']['width'], 'widths above 100 must be dropped' );
 assert( 'abc' === $field['wrapper']['class'], 'wrapper classes must be class-name safe, got: ' . $field['wrapper']['class'] );
 
-// Conditional logic falls back to known values.
+// Conditional logic falls back to known values. The input used the shape
+// earlier versions stored, and comes back as rule groups: one list of rules
+// under "all" is one group, which says the same thing.
 assert( 'show' === $field['conditional']['action'], 'unknown conditional actions fall back to show' );
-assert( '==' === $field['conditional']['rules'][0]['operator'], 'unknown operators fall back to ==' );
-assert( 'field_xyz789' === $field['conditional']['rules'][0]['field'], 'valid field references are preserved' );
+assert( 1 === count( $field['conditional']['groups'] ), 'a stored "all" rule list becomes one group' );
+assert( '==' === $field['conditional']['groups'][0][0]['operator'], 'unknown operators fall back to ==' );
+assert( 'field_xyz789' === $field['conditional']['groups'][0][0]['field'], 'valid field references are preserved' );
+assert( ! isset( $field['conditional']['rules'], $field['conditional']['logic'] ), 'and the old keys are not stored alongside' );
 
 // Sub fields recurse through the same sanitizer.
 assert( 1 === count( $field['sub_fields'] ), 'sub fields are sanitized' );

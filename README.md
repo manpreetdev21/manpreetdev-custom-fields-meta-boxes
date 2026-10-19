@@ -2,7 +2,7 @@
 
 Field groups, meta boxes and a developer-friendly field API for WordPress.
 
-- **Version:** 1.16.0
+- **Version:** 1.17.0
 - **Author:** Manpreet Singh
 - **Requires PHP:** 8.1
 - **Requires WordPress:** 6.8
@@ -979,6 +979,37 @@ guards and the suite fails.
 
 ## Conditional logic and validation
 
+### Conditions are groups
+
+A field's conditional logic is an **OR list of AND groups**: every rule in a
+group has to hold, and any one group holding is enough. So "A and B, or C" is
+sayable — which the single all/any switch it replaced never could, and which is
+what most real conditions turn out to be. Location rules have had this shape
+since the first release; this is the same idea in the same spelling.
+
+```php
+'conditional' => array(
+	'action' => 'show',   // or 'hide', which inverts the outcome
+	'groups' => array(
+		array( $rule_a, $rule_b ),  // A and B
+		array( $rule_c ),           // or C
+	),
+)
+```
+
+An empty group counts as **unmet**, not as vacuously true — otherwise one stray
+group would override every real one and pin the field visible. The editor
+removes a group when its last rule goes, so an empty one only arrives from
+config written elsewhere.
+
+Logic saved before rule groups existed keeps the behaviour it had: `all`
+becomes one group of every rule, `any` becomes one group per rule. That
+conversion happens **when the logic is read**, not only when it is saved,
+because `FieldGroup::from_post()` hands the stored JSON straight to the model —
+a group last saved by an earlier version never passes through `sanitize()`
+again. Reading only `groups` would have made every existing condition stop
+applying, which does not error: it shows a field that should be hidden.
+
 Both run on the server. The browser copy exists for fast feedback, not to decide what may be stored.
 
 - **Fields hidden by conditional logic are not validated.** A required field the user was never shown must not block a save.
@@ -1143,6 +1174,10 @@ WordPress 6.4+ already stores, restores, diffs and autosaves any meta key named 
 | `wpcmb/records/{$post_type}` | filter | Records of one type before they are used. Define them in code. |
 | `wpcmb/export` | filter | An export payload before it is written. |
 | `wpcmb/imported` | action | After an import. Receives `array $written, array $payload`. |
+| `wpcmb/json/save_path` | filter | Directory field group files are written to. |
+| `wpcmb/json/load_paths` | filter | Directories field group files are read from. |
+| `wpcmb/json/written` | action | After a group was written to its file. |
+| `wpcmb/json/synced` | action | After groups were imported from their files. |
 
 ### Registering your own module
 
@@ -1207,6 +1242,85 @@ A key written by hand — `group_site_header` rather than a generated
 `group_6a1f…` — survives a round trip. It has to: a key is an identity, values
 are stored against it, and renaming it on import would orphan them and make the
 next import create a second group.
+## Local JSON
+
+Every field group you save also writes a file:
+
+```
+wp-content/themes/your-theme/wpcmb-json/group_6a1f….json
+```
+
+**Create that directory to switch it on, remove it to switch it off.** One
+less setting, and it puts the decision where the consequence is: a theme with
+the folder gets files, a theme without one does not. The plugin never creates
+it, because writing files into somebody's repository uninvited is not a default.
+
+Those files are then **read back as groups registered in code**, through the
+same `wpcmb/register_field_groups` hook the PHP export writes against. So a
+fresh checkout works immediately with no import step — the fields exist because
+the files do. A group that is *also* in the database wins over its file, which
+is what keeps the editor authoritative while you are working in it.
+
+### Syncing
+
+When a file says something the database does not — a group that is only a file,
+or one whose file was changed more recently than the group was saved here — the
+Field Groups screen says so and offers to import it, per group or all at once.
+
+Nothing is imported without being asked. A file arriving from version control
+is somebody else's change to this site's configuration, and overwriting what is
+here unprompted is how an afternoon's work disappears. An existing group also
+keeps the active state it has on **this** site: whether a group is switched on
+is a decision about this install, not something a pulled file should overrule.
+
+The modification stamp travels **inside** the file rather than being read off
+the filesystem, because a checkout gives every file the time it was checked
+out — a file's own mtime says when this machine saw it, not when somebody
+changed it, and sync would otherwise offer every group after every pull.
+Syncing records which file version it took, so a file written on a machine whose
+clock runs ahead is not offered again for ever, and importing does not have to
+rewrite the file to make the two agree (which would put a change in your working
+tree every time you pressed the button).
+
+Filters: `wpcmb/json/save_path` (a string) and `wpcmb/json/load_paths` (an
+array — a child theme reads its parent's groups by default, earlier paths
+winning). Actions: `wpcmb/json/written`, `wpcmb/json/synced`.
+
+**Field groups only.** The five record types — post types, taxonomies, block
+types, forms, options pages — move between installs through the export on the
+Tools screen instead. Nothing stops this growing to cover them; it has not,
+because the export already does that job and a second mechanism for it would be
+two things to keep in step.
+
+## Exporting submissions
+
+The submissions list has an **Export all to CSV** button. One column per field,
+taken from the field group rather than from the submissions, so every row has
+the same columns in the same order — including a column for a field added after
+some submissions arrived, which is honestly empty rather than missing.
+
+Everything, not the current filter. A half-honoured filter is worse than none: a
+file that silently holds a subset is one somebody reports numbers from, and the
+button says which it is. Rows are read in batches, so a form that has been
+collecting for a year downloads instead of exhausting memory.
+
+Repeater and multi-value answers are flattened rather than dropped — values
+within a row joined with a pipe, rows with a semicolon. A repeater holds answers
+somebody typed, and a spreadsheet missing them is the wrong answer to "a
+repeater does not fit in a cell".
+
+### The formula guard
+
+A cell beginning `=`, `+`, `-`, `@`, a tab or a return is prefixed with a
+quote, so a spreadsheet treats it as text. This matters more here than
+anywhere: a submission cell is text a stranger typed, and `=HYPERLINK(…)`
+becomes something worse the moment somebody opens the file. The repeater's own
+CSV export and this one share one definition of that escaping, because a second
+copy of it is a second place for the guard to be forgotten.
+
+The file carries a byte order mark, because the main thing anyone does with it
+is open it in Excel, which otherwise reads UTF-8 as the local codepage and
+mangles every name with an accent in it.
 ## Data on uninstall
 
 Deleting the plugin removes nothing unless `wpcmb_delete_data_on_uninstall` is set. Reinstalling should not cost a site its field groups.
@@ -1214,7 +1328,7 @@ Deleting the plugin removes nothing unless `wpcmb_delete_data_on_uninstall` is s
 ## Checks
 
 ```bash
-composer test        # all 20 PHP checks, one process each
+composer test        # all 22 PHP checks, one process each
 npm test             # 158 browser tests against the real scripts
 php tests/integration.php   # real WordPress, non-destructive
 composer lint        # WordPress Coding Standards
@@ -1248,6 +1362,8 @@ php tests/settings-check.php     # every group and field setting, where it takes
 php tests/records-check.php      # post type, taxonomy, block, form and options page records
 php tests/portability-check.php  # what an export holds, and what an import accepts
 php tests/rows-check.php         # the row loop: positions, nesting, writers
+php tests/json-check.php         # local JSON: what is offered to sync, and when
+php tests/csv-check.php          # CSV quoting and the formula guard
 ```
 
 None of these need WordPress.
@@ -1339,6 +1455,7 @@ manpreetdev-custom-fields-meta-boxes/
 │   ├── Admin/
 │   │   ├── Ajax.php              repeater rows + CSV endpoints
 │   │   ├── Assets.php            screen-gated asset loading
+│   │   ├── Csv.php              one definition of how a CSV row is written
 │   │   ├── DashboardWidget.php
 │   │   ├── FieldGroupEditor.php  builder screen + the single save path
 │   │   ├── FieldGroupList.php    columns, duplicate, cache invalidation
@@ -1351,6 +1468,7 @@ manpreetdev-custom-fields-meta-boxes/
 │   ├── FieldTypes/               11 classes, 52 types
 │   ├── API/functions.php         the public template functions
 │   ├── Database/
+│   │   ├── LocalJson.php        field groups as files, and syncing them back
 │   │   ├── Migrations.php        additive, one-way, keyed by an option
 │   │   ├── Portability.php       what an export holds, what an import accepts
 │   │   └── Revisions.php         revisioned meta keys (revisions + autosave)

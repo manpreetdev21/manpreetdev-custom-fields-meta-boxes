@@ -109,8 +109,9 @@ const globals = {
 			logic: 'Conditional logic',
 			showThisField: 'Show this field when',
 			hideThisField: 'Hide this field when',
-			allRules: 'all rules match',
-			anyRule: 'any rule matches',
+			ifAnyGroup: 'if any group of conditions is met',
+			andLabel: 'and',
+			addOrGroup: '+ Add "or" group',
 			addCondition: '+ Add condition',
 			noOtherFields: 'Add another field first.',
 			noSettings: 'No extra settings.',
@@ -580,9 +581,43 @@ test( 'conditional logic is offered once another field exists', () => {
 	const conditional = two.fields()[ 0 ].conditional;
 
 	assert.equal( conditional.action, 'show' );
-	assert.equal( conditional.logic, 'all' );
-	assert.equal( conditional.rules.length, 1 );
-	assert.equal( conditional.rules[ 0 ].field, 'field_b000000001', 'the rule points at the sibling by key' );
+	assert.equal( conditional.groups.length, 1, 'the first condition opens a group' );
+	assert.equal( conditional.groups[ 0 ].length, 1 );
+	assert.equal( conditional.groups[ 0 ][ 0 ].field, 'field_b000000001', 'the rule points at the sibling by key' );
+
+	// A second group is the "or": the thing one all/any switch could not say.
+	const addGroup = two.$$( 'button' ).find( ( b ) => '+ Add "or" group' === b.textContent );
+
+	assert.ok( addGroup, 'an or group is offered once there is something to be an alternative to' );
+
+	two.click( addGroup );
+
+	assert.equal( two.fields()[ 0 ].conditional.groups.length, 2, 'and opens a second group' );
+
+	// Another condition inside the second group, so the whole thing reads
+	// "B == x, or (B == y and B == z)".
+	// Scoped to the field being edited: the sibling has a conditional editor
+	// of its own, with an add button of its own.
+	const row = two.$$( '.wpcmb-field-row' )[ 0 ];
+	const adds = Array.from( row.querySelectorAll( 'button' ) ).filter( ( b ) => '+ Add condition' === b.textContent );
+
+	assert.equal( adds.length, 2, 'each group adds conditions of its own' );
+
+	two.click( adds[ 1 ] );
+
+	const groups = two.fields()[ 0 ].conditional.groups;
+
+	assert.equal( groups[ 0 ].length, 1, 'the first group is untouched' );
+	assert.equal( groups[ 1 ].length, 2, 'and the second has two conditions' );
+
+	// Emptying a group removes it: an empty group would read as "or nothing",
+	// and on the server it is never satisfied, so leaving it would be a
+	// condition that silently does nothing.
+	const removes = two.$$( '.wpcmb-rule__remove' );
+
+	two.click( removes[ 0 ] );
+
+	assert.equal( two.fields()[ 0 ].conditional.groups.length, 1, 'a group loses its last rule and goes with it' );
 } );
 
 test( 'the location builder writes OR groups of AND rules', () => {
@@ -1062,12 +1097,67 @@ test( 'stored conditional logic is normalised without losing real rules', () => 
 	const stored = page.fields()[ 0 ].conditional;
 
 	assert.equal( stored.action, 'hide', 'a real rule set is left alone' );
-	assert.equal( stored.logic, 'any' );
-	assert.equal( stored.rules.length, 1 );
-	assert.equal( stored.rules[ 0 ].value, 'x' );
+
+	// Saved under the old shape — one list plus an all/any switch — and read
+	// back as groups. `any` is one group per rule, which is what OR between
+	// groups means, so the condition keeps the behaviour it had.
+	assert.equal( stored.groups.length, 1, 'one rule under "any" is one group' );
+	assert.equal( stored.groups[ 0 ].length, 1 );
+	assert.equal( stored.groups[ 0 ][ 0 ].value, 'x' );
 
 	// And the field that had none gets an empty, usable shape.
-	assert.deepEqual( page.fields()[ 1 ].conditional.rules, [] );
+	assert.deepEqual( page.fields()[ 1 ].conditional.groups, [] );
+} );
+
+test( 'the old all/any shape converts to groups that mean the same thing', () => {
+	const page = builderPage(
+		JSON.stringify( [
+			{
+				key: 'field_a000000001', name: 'one', label: 'One', type: 'text', settings: [],
+				conditional: {
+					action: 'show', logic: 'all',
+					rules: [
+						{ field: 'field_b000000001', operator: '==', value: 'x' },
+						{ field: 'field_b000000001', operator: '!=', value: 'y' },
+					],
+				},
+			},
+			{ key: 'field_b000000001', name: 'two', label: 'Two', type: 'text', settings: [] },
+		] )
+	);
+
+	// `all` is every rule in one group, because rules within a group are ANDed.
+	const all = page.fields()[ 0 ].conditional;
+
+	assert.equal( all.groups.length, 1, 'all: one group' );
+	assert.equal( all.groups[ 0 ].length, 2, 'holding both rules' );
+
+	const other = builderPage(
+		JSON.stringify( [
+			{
+				key: 'field_a000000001', name: 'one', label: 'One', type: 'text', settings: [],
+				conditional: {
+					action: 'show', logic: 'any',
+					rules: [
+						{ field: 'field_b000000001', operator: '==', value: 'x' },
+						{ field: 'field_b000000001', operator: '==', value: 'y' },
+					],
+				},
+			},
+			{ key: 'field_b000000001', name: 'two', label: 'Two', type: 'text', settings: [] },
+		] )
+	);
+
+	// `any` is a group each, because any one group holding is enough.
+	const any = other.fields()[ 0 ].conditional;
+
+	assert.equal( any.groups.length, 2, 'any: a group per rule' );
+	assert.equal( any.groups[ 0 ].length, 1 );
+	assert.equal( any.groups[ 1 ][ 0 ].value, 'y' );
+
+	// The switch itself is gone, so nothing downstream can read it and be
+	// wrong about what the groups already say.
+	assert.equal( any.logic, undefined, 'the all/any switch is not carried forward' );
 } );
 
 test( 'an empty layout settings array is normalised too', () => {

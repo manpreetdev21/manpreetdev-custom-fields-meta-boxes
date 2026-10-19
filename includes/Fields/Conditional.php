@@ -35,19 +35,17 @@ final class Conditional {
 	public static function is_visible( array $field, callable $lookup ): bool {
 		$conditional = $field['conditional'] ?? array();
 
-		if ( ! is_array( $conditional ) || empty( $conditional['rules'] ) ) {
+		if ( ! is_array( $conditional ) ) {
 			return true;
 		}
 
-		$rules       = (array) $conditional['rules'];
-		$require_all = 'any' !== ( $conditional['logic'] ?? 'all' );
-		$met         = array();
+		$groups = self::groups( $conditional );
 
-		foreach ( $rules as $rule ) {
-			$met[] = is_array( $rule ) && self::rule_met( $rule, $lookup( (string) ( $rule['field'] ?? '' ) ) );
+		if ( array() === $groups ) {
+			return true;
 		}
 
-		$satisfied = $require_all ? ! in_array( false, $met, true ) : in_array( true, $met, true );
+		$satisfied = self::groups_met( $groups, $lookup );
 		$visible   = 'hide' === ( $conditional['action'] ?? 'show' ) ? ! $satisfied : $satisfied;
 
 		/**
@@ -59,6 +57,79 @@ final class Conditional {
 		 * @param array<string, mixed> $field   Field definition.
 		 */
 		return (bool) apply_filters( 'wpcmb/conditional/visible', $visible, $field );
+	}
+
+	/**
+	 * Read conditional logic as an OR list of AND groups.
+	 *
+	 * Converting here rather than only in the sanitizer, because a stored
+	 * field group is not re-sanitized on the way out: `FieldGroup::from_post()`
+	 * hands the JSON straight to the model, so a group last saved by an
+	 * earlier version arrives with its original `rules` and `logic` and never
+	 * passes through `sanitize()` again. Reading only `groups` would therefore
+	 * have made every existing condition vanish — and a condition that stops
+	 * applying does not error, it just shows a field that should be hidden.
+	 *
+	 * `all` is one group holding every rule; `any` is one group per rule.
+	 * Both say exactly what the old switch said.
+	 *
+	 * @param array<string, mixed> $conditional Stored conditional logic.
+	 *
+	 * @return array<int, array<int, mixed>>
+	 */
+	public static function groups( array $conditional ): array {
+		if ( isset( $conditional['groups'] ) && is_array( $conditional['groups'] ) ) {
+			return array_values( array_filter( $conditional['groups'], 'is_array' ) );
+		}
+
+		if ( empty( $conditional['rules'] ) || ! is_array( $conditional['rules'] ) ) {
+			return array();
+		}
+
+		$rules = array_values( array_filter( $conditional['rules'], 'is_array' ) );
+
+		if ( 'any' === ( $conditional['logic'] ?? 'all' ) ) {
+			return array_map( static fn( array $rule ): array => array( $rule ), $rules );
+		}
+
+		return array( $rules );
+	}
+
+	/**
+	 * Whether any group of rules is satisfied.
+	 *
+	 * Rules within a group all have to hold; any one group holding is enough.
+	 * That is the same OR-of-ANDs shape location rules use, so "A and B, or C"
+	 * is sayable — which a single all/any switch never could.
+	 *
+	 * An empty group is not a condition anybody wrote, so it counts as unmet
+	 * rather than as vacuously true. Otherwise one stray group would make a
+	 * field permanently visible whatever the other groups said.
+	 *
+	 * @param array<int, mixed> $groups OR list of AND groups.
+	 * @param callable          $lookup Given a field key, returns its value.
+	 */
+	private static function groups_met( array $groups, callable $lookup ): bool {
+		foreach ( $groups as $group ) {
+			if ( ! is_array( $group ) || array() === $group ) {
+				continue;
+			}
+
+			$met = true;
+
+			foreach ( $group as $rule ) {
+				if ( ! is_array( $rule ) || ! self::rule_met( $rule, $lookup( (string) ( $rule['field'] ?? '' ) ) ) ) {
+					$met = false;
+					break;
+				}
+			}
+
+			if ( $met ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
