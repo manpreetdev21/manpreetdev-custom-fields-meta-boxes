@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name:       Manpreetdev Custom Fields and Meta Boxes
- * Plugin URI:        https://github.com/manpreetdev21/manpreetdev-custom-fields-meta-boxes
+ * Plugin URI:        https://wordpress.org/plugins/manpreetdev-custom-fields-meta-boxes/
  * Description:       Field groups, meta boxes and a developer-friendly field API for WordPress.
  * Version:           1.16.0
  * Requires at least: 6.8
