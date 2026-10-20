@@ -1872,6 +1872,243 @@ wpcmb_group(
 		wpcmb_is( 'kept' === wpcmb_get_field( 'ionly_b', $page, false ), 'a field hidden again keeps what it had' );
 	}
 );
+wpcmb_group(
+	'a term on a hidden taxonomy does not hand out its values',
+	function (): void {
+		/*
+		 * Reported by a plugin reviewer: every object type weighed up whether
+		 * its values were public except terms, which answered yes to anybody
+		 * for any term. A term id was all it took over REST, including for a
+		 * taxonomy registered to hold things the site never shows.
+		 */
+		register_taxonomy(
+			'wpcmb_itest_open',
+			'post',
+			array( 'public' => true, 'label' => 'Open', 'capabilities' => array( 'assign_terms' => 'edit_posts' ) )
+		);
+
+		register_taxonomy(
+			'wpcmb_itest_hidden',
+			'post',
+			array( 'public' => false, 'label' => 'Hidden', 'capabilities' => array( 'assign_terms' => 'manage_options' ) )
+		);
+
+		$open   = wp_insert_term( 'Open term ' . wp_generate_password( 5, false, false ), 'wpcmb_itest_open' );
+		$hidden = wp_insert_term( 'Hidden term ' . wp_generate_password( 5, false, false ), 'wpcmb_itest_hidden' );
+
+		if ( is_wp_error( $open ) || is_wp_error( $hidden ) ) {
+			wpcmb_is( false, 'could not create the terms to test with' );
+
+			return;
+		}
+
+		$open_ref   = new WPCMB\Fields\ObjectRef( WPCMB\Fields\ObjectRef::TERM, (int) $open['term_id'] );
+		$hidden_ref = new WPCMB\Fields\ObjectRef( WPCMB\Fields\ObjectRef::TERM, (int) $hidden['term_id'] );
+
+		$was = get_current_user_id();
+
+		/* An administrator sees both, as before. */
+		wpcmb_is( WPCMB\Fields\Permissions::can_read( $open_ref ), 'an administrator reads a public term' );
+		wpcmb_is( WPCMB\Fields\Permissions::can_read( $hidden_ref ), 'and one on a hidden taxonomy' );
+
+		/* A logged-out visitor is the case that was wrong. */
+		wp_set_current_user( 0 );
+
+		wpcmb_is(
+			WPCMB\Fields\Permissions::can_read( $open_ref ),
+			'a visitor still reads a term on a public taxonomy, which is public content'
+		);
+
+		wpcmb_is(
+			! WPCMB\Fields\Permissions::can_read( $hidden_ref ),
+			'but not one on a taxonomy that is not public'
+		);
+
+		/* And an id nobody has is refused rather than assumed. */
+		wpcmb_is(
+			! WPCMB\Fields\Permissions::can_read( new WPCMB\Fields\ObjectRef( WPCMB\Fields\ObjectRef::TERM, 99999999 ) ),
+			'a term that does not exist is not readable'
+		);
+
+		wp_set_current_user( $was );
+
+		/*
+		 * Writing was already gated on the taxonomy's own capability, so the
+		 * fix must not have loosened it.
+		 */
+		wp_set_current_user( 0 );
+
+		wpcmb_is( ! WPCMB\Fields\Permissions::can_edit( $open_ref ), 'a visitor still cannot write to a public term' );
+
+		wp_set_current_user( $was );
+
+		wp_delete_term( (int) $open['term_id'], 'wpcmb_itest_open' );
+		wp_delete_term( (int) $hidden['term_id'], 'wpcmb_itest_hidden' );
+
+		unregister_taxonomy( 'wpcmb_itest_open' );
+		unregister_taxonomy( 'wpcmb_itest_hidden' );
+	}
+);
+wpcmb_group(
+	'an options page hands its hook sanitized values, and skips hidden fields',
+	function (): void {
+		/*
+		 * Two things a plugin reviewer was right about. The saved hook was
+		 * handed the request as it arrived, so an extension reading it was
+		 * reading unsanitized input while reasonably assuming otherwise. And
+		 * this third save path never got the conditional-logic guard the edit
+		 * screen and the front-end form have, so a value posted for a field
+		 * the page was hiding was stored.
+		 */
+		$group = wpcmb_group_fixture(
+			array(
+				'key'      => 'group_iopt_hook',
+				'title'    => 'Integration options hook',
+				'fields'   => array(
+					array( 'key' => 'field_iomode00001', 'name' => 'io_mode', 'label' => 'Mode', 'type' => 'select', 'settings' => array( 'choices' => "plain : Plain\nfancy : Fancy" ) ),
+					array( 'key' => 'field_ionote00001', 'name' => 'io_note', 'label' => 'Note', 'type' => 'text' ),
+					array(
+						'key'         => 'field_iofancy0001',
+						'name'        => 'io_fancy',
+						'label'       => 'Fancy only',
+						'type'        => 'text',
+						'conditional' => array(
+							'action' => 'show',
+							'groups' => array( array( array( 'field' => 'field_iomode00001', 'operator' => '==', 'value' => 'fancy' ) ) ),
+						),
+					),
+				),
+				'location' => array( array( array( 'param' => 'options_page', 'operator' => '==', 'value' => 'iopt-hook' ) ) ),
+				'settings' => array( 'options_page' => 'iopt-hook' ),
+			)
+		);
+
+		$module = new WPCMB\Admin\OptionsPages( wpcmb()->container() );
+		$ref    = new WPCMB\Fields\ObjectRef( WPCMB\Fields\ObjectRef::OPTION, 'iopt-hook' );
+
+		$seen = null;
+
+		$listener = static function ( $slug, $values ) use ( &$seen ): void {
+			$seen = $values;
+		};
+
+		add_action( 'wpcmb/options_page/saved', $listener, 10, 2 );
+
+		/* The redirect at the end of the save would exit the test run. */
+		$stop = static function (): void {
+			throw new \RuntimeException( 'redirected' );
+		};
+
+		add_filter( 'wp_redirect', $stop );
+
+		$_POST = array(
+			'wpcmb_options_nonce' => wp_create_nonce( 'wpcmb_save_options' ),
+			'_wp_http_referer'    => '/wp-admin/admin.php?page=wpcmb-options-iopt-hook',
+			'wpcmb_values'        => array(
+				'io_mode'  => 'plain',
+				// Tags in a text field, to show the hook is handed the clean value.
+				'io_note'  => '<script>alert(1)</script>Note',
+				// Hidden: io_mode is "plain", so the page never showed this.
+				'io_fancy' => 'SMUGGLED',
+			),
+		);
+
+		$_REQUEST = $_POST;
+
+		$save = new ReflectionMethod( $module, 'handle_save' );
+
+		$save->setAccessible( true );
+
+		try {
+			$save->invoke( $module, 'iopt-hook' );
+		} catch ( \RuntimeException $e ) {
+			// The redirect, which means the save ran to the end.
+			$seen = $seen;
+		}
+
+		remove_filter( 'wp_redirect', $stop );
+		remove_action( 'wpcmb/options_page/saved', $listener, 10 );
+
+		$_POST    = array();
+		$_REQUEST = array();
+
+		wpcmb_is( is_array( $seen ), 'the saved hook fired' );
+
+		if ( is_array( $seen ) ) {
+			wpcmb_is(
+				isset( $seen['io_note'] ) && ! str_contains( (string) $seen['io_note'], '<script' ),
+				'and was handed the sanitized value, not the request: ' . var_export( $seen['io_note'] ?? null, true )
+			);
+
+			wpcmb_is( ! array_key_exists( 'io_fancy', $seen ), 'with the hidden field left out of it' );
+		}
+
+		$values = wpcmb()->container()->get( WPCMB\Fields\Values::class );
+
+		wpcmb_is( 'plain' === $values->get( 'io_mode', $ref, false ), 'the visible select is stored' );
+		wpcmb_is( ! str_contains( (string) $values->get( 'io_note', $ref, false ), '<script' ), 'the stored note is clean' );
+		wpcmb_is( '' === (string) $values->get( 'io_fancy', $ref, false ), 'and the hidden field was not written' );
+
+		/*
+		 * Every option this page holds, not just this group's fields: another
+		 * fixture is located on "not some other options page", which matches
+		 * this one too, so the save wrote its field here as well.
+		 */
+		global $wpdb;
+
+		foreach ( $wpdb->get_col( $wpdb->prepare( "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like( 'wpcmb_iopt-hook_' ) . '%' ) ) as $option ) {
+			delete_option( $option );
+		}
+		delete_transient( 'wpcmb_options_result_iopt-hook' );
+	}
+);
+wpcmb_group(
+	'values posted to the block form renderer are escaped, not executed',
+	function (): void {
+		/*
+		 * A plugin reviewer noted that json_decode() does not sanitize, and
+		 * the block preview endpoint decodes the values it is handed. It does
+		 * not store them — it renders a form with them — so what matters is
+		 * that every field type escapes on the way out. Asserted against the
+		 * real renderer rather than inferred from reading it.
+		 */
+		$group = wpcmb_group_fixture(
+			array(
+				'key'      => 'group_iesc_probe',
+				'title'    => 'Integration escaping',
+				'fields'   => array(
+					array( 'key' => 'field_ietext00001', 'name' => 'ie_text', 'label' => 'Text', 'type' => 'text' ),
+					array( 'key' => 'field_iearea00001', 'name' => 'ie_area', 'label' => 'Area', 'type' => 'textarea' ),
+					array( 'key' => 'field_iesel000001', 'name' => 'ie_sel', 'label' => 'Sel', 'type' => 'select', 'settings' => array( 'choices' => "a : A" ) ),
+					array( 'key' => 'field_ieurl000001', 'name' => 'ie_url', 'label' => 'Url', 'type' => 'url' ),
+				),
+				'location' => array( array( array( 'param' => 'post_type', 'operator' => '==', 'value' => 'post' ) ) ),
+			)
+		);
+
+		$payloads = array(
+			'ie_text' => '"><script>alert(1)</script>',
+			'ie_area' => '</textarea><script>alert(2)</script>',
+			'ie_sel'  => '"><img src=x onerror=alert(3)>',
+			'ie_url'  => 'javascript:alert(4)',
+		);
+
+		$html = wpcmb()->container()->get( WPCMB\Blocks\BlockRegistry::class )->render_form( $group, $payloads );
+
+		wpcmb_is( '' !== $html, 'the form rendered' );
+
+		foreach ( array( '<script>alert(1)', '<script>alert(2)', 'onerror=alert(3)' ) as $needle ) {
+			wpcmb_is( ! str_contains( $html, $needle ), 'no executable markup survived: ' . $needle );
+		}
+
+		// A closing tag inside a textarea would end it early and let the rest
+		// of the payload out as markup.
+		wpcmb_is( ! str_contains( $html, '</textarea><script' ), 'a textarea cannot be closed from its own value' );
+
+		// javascript: in an href is the other way a value becomes executable.
+		wpcmb_is( ! str_contains( $html, 'href="javascript:' ), 'a javascript URL is not rendered as a link' );
+	}
+);
 /* -------------------------------------------------------------------------
  * Clean up everything this run created.
  * ---------------------------------------------------------------------- */

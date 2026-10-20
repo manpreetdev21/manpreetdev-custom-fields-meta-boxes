@@ -85,7 +85,7 @@ final class SettingsPage extends Module {
 			array(
 				'type'              => 'boolean',
 				'default'           => false,
-				'sanitize_callback' => static fn( $value ): bool => (bool) $value,
+				'sanitize_callback' => array( self::class, 'sanitize_opt_in' ),
 			)
 		);
 
@@ -215,6 +215,34 @@ final class SettingsPage extends Module {
 				implode( ', ', Media::default_upload_types() )
 			)
 		);
+	}
+
+	/**
+	 * Read a value as a deliberate yes, and treat everything else as no.
+	 *
+	 * Stricter than casting and stricter than rest_sanitize_boolean(), both of
+	 * which read some form of "no" as yes: `(bool) 'false'` is true, and
+	 * rest_sanitize_boolean() still returns true for 'no', 'off' and any other
+	 * word it does not recognise. This guards "delete everything on uninstall",
+	 * where a wrong yes destroys every field group and value on the site, so
+	 * nothing but an explicit affirmative counts.
+	 *
+	 * @param mixed $value Submitted value.
+	 */
+	public static function sanitize_opt_in( $value ): bool {
+		if ( is_bool( $value ) ) {
+			return $value;
+		}
+
+		if ( is_int( $value ) || is_float( $value ) ) {
+			return 1 === (int) $value;
+		}
+
+		if ( ! is_string( $value ) ) {
+			return false;
+		}
+
+		return in_array( strtolower( trim( $value ) ), array( '1', 'true', 'yes', 'on' ), true );
 	}
 
 	/**

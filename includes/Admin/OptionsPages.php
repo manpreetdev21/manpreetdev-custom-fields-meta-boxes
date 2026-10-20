@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace WPCMB\Admin;
 
 use WPCMB\Abstracts\Module;
+use WPCMB\Fields\Conditional;
 use WPCMB\Fields\Context;
 use WPCMB\Fields\FieldGroup;
 use WPCMB\Fields\ObjectRef;
@@ -356,22 +357,38 @@ final class OptionsPages extends Module {
 			$present[ $name ] = $submitted[ $name ] ?? null;
 		}
 
+		/*
+		 * A field hidden by conditional logic was not on the form, so a value
+		 * posted for it was added to the request. The same guard the edit
+		 * screen and the front-end form apply; this page needs it for the same
+		 * reason, and a dropped field keeps what it had rather than being
+		 * emptied by a submission that never showed it.
+		 */
+		$present = Conditional::visible_values( $fields, $present );
+
 		$errors = $this->container->get( Validator::class )->validate( $fields, $present );
+		$clean  = array();
 
 		foreach ( $present as $name => $value ) {
-			$values->update( $name, $renderer->sanitize( $value, $fields[ $name ] ), $ref );
+			$clean[ $name ] = $renderer->sanitize( $value, $fields[ $name ] );
+
+			$values->update( $name, $clean[ $name ], $ref );
 		}
 
 		/**
 		 * Fires after an options page has been saved.
 		 *
+		 * Handed the sanitized values, not the request. An extension reading
+		 * this is reading plugin data and should not have to sanitize it
+		 * again — and would not reliably know to.
+		 *
 		 * @since 1.3.0
 		 *
 		 * @param string                $slug   Options page slug.
-		 * @param array<string, mixed>  $values Submitted values, before sanitizing.
+		 * @param array<string, mixed>  $clean  Sanitized values that were stored.
 		 * @param array<string, string> $errors Validation errors, if any.
 		 */
-		do_action( 'wpcmb/options_page/saved', $slug, $present, $errors );
+		do_action( 'wpcmb/options_page/saved', $slug, $clean, $errors );
 
 		set_transient( $this->result_key( $slug ), $errors, MINUTE_IN_SECONDS * 5 );
 

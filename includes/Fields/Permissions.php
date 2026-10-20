@@ -37,7 +37,7 @@ final class Permissions {
 
 		$allowed = match ( $ref->type ) {
 			ObjectRef::POST    => self::can_read_post( (int) $ref->id ),
-			ObjectRef::TERM    => true,
+			ObjectRef::TERM    => self::can_read_term( (int) $ref->id ),
 			ObjectRef::USER    => current_user_can( 'list_users' ) || get_current_user_id() === (int) $ref->id,
 			ObjectRef::COMMENT => self::can_read_comment( (int) $ref->id ),
 			ObjectRef::OPTION  => current_user_can( 'manage_options' ),
@@ -106,6 +106,41 @@ final class Permissions {
 		}
 
 		return current_user_can( 'read_post', $post_id );
+	}
+
+	/**
+	 * Whether a term's values are readable.
+	 *
+	 * A term on a public taxonomy is public content, like a published post, so
+	 * its field values are readable by anybody. A taxonomy that is not public
+	 * is the opposite: it exists to hold things the site does not show, and its
+	 * terms were readable by anyone at all until this check existed — including
+	 * over REST, where a term id is all it took.
+	 *
+	 * The capability is the taxonomy's own `assign_terms`, which is the lowest
+	 * bar for having business with that taxonomy, and the same test core's own
+	 * term endpoints apply before serving a non-public one.
+	 *
+	 * @param int $term_id Term id.
+	 */
+	private static function can_read_term( int $term_id ): bool {
+		$term = get_term( $term_id );
+
+		if ( ! $term instanceof \WP_Term ) {
+			return false;
+		}
+
+		$taxonomy = get_taxonomy( $term->taxonomy );
+
+		if ( ! $taxonomy instanceof \WP_Taxonomy ) {
+			return false;
+		}
+
+		if ( $taxonomy->public ) {
+			return true;
+		}
+
+		return current_user_can( $taxonomy->cap->assign_terms );
 	}
 
 	/**

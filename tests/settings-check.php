@@ -349,4 +349,33 @@ $enhanced = new Enhanced();
 assert( isset( $enhanced->settings_schema( 'embed' )['width'] ), 'an embed can be given a width' );
 assert( ! isset( $enhanced->settings_schema( 'signature' )['width'] ), 'a signature cannot' );
 
+
+/* -------------------------------------------------------------------------
+ * The uninstall opt-in.
+ *
+ * Reported by a plugin reviewer: the sanitize_callback cast to bool, so any
+ * non-empty string — including the word "false" — switched on "delete
+ * everything on uninstall". A wrong yes here destroys every field group and
+ * value on the site, so only a deliberate affirmative counts.
+ * ---------------------------------------------------------------------- */
+
+foreach ( array( true, 1, '1', 'true', 'TRUE', ' yes ', 'on' ) as $yes ) {
+	assert(
+		true === WPCMB\Admin\SettingsPage::sanitize_opt_in( $yes ),
+		'an explicit yes is a yes: ' . var_export( $yes, true )
+	);
+}
+
+foreach ( array( false, 0, '0', '', 'false', 'FALSE', 'no', 'off', 'banana', null, array(), array( '1' ), '2' ) as $no ) {
+	assert(
+		false === WPCMB\Admin\SettingsPage::sanitize_opt_in( $no ),
+		'everything else is a no: ' . var_export( $no, true )
+	);
+}
+
+// The two readings this replaces, so the difference is on the record.
+assert( true === (bool) 'false', 'a plain cast reads "false" as true, which is why it is not used' );
+// rest_sanitize_boolean() is WordPress's own and not shimmed here; it reads
+// "no" and "off" as true, which is why this is an allowlist instead.
+
 echo "settings-check: OK\n";

@@ -4,7 +4,7 @@ Tags: custom fields, meta box, repeater, options page, custom post type
 Requires at least: 6.8
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.17.3
+Stable tag: 1.17.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -95,6 +95,13 @@ Yes. Every string is translatable under the `manpreetdev-custom-fields-meta-boxe
 5. The field group list, with each group's key, field count and location.
 
 == Changelog ==
+
+= 1.17.4 =
+* Security: a term's field values were readable by anybody, for any term. Every other object type weighed up whether its values were public — a draft post, an unapproved comment, an options page — but terms answered yes unconditionally, so a term id was all it took to read field values on a taxonomy registered to hold what a site does not show. A term on a public taxonomy is still public, like a published post; one on a taxonomy that is not public now needs that taxonomy's own assign_terms capability, which is the test core applies to its own term endpoints.
+* The wpcmb/options_page/saved action is handed the sanitized values that were stored, not the request as it arrived. An extension reading that hook is reading plugin data and should not have to sanitize it again, nor would it reliably know to.
+* The options page save path now drops values posted for fields that conditional logic was hiding, which the edit screen and the front-end form have done since 1.17.1. It was the one save path that missed the guard.
+* The "delete all data on uninstall" setting is read as a deliberate yes rather than cast to a boolean. A plain cast reads any non-empty string as true, including the word "false", and rest_sanitize_boolean() still reads "no" and "off" as true — on a setting that destroys every field group and value on the site, only an explicit affirmative counts.
+
 
 = 1.17.3 =
 * Fixed: the Conditional logic panel was laid out wrongly. Its rule rows are drawn in the same six column grid the location rules use — joiner, icon, field, operator, value, remove — and the rewrite in 1.17.0 added a seventh child for the "and" label, pushing every control one column right. The field and operator menus landed in the 34px and 20px columns and rendered as bare chevrons with no readable text.
