@@ -352,7 +352,17 @@
 	 * @param {Array} panels `{ id, label, content }`, empty ones skipped.
 	 * @return {HTMLElement|null} The tab set, or null when there is one panel.
 	 */
-	function tabbed( panels ) {
+	/**
+	 * Which tab each tab set was last showing, keyed by the caller's key.
+	 *
+	 * Module level because the builder rebuilds its rows from scratch on every
+	 * change, so nothing on the old DOM survives to be asked.
+	 *
+	 * @type {Object}
+	 */
+	var openTabs = {};
+
+	function tabbed( panels, key ) {
 		panels = panels.filter( function ( panel ) {
 			return panel.content && panel.content.childNodes.length;
 		} );
@@ -379,6 +389,13 @@
 				buttons[ i ].classList.toggle( 'is-active', selected );
 				panel.content.hidden = ! selected;
 			} );
+
+			// Remembered across renders. Adding a condition rebuilds the row,
+			// and without this the rebuilt tab set opened on its first tab —
+			// so every click inside Logic threw you back to General.
+			if ( key ) {
+				openTabs[ key ] = index;
+			}
 		}
 
 		panels.forEach( function ( panel, index ) {
@@ -435,7 +452,11 @@
 			wrap.appendChild( panel.content );
 		} );
 
-		activate( 0 );
+		// A field whose type changed has a different set of panels, so a
+		// remembered index can be past the end; fall back to the first.
+		var remembered = key && 'number' === typeof openTabs[ key ] ? openTabs[ key ] : 0;
+
+		activate( remembered < panels.length ? remembered : 0 );
 
 		return wrap;
 	}
@@ -922,13 +943,18 @@
 		] );
 
 		var body = el( 'div', { class: 'wpcmb-field-row__body' }, [
-			tabbed( [
-				{ label: i18n.tabGeneral, content: general },
-				{ label: i18n.tabValidation, content: el( 'div', {}, [ this.renderSettings( field, 'validation' ) ] ) },
-				{ label: i18n.tabAppearance, content: appearance },
-				{ label: i18n.tabLogic, content: el( 'div', {}, [ this.renderConditional( field, index ) ] ) },
-				{ label: i18n.tabAdvanced, content: advanced },
-			] ),
+			tabbed(
+				[
+					{ label: i18n.tabGeneral, content: general },
+					{ label: i18n.tabValidation, content: el( 'div', {}, [ this.renderSettings( field, 'validation' ) ] ) },
+					{ label: i18n.tabAppearance, content: appearance },
+					{ label: i18n.tabLogic, content: el( 'div', {}, [ this.renderConditional( field, index ) ] ) },
+					{ label: i18n.tabAdvanced, content: advanced },
+				],
+				// Keyed by the field, so the tab you were on is still the tab
+				// you are on after a click rebuilds the row.
+				field.key || 'field-' + index
+			),
 		] );
 
 		var toggle = el( 'button', {
@@ -1388,8 +1414,15 @@
 	 */
 	FieldsBuilder.prototype.renderConditional = function ( field, index ) {
 		var builder = this;
+
+		// A rule references a field by its key, and a field has one from the
+		// moment it is added — so a name is not required to point at it.
+		// Requiring one made this section unusable on a new group: a field
+		// gains its name after its neighbours' rows were built, nothing
+		// re-renders them, and every other row went on saying "add another
+		// field first" until the page was reloaded.
 		var others = this.items.filter( function ( other, i ) {
-			return i !== index && other.key && other.name;
+			return i !== index && other.key;
 		} );
 
 		if ( ! others.length ) {
@@ -1405,10 +1438,17 @@
 
 		var targets = {};
 		others.forEach( function ( other ) {
-			targets[ other.key ] = other.label || other.name;
+			// A field being named right now has neither yet, and an option
+			// with no text reads as a broken list rather than a new field.
+			targets[ other.key ] = other.label || other.name || i18n.newField || 'New Field';
 		} );
 
-		var header = el( 'div', { class: 'wpcmb-rule' }, [
+		/*
+		 * Not `.wpcmb-rule`: that is the six column grid the rule rows use, so
+		 * a two child header dropped its select into the 34px joiner column
+		 * and wrapped the sentence beside it one word per line.
+		 */
+		var header = el( 'div', { class: 'wpcmb-conditional__action' }, [
 			this.bind(
 				select( { show: i18n.showThisField, hide: i18n.hideThisField }, field.conditional.action, false ),
 				field.conditional,
@@ -1462,7 +1502,13 @@
 		var list = el( 'div' );
 
 		rules.forEach( function ( rule, ruleIndex ) {
-			var remove = el( 'button', { type: 'button', class: 'wpcmb-iconbtn wpcmb-rule__remove', text: '×' } );
+			var remove = el( 'button', {
+				type: 'button',
+				class: 'wpcmb-rule__remove',
+				'aria-label': i18n.removeRule,
+				title: i18n.removeRule,
+				text: '×',
+			} );
 
 			remove.addEventListener( 'click', function () {
 				rules.splice( ruleIndex, 1 );
@@ -1478,29 +1524,55 @@
 				builder.open( index );
 			} );
 
+			/*
+			 * `.wpcmb-rule` is a six column grid — joiner, icon, then the
+			 * three controls and the remove button. Every slot has to be
+			 * filled in order or the controls land in the 34px and 20px
+			 * columns meant for the first two and collapse to bare chevrons.
+			 */
+			var joiner = el( 'span', {
+				class: 'wpcmb-rule__joiner',
+				text: ruleIndex ? i18n.andLabel || 'and' : '',
+			} );
+
+			joiner.setAttribute( 'aria-hidden', ruleIndex ? 'false' : 'true' );
+
+			var icon = el( 'span', {
+				class: 'wpcmb-rule__icon dashicons dashicons-randomize',
+				'aria-hidden': 'true',
+			} );
+
+			var fieldSelect = builder.bind( select( targets, rule.field, false ), rule, 'field' );
+
+			var operatorSelect = builder.bind(
+				select(
+					{
+						'==': i18n.isEqual,
+						'!=': i18n.isNotEqual,
+						contains: 'contains',
+						not_contains: 'does not contain',
+						'>': 'is greater than',
+						'<': 'is less than',
+						empty: 'is empty',
+						not_empty: 'is not empty',
+						pattern: 'matches pattern',
+					},
+					rule.operator,
+					false
+				),
+				rule,
+				'operator'
+			);
+
+			fieldSelect.classList.add( 'wpcmb-rule__param' );
+			operatorSelect.classList.add( 'wpcmb-rule__operator' );
+
 			list.appendChild(
-				el( 'div', { class: 'wpcmb-rule' }, [
-					ruleIndex ? el( 'span', { class: 'wpcmb-rule__and', text: i18n.andLabel } ) : null,
-					builder.bind( select( targets, rule.field, false ), rule, 'field' ),
-					builder.bind(
-						select(
-							{
-								'==': i18n.isEqual,
-								'!=': i18n.isNotEqual,
-								contains: 'contains',
-								not_contains: 'does not contain',
-								'>': 'is greater than',
-								'<': 'is less than',
-								empty: 'is empty',
-								not_empty: 'is not empty',
-								pattern: 'matches pattern',
-							},
-							rule.operator,
-							false
-						),
-						rule,
-						'operator'
-					),
+				el( 'div', { class: 'wpcmb-rule' + ( ruleIndex ? ' is-joined' : '' ) }, [
+					joiner,
+					icon,
+					fieldSelect,
+					operatorSelect,
 					builder.bind(
 						el( 'input', { type: 'text', class: 'wpcmb-field-row__control', value: rule.value || '' } ),
 						rule,

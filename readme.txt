@@ -4,7 +4,7 @@ Tags: custom fields, meta box, repeater, options page, custom post type
 Requires at least: 6.8
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.17.1
+Stable tag: 1.17.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -95,6 +95,18 @@ Yes. Every string is translatable under the `manpreetdev-custom-fields-meta-boxe
 5. The field group list, with each group's key, field count and location.
 
 == Changelog ==
+
+= 1.17.3 =
+* Fixed: the Conditional logic panel was laid out wrongly. Its rule rows are drawn in the same six column grid the location rules use — joiner, icon, field, operator, value, remove — and the rewrite in 1.17.0 added a seventh child for the "and" label, pushing every control one column right. The field and operator menus landed in the 34px and 20px columns and rendered as bare chevrons with no readable text.
+* The "and" between two conditions in a group is now the connector the stylesheet already draws for location rules, rather than an extra element in the grid.
+* Fixed: "Show this field when …" was being laid out as a rule row too, which squeezed its menu into the 34px first column and wrapped the sentence beside it one word per line. It is its own row now.
+* Fixed: clicking "+ Add condition" threw the field back to its General tab. Every change rebuilds the row, and the rebuilt tab set always opened on its first tab, so each condition had to be added from scratch. A row now reopens on the tab it was on.
+
+
+= 1.17.2 =
+* Fixed: the Conditional logic panel was unusable while building a new field group. It said "Add another field first to use conditional logic" even once several fields existed, because it only offered fields that already had a name — and a field gains its name after its neighbours' rows were drawn, with nothing redrawing them. Reloading the editor was the only way to get the panel working.
+* A condition references a field by its key, which exists from the moment the field is added, so a name is no longer required to point at one. A field being named right now is listed as "New Field" until it has a label of its own.
+
 
 = 1.17.1 =
 * Security: a password field's value is no longer exposed over the REST API. `register_meta()` with `show_in_rest` puts a value in the post response, a published post's response is readable by anybody, and groups are exposed unless the author turns it off — so the one field type whose purpose is to hold a secret was being handed to anonymous visitors in plain text. It still renders, still saves, and is still readable in a template with `wpcmb_get_field()`; it no longer leaves the site on its own.

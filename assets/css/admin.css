@@ -1437,16 +1437,28 @@
 }
 
 /*
- * The join between two conditions in the same group. Said once per rule after
- * the first, so a group of three reads "A and B and C" rather than leaving the
- * reader to assume which way it binds.
+ * "Show this field when …" sits above the groups rather than inside one, so it
+ * is a plain row: the rule grid's first column is 34px, which would squeeze the
+ * select to a bare chevron and wrap the sentence a word at a time.
  */
-.wpcmb-rule__and {
-	color: var( --wpcmb-faint );
-	font-size: 11px;
-	font-weight: 600;
-	letter-spacing: 0.08em;
-	text-transform: uppercase;
+.wpcmb-conditional__action {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: var( --wpcmb-space-2 );
+	padding: var( --wpcmb-space-1 ) 0 var( --wpcmb-space-2 );
+}
+
+.wpcmb-conditional__action select {
+	flex: 0 1 auto;
+	max-width: 100%;
+	width: auto;
+}
+
+.wpcmb-conditional__action .description {
+	flex: 1 1 auto;
+	margin: 0;
+	min-width: 0;
 }
 
 /*

@@ -1336,3 +1336,143 @@ test( 'a clipboard the browser will not give us is not reported as a copy', () =
 	assert.doesNotThrow( () => page.click( chip ) );
 	assert.equal( chip.classList.contains( 'is-copied' ), false );
 } );
+
+test( 'conditional logic is usable on a group that has not been saved yet', () => {
+	// The bug this covers: targets were filtered on `other.name`, but a field
+	// gains its name after its neighbours' rows were built and nothing
+	// re-renders them — so on a new group every row went on saying "add
+	// another field first" until the page was reloaded. A rule references a
+	// field by its key, which exists from the moment the field is added.
+	const page = builderPage( '[]' );
+
+	page.addField();
+	page.addField();
+
+	const rows = page.$$( '.wpcmb-field-row' );
+
+	assert.equal( rows.length, 2, 'two fresh fields' );
+	assert.deepEqual( page.fields().map( ( f ) => f.name ), [ '', '' ], 'neither has a name yet' );
+
+	// Conditional logic has to be offered against a sibling that is still
+	// nameless, because that is the state the builder is in while you work.
+	const section = [ ...rows[ 1 ].querySelectorAll( 'details.wpcmb-subsection' ) ]
+		.find( ( d ) => /logic/i.test( d.querySelector( 'summary' ).textContent ) );
+
+	assert.ok( section, 'the second field has a conditional logic section' );
+	assert.ok(
+		! /Add another field first/i.test( section.textContent ),
+		'and it does not claim there is nothing to point at: ' + section.textContent.replace( /\s+/g, ' ' ).trim()
+	);
+
+	const add = [ ...section.querySelectorAll( 'button' ) ].find( ( b ) => /Add condition/i.test( b.textContent ) );
+
+	assert.ok( add, 'a condition can be added' );
+
+	page.click( add );
+
+	const rule = page.fields()[ 1 ].conditional.groups[ 0 ][ 0 ];
+
+	assert.equal( rule.field, page.fields()[ 0 ].key, 'and the rule points at the sibling by key' );
+
+	// The option still reads as something rather than as a blank line. Queried
+	// afresh: adding a condition re-renders, so the node above is detached.
+	const after = [ ...page.$$( '.wpcmb-field-row' )[ 1 ].querySelectorAll( 'details.wpcmb-subsection' ) ]
+		.find( ( d ) => /logic/i.test( d.querySelector( 'summary' ).textContent ) );
+
+	const option = [ ...after.querySelectorAll( 'select' ) ]
+		.flatMap( ( s ) => [ ...s.options ] )
+		.find( ( o ) => o.value === page.fields()[ 0 ].key );
+
+	assert.ok( option && option.textContent.trim(), 'the unnamed field is listed with a readable label' );
+} );
+
+test( 'a conditional rule row fills the rule grid in the order the CSS expects', () => {
+	// `.wpcmb-rule` is a six column grid: joiner, icon, then the three
+	// controls and the remove button. The bug this covers shipped a seventh
+	// child — an "and" label — which pushed every control one column right,
+	// so the field and operator selects landed in the 34px and 20px columns
+	// and rendered as bare chevrons with no visible text.
+	const page = builderPage(
+		JSON.stringify( [
+			{ key: 'field_a000000001', name: 'one', label: 'One', type: 'text', settings: {} },
+			{
+				key: 'field_b000000001', name: 'two', label: 'Two', type: 'text', settings: {},
+				conditional: {
+					action: 'show',
+					groups: [ [
+						{ field: 'field_a000000001', operator: '==', value: 'x' },
+						{ field: 'field_a000000001', operator: '!=', value: 'y' },
+					] ],
+				},
+			},
+		] )
+	);
+
+	const rules = page.$$( '.wpcmb-field-row' )[ 1 ].querySelectorAll( '.wpcmb-rule' );
+
+	assert.equal( rules.length, 2, 'both rules are drawn' );
+
+	for ( const rule of rules ) {
+		assert.equal( rule.children.length, 6, 'a rule row fills all six grid columns' );
+
+		const [ joiner, icon, field, operator, value, remove ] = rule.children;
+
+		assert.ok( joiner.classList.contains( 'wpcmb-rule__joiner' ), 'column 1 is the joiner' );
+		assert.ok( icon.classList.contains( 'wpcmb-rule__icon' ), 'column 2 is the icon' );
+		assert.equal( field.tagName, 'SELECT', 'column 3 is the field select' );
+		assert.equal( operator.tagName, 'SELECT', 'column 4 is the operator select' );
+		assert.ok( 'INPUT' === value.tagName || 'SELECT' === value.tagName, 'column 5 is the value control' );
+		assert.ok( remove.classList.contains( 'wpcmb-rule__remove' ), 'column 6 is the remove button' );
+	}
+
+	// The connector between ANDed rules is a class the stylesheet draws, not an
+	// extra element in the grid.
+	assert.ok( ! rules[ 0 ].classList.contains( 'is-joined' ), 'the first rule has no connector' );
+	assert.ok( rules[ 1 ].classList.contains( 'is-joined' ), 'and every rule after it does' );
+	assert.equal( rules[ 1 ].children[ 0 ].textContent.trim(), 'and', 'which reads as "and"' );
+
+	// And the "show/hide" header is not in that grid at all: two children in a
+	// six column row squeezed the select into 34px and wrapped the sentence
+	// beside it one word per line.
+	const section = [ ...page.$$( '.wpcmb-field-row' )[ 1 ].querySelectorAll( 'details.wpcmb-subsection' ) ]
+		.find( ( d ) => /logic/i.test( d.querySelector( 'summary' ).textContent ) );
+
+	const header = section.querySelector( '.wpcmb-conditional__action' );
+
+	assert.ok( header, 'the action row has a class of its own' );
+	assert.ok( ! header.classList.contains( 'wpcmb-rule' ), 'and is not laid out as a rule row' );
+} );
+
+test( 'the open settings tab survives a click that rebuilds the row', () => {
+	// Every change rebuilds the rows from scratch, and the rebuilt tab set
+	// used to open on its first tab — so adding a condition inside Logic threw
+	// you back to General and you had to find your way back for each one.
+	const page = builderPage(
+		JSON.stringify( [
+			{ key: 'field_a000000001', name: 'one', label: 'One', type: 'text', settings: {} },
+			{ key: 'field_b000000001', name: 'two', label: 'Two', type: 'text', settings: {} },
+		] )
+	);
+
+	const tabsOf = ( i ) => [ ...page.$$( '.wpcmb-field-row' )[ i ].querySelectorAll( '.wpcmb-tabset__tab' ) ];
+	const activeTab = ( i ) => ( tabsOf( i ).find( ( t ) => 'true' === t.getAttribute( 'aria-selected' ) ) || {} ).textContent;
+
+	assert.equal( activeTab( 1 ), 'General', 'a row opens on General' );
+
+	// Move to Logic and add a condition, which re-renders.
+	const logic = tabsOf( 1 ).find( ( t ) => /logic/i.test( t.textContent ) );
+	page.click( logic );
+
+	assert.equal( activeTab( 1 ), 'Logic', 'clicking the tab selects it' );
+
+	const section = [ ...page.$$( '.wpcmb-field-row' )[ 1 ].querySelectorAll( 'details.wpcmb-subsection' ) ]
+		.find( ( d ) => /logic/i.test( d.querySelector( 'summary' ).textContent ) );
+
+	page.click( [ ...section.querySelectorAll( 'button' ) ].find( ( b ) => /Add condition/i.test( b.textContent ) ) );
+
+	assert.equal( activeTab( 1 ), 'Logic', 'and the row is still on Logic after the rebuild' );
+	assert.equal( page.fields()[ 1 ].conditional.groups.length, 1, 'with the condition added' );
+
+	// Each row remembers its own tab, rather than sharing one.
+	assert.equal( activeTab( 0 ), 'General', 'the other row is untouched' );
+} );
