@@ -72,7 +72,7 @@ final class Bricks extends Module {
 				$tags[] = array(
 					'name'  => '{' . self::PREFIX . $field['name'] . '}',
 					'label' => (string) ( $field['label'] ?? $field['name'] ),
-					'group' => '' !== $group->title ? $group->title : __( 'Custom Meta Box', 'manpreetdev-custom-fields-meta-boxes' ),
+					'group' => '' !== $group->title ? $group->title : __( 'Manpreetdev Custom Fields', 'manpreetdev-custom-fields-meta-boxes' ),
 				);
 			}
 		}

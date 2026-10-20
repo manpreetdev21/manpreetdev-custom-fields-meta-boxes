@@ -343,7 +343,7 @@ final class SettingsPage extends Module {
 
 		?>
 		<div class="wrap wpcmb-wrap">
-			<h1><?php esc_html_e( 'Custom Meta Box Settings', 'manpreetdev-custom-fields-meta-boxes' ); ?></h1>
+			<h1><?php esc_html_e( 'Manpreetdev Custom Fields Settings', 'manpreetdev-custom-fields-meta-boxes' ); ?></h1>
 			<p class="wpcmb-lede"><?php esc_html_e( 'How the plugin looks while you work, and what it leaves behind when it goes.', 'manpreetdev-custom-fields-meta-boxes' ); ?></p>
 			<form action="options.php" method="post" class="wpcmb-settings-form">
 				<?php

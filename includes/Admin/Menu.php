@@ -152,7 +152,7 @@ final class Menu extends Module {
 		$capability = FieldGroupPostType::capability();
 
 		add_menu_page(
-			__( 'Custom Meta Box', 'manpreetdev-custom-fields-meta-boxes' ),
+			__( 'Manpreetdev Custom Fields', 'manpreetdev-custom-fields-meta-boxes' ),
 			__( 'Meta Boxes', 'manpreetdev-custom-fields-meta-boxes' ),
 			$capability,
 			self::SLUG,
@@ -224,7 +224,7 @@ final class Menu extends Module {
 		$inactive = count( $all ) - count( $active );
 		?>
 		<div class="wrap wpcmb-wrap">
-			<h1><?php esc_html_e( 'Custom Meta Box', 'manpreetdev-custom-fields-meta-boxes' ); ?></h1>
+			<h1><?php esc_html_e( 'Manpreetdev Custom Fields', 'manpreetdev-custom-fields-meta-boxes' ); ?></h1>
 
 			<?php if ( array() === $all ) : ?>
 				<div class="wpcmb-empty wpcmb-empty--page">

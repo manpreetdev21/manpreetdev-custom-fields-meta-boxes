@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace WPCMB\Frontend;
 
 use WPCMB\Abstracts\Module;
+use WPCMB\Fields\Conditional;
 use WPCMB\Fields\Context;
 use WPCMB\Fields\FieldGroup;
 use WPCMB\Fields\ObjectRef;
@@ -139,6 +140,11 @@ final class Submission extends Module {
 		$submitted = $this->submitted_values();
 		$fields    = $this->fields( $group );
 		$present   = array_intersect_key( $submitted, $fields );
+
+		// A field hidden by conditional logic was never on the form, so a
+		// value posted for it was added to the request. On a public form that
+		// is a visitor writing to a field the site never offered them.
+		$present = Conditional::visible_values( $fields, $present );
 
 		// Validate what was typed, before sanitizing discards anything it
 		// cannot make safe. Same order as the admin save path, for the same

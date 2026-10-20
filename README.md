@@ -2,7 +2,7 @@
 
 Field groups, meta boxes and a developer-friendly field API for WordPress.
 
-- **Version:** 1.17.0
+- **Version:** 1.17.1
 - **Author:** Manpreet Singh
 - **Requires PHP:** 8.1
 - **Requires WordPress:** 6.8
@@ -1308,6 +1308,35 @@ Repeater and multi-value answers are flattened rather than dropped — values
 within a row joined with a pipe, rows with a semicolon. A repeater holds answers
 somebody typed, and a spreadsheet missing them is the wrong answer to "a
 repeater does not fit in a cell".
+
+### What never leaves the site
+
+A **password** field is excluded from REST. `register_meta()` with `show_in_rest`
+puts a value in the post response and a published post is readable by anybody,
+so the one field type whose purpose is to hold a secret would otherwise be
+handed to anonymous visitors in plain text — by default, because groups are
+exposed unless the author turns it off. It still renders, still saves from the
+edit screen, and `wpcmb_get_field()` still returns it to a template; it just
+does not leave on its own. `Schema::is_exposable()` is the single gate both
+REST paths use, core's registered meta and this plugin's own `/values` route.
+
+### Values a form never asked for
+
+A value posted for a field **conditional logic was hiding** is dropped rather
+than stored. The browser disables hidden inputs, so an honest submission never
+carries them, but a disabled attribute is advice to a browser and not a rule
+about what may arrive. Without this, anybody could write to a field a form had
+never offered them.
+
+Both save paths — the edit screen and the front-end form — hand their
+submission through `Conditional::visible_values()` before validating and
+writing, so the decision is made once and the two cannot disagree. Repeaters
+and flexible content apply it **per row**, because a row answering "A" hides a
+sub field that a row answering "B" still shows.
+
+A visible field can still be cleared, and a field that becomes hidden again
+keeps whatever it held: the value is not the submission's to change once the
+field is no longer on the form.
 
 ### The formula guard
 

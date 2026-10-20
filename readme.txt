@@ -4,7 +4,7 @@ Tags: custom fields, meta box, repeater, options page, custom post type
 Requires at least: 6.8
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.17.0
+Stable tag: 1.17.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -95,6 +95,13 @@ Yes. Every string is translatable under the `manpreetdev-custom-fields-meta-boxe
 5. The field group list, with each group's key, field count and location.
 
 == Changelog ==
+
+= 1.17.1 =
+* Security: a password field's value is no longer exposed over the REST API. `register_meta()` with `show_in_rest` puts a value in the post response, a published post's response is readable by anybody, and groups are exposed unless the author turns it off — so the one field type whose purpose is to hold a secret was being handed to anonymous visitors in plain text. It still renders, still saves, and is still readable in a template with `wpcmb_get_field()`; it no longer leaves the site on its own.
+* Security: a value posted for a field that conditional logic was hiding is no longer stored. The browser disables hidden inputs, so an honest submission never carries them, but that is advice to a browser rather than a rule about what may arrive — anybody could write to a field a form had never offered them, which on a public form means a visitor filling in something the site only reveals to certain answers. Both save paths, the edit screen and the front-end form, now drop them.
+* The same guard applies inside repeaters and flexible content, judged per row: a row answering "A" hides a sub field that a row answering "B" still shows, so the decision is made for each row against its own answers.
+* A field that is visible can still be cleared, and a field hidden again keeps the value it had rather than being wiped.
+* The admin stopped introducing itself by the name the plugin had two renames ago. The menu page title, the Overview and Settings headings, the dashboard widget, the block category and the Elementor and Bricks labels all said "Custom Meta Box"; they now say "Manpreetdev Custom Fields".
 
 = 1.17.0 =
 * New: local JSON. Every field group you save also writes `wpcmb-json/{key}.json` in your theme, so the fields a template reads live in version control beside the template that reads them.

@@ -60,6 +60,58 @@ final class Conditional {
 	}
 
 	/**
+	 * Keep only the submitted values whose field was actually on the form.
+	 *
+	 * A field hidden by conditional logic was never shown, so a value posted
+	 * for it did not come from the form — it was added to the request. The
+	 * browser disables hidden inputs, which stops an honest submission from
+	 * carrying them, but a disabled attribute is advice to a browser and not a
+	 * rule about what may arrive. Without this, anybody could store values in
+	 * fields a form never offered them: on a public form that means a visitor
+	 * writing to a field the site only reveals to some answers.
+	 *
+	 * Both save paths hand their submission through here before validating and
+	 * writing, so the decision is made once and the front-end form and the
+	 * edit screen cannot disagree about it.
+	 *
+	 * @param array<string, array<string, mixed>> $fields Field definitions, keyed by name.
+	 * @param array<string, mixed>                $values Submitted values, keyed by name.
+	 *
+	 * @return array<string, mixed> The values whose field is visible.
+	 */
+	public static function visible_values( array $fields, array $values ): array {
+		/*
+		 * Rules reference a field by key while values arrive by name, so the
+		 * lookup bridges the two — against the submission being judged, which
+		 * is what makes "show this when that other answer is X" resolve to
+		 * what the person actually answered.
+		 */
+		$lookup = static function ( string $key ) use ( $fields, $values ) {
+			foreach ( $fields as $name => $field ) {
+				if ( ( $field['key'] ?? '' ) === $key ) {
+					return $values[ $name ] ?? null;
+				}
+			}
+
+			return null;
+		};
+
+		$visible = array();
+
+		foreach ( $values as $name => $value ) {
+			$field = $fields[ $name ] ?? null;
+
+			// A value with no field behind it is somebody else's business; the
+			// callers have already narrowed to fields that apply here.
+			if ( ! is_array( $field ) || self::is_visible( $field, $lookup ) ) {
+				$visible[ $name ] = $value;
+			}
+		}
+
+		return $visible;
+	}
+
+	/**
 	 * Read conditional logic as an OR list of AND groups.
 	 *
 	 * Converting here rather than only in the sanitizer, because a stored

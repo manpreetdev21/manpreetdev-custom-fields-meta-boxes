@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace WPCMB\FieldTypes;
 
 use WPCMB\Abstracts\FieldType;
+use WPCMB\Fields\Conditional;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -324,7 +325,16 @@ class Repeater extends FieldType {
 				break;
 			}
 
-			$row  = is_array( $row ) ? $row : array();
+			$row = is_array( $row ) ? $row : array();
+
+			/*
+			 * A sub field hidden by conditional logic was not on the form for
+			 * this row, so a value posted for it was added to the request.
+			 * Judged per row, because each row answers the conditions for
+			 * itself — row one picking "A" hides a field that row two picking
+			 * "B" still shows.
+			 */
+			$row  = Conditional::visible_values( self::keyed( $sub_fields ), $row );
 			$next = array();
 
 			foreach ( $sub_fields as $sub ) {
@@ -447,6 +457,25 @@ class Repeater extends FieldType {
 	 */
 	public function sub_fields( array $field ): array {
 		return is_array( $field['sub_fields'] ?? null ) ? array_values( $field['sub_fields'] ) : array();
+	}
+
+	/**
+	 * Sub fields keyed by name, as the conditional guard wants them.
+	 *
+	 * @param array<int, mixed> $sub_fields Sub field definitions.
+	 *
+	 * @return array<string, array<string, mixed>>
+	 */
+	protected static function keyed( array $sub_fields ): array {
+		$keyed = array();
+
+		foreach ( $sub_fields as $sub ) {
+			if ( is_array( $sub ) && '' !== (string) ( $sub['name'] ?? '' ) ) {
+				$keyed[ (string) $sub['name'] ] = $sub;
+			}
+		}
+
+		return $keyed;
 	}
 
 	/**

@@ -60,7 +60,7 @@ final class Elementor extends Module {
 		if ( method_exists( $tags, 'register_group' ) ) {
 			$tags->register_group(
 				self::GROUP,
-				array( 'title' => __( 'Custom Meta Box', 'manpreetdev-custom-fields-meta-boxes' ) )
+				array( 'title' => __( 'Manpreetdev Custom Fields', 'manpreetdev-custom-fields-meta-boxes' ) )
 			);
 		}
 

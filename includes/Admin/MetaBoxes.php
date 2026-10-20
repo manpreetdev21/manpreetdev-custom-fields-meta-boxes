@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace WPCMB\Admin;
 
 use WPCMB\Abstracts\Module;
+use WPCMB\Fields\Conditional;
 use WPCMB\Fields\Context;
 use WPCMB\Fields\FieldGroup;
 use WPCMB\Fields\ObjectRef;
@@ -453,6 +454,10 @@ final class MetaBoxes extends Module {
 
 			$present[ $name ] = $submitted[ $name ];
 		}
+
+		// A field hidden by conditional logic was not on the form, so a value
+		// posted for it was added to the request rather than typed into it.
+		$present = Conditional::visible_values( $fields, $present );
 
 		// Validate what was actually typed, before sanitizing. A sanitizer
 		// discards what it cannot make safe, so validating afterwards would

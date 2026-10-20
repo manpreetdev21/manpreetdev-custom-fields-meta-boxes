@@ -1787,6 +1787,91 @@ wpcmb_group(
 		wpcmb_is( null === WPCMB\Database\Portability::normalise( array( 'format' => 'other-plugin' ) ), "another plugin's export is refused" );
 	}
 );
+wpcmb_group(
+	'a value posted for a conditionally hidden field is not stored',
+	function (): void {
+		/*
+		 * Found by posting to a real form with the hidden input re-enabled.
+		 * The browser disables a hidden field's inputs, so an honest
+		 * submission never carries them — but that is advice to a browser,
+		 * not a rule about what may arrive, and the value was being stored in
+		 * a field the form had never offered.
+		 */
+		$group = wpcmb_group_fixture(
+			array(
+				'key'      => 'group_ihidden',
+				'title'    => 'Integration hidden',
+				'fields'   => array(
+					array( 'key' => 'field_ipick000001', 'name' => 'ipick', 'label' => 'Pick', 'type' => 'select', 'settings' => array( 'choices' => "a : A\nb : B" ) ),
+					array(
+						'key'         => 'field_ionlyb00001',
+						'name'        => 'ionly_b',
+						'label'       => 'Only for B',
+						'type'        => 'text',
+						'conditional' => array(
+							'action' => 'show',
+							'groups' => array( array( array( 'field' => 'field_ipick000001', 'operator' => '==', 'value' => 'b' ) ) ),
+						),
+					),
+				),
+				'location' => array( array( array( 'param' => 'post_type', 'operator' => '==', 'value' => 'page' ) ) ),
+			)
+		);
+
+		$page = wpcmb_post_fixture( 'page', 'Integration hidden field' );
+
+		/**
+		 * Save through the admin path, as an edit screen posts it.
+		 *
+		 * @param array<string, mixed> $values Field values.
+		 */
+		$save = static function ( array $values ) use ( $page ): void {
+			$_POST = array(
+				'wpcmb_values_nonce'   => wp_create_nonce( 'wpcmb_save_values' ),
+				'wpcmb_values'         => $values,
+				'post_ID'              => $page,
+				'post_status'          => 'publish',
+				'original_post_status' => 'publish',
+			);
+
+			$_REQUEST = $_POST;
+
+			wp_update_post( array( 'ID' => $page, 'post_title' => 'Integration hidden field' ) );
+
+			$_POST    = array();
+			$_REQUEST = array();
+		};
+
+		/* The condition is not met, so the second field was never on the form. */
+		$save( array( 'ipick' => 'a', 'ionly_b' => 'smuggled' ) );
+
+		wpcmb_is( 'a' === wpcmb_get_field( 'ipick', $page, false ), 'the visible field is stored' );
+		wpcmb_is( '' === (string) wpcmb_get_field( 'ionly_b', $page, false ), 'and the hidden one is not, got: ' . var_export( wpcmb_get_field( 'ionly_b', $page, false ), true ) );
+
+		/* Met in the same request: the field was on the form, so it is stored. */
+		$save( array( 'ipick' => 'b', 'ionly_b' => 'a real answer' ) );
+
+		wpcmb_is( 'a real answer' === wpcmb_get_field( 'ionly_b', $page, false ), 'a visible field is stored as normal' );
+
+		/*
+		 * And it can be cleared while still visible. A guard that dropped
+		 * empty values would make a conditional field impossible to empty.
+		 */
+		$save( array( 'ipick' => 'b', 'ionly_b' => '' ) );
+
+		wpcmb_is( '' === (string) wpcmb_get_field( 'ionly_b', $page, false ), 'a visible field can be emptied' );
+
+		/*
+		 * Switching the answer away hides the field again. Whatever it held
+		 * stays put rather than being wiped: the value is not the submission's
+		 * to change once the field is no longer on the form.
+		 */
+		$save( array( 'ipick' => 'b', 'ionly_b' => 'kept' ) );
+		$save( array( 'ipick' => 'a', 'ionly_b' => 'overwritten' ) );
+
+		wpcmb_is( 'kept' === wpcmb_get_field( 'ionly_b', $page, false ), 'a field hidden again keeps what it had' );
+	}
+);
 /* -------------------------------------------------------------------------
  * Clean up everything this run created.
  * ---------------------------------------------------------------------- */

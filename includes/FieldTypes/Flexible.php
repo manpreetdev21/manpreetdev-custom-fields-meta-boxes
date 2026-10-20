@@ -9,6 +9,8 @@ declare( strict_types=1 );
 
 namespace WPCMB\FieldTypes;
 
+use WPCMB\Fields\Conditional;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -291,6 +293,9 @@ final class Flexible extends Repeater {
 				continue;
 			}
 
+			// Hidden sub fields are dropped per row, against this row's own
+			// answers and this layout's own fields. See Repeater::sanitize().
+			$row  = Conditional::visible_values( self::keyed( $layout['sub_fields'] ), $row );
 			$next = array( self::LAYOUT_KEY => $name );
 
 			foreach ( $layout['sub_fields'] as $sub ) {

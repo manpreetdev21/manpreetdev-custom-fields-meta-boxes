@@ -336,7 +336,7 @@ final class BlockRegistry extends Module {
 
 		$categories[] = array(
 			'slug'  => self::CATEGORY,
-			'title' => __( 'Custom Meta Box', 'manpreetdev-custom-fields-meta-boxes' ),
+			'title' => __( 'Manpreetdev Custom Fields', 'manpreetdev-custom-fields-meta-boxes' ),
 			'icon'  => null,
 		);
 

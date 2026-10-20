@@ -405,3 +405,58 @@ assert( 'Rejected.' === $validator->validate_field( $field( array() ), 'nope' ),
 assert( '' === $validator->validate_field( $field( array() ), 'fine' ), 'a custom PHP rule leaves other values alone' );
 
 echo "api-check: OK\n";
+
+/* -------------------------------------------------------------------------
+ * A value posted for a field conditional logic was hiding.
+ *
+ * The browser disables hidden inputs, so an honest submission never carries
+ * them — but a disabled attribute is advice to a browser, not a rule about
+ * what may arrive. Found by posting to a real form with the hidden input
+ * re-enabled: the value was stored in a field the form never offered.
+ * ---------------------------------------------------------------------- */
+
+$cond_fields = array(
+	'colour' => array( 'key' => 'field_colour000001', 'name' => 'colour', 'type' => 'select' ),
+	'why'    => array(
+		'key'         => 'field_why00000001',
+		'name'        => 'why',
+		'type'        => 'text',
+		'conditional' => array(
+			'action' => 'show',
+			'groups' => array( array( array( 'field' => 'field_colour000001', 'operator' => '==', 'value' => 'other' ) ) ),
+		),
+	),
+);
+
+// The condition is not met, so "why" was never on the form.
+$posted = Conditional::visible_values( $cond_fields, array( 'colour' => 'red', 'why' => 'smuggled' ) );
+
+assert( array( 'colour' => 'red' ) === $posted, 'a value for a hidden field is dropped, got: ' . wp_json_encode( $posted ) );
+
+// The condition is met, so the field was on the form and its value stands.
+$posted = Conditional::visible_values( $cond_fields, array( 'colour' => 'other', 'why' => 'because' ) );
+
+assert(
+	array( 'colour' => 'other', 'why' => 'because' ) === $posted,
+	'a value for a visible field is kept, got: ' . wp_json_encode( $posted )
+);
+
+// The decision is made against the submission, not against what is stored:
+// answering "other" and filling the field in the same request has to work.
+$posted = Conditional::visible_values( $cond_fields, array( 'colour' => 'other', 'why' => '' ) );
+
+assert( array_key_exists( 'why', $posted ), 'an emptied visible field is still written, so it can be cleared' );
+
+// A field with no conditional logic is never dropped.
+$posted = Conditional::visible_values( array( 'plain' => array( 'key' => 'field_plain00001', 'name' => 'plain', 'type' => 'text' ) ), array( 'plain' => 'kept' ) );
+
+assert( array( 'plain' => 'kept' ) === $posted, 'a field with no logic is always kept' );
+
+// And a value with no field behind it is left alone: the callers have already
+// narrowed to the fields that apply, so this is not the place to second-guess.
+$posted = Conditional::visible_values( array(), array( 'unknown' => 'x' ) );
+
+assert( array( 'unknown' => 'x' ) === $posted, 'a value with no field definition is not this function to judge' );
+
+echo "api-check: OK
+";

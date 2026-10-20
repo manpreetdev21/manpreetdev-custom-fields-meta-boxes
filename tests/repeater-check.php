@@ -172,3 +172,39 @@ $empty_definition = wpcmb_repeater( array() );
 assert( array( array() ) === $repeater->sanitize( array( array( 'anything' => 'x' ) ), $empty_definition ), 'a repeater with no sub fields stores nothing per row' );
 
 echo "repeater-check: OK\n";
+
+/* -------------------------------------------------------------------------
+ * A sub field hidden by conditional logic, in a row that posted a value for
+ * it anyway.
+ *
+ * Judged per row: row one answering "a" hides a field that row two answering
+ * "b" still shows, so the decision cannot be made once for the whole field.
+ * ---------------------------------------------------------------------- */
+
+$conditional_subs = array(
+	array( 'key' => 'field_rpick000001', 'name' => 'rpick', 'type' => 'text' ),
+	array(
+		'key'         => 'field_ronlyb00001',
+		'name'        => 'ronly_b',
+		'type'        => 'text',
+		'conditional' => array(
+			'action' => 'show',
+			'groups' => array( array( array( 'field' => 'field_rpick000001', 'operator' => '==', 'value' => 'b' ) ) ),
+		),
+	),
+);
+
+$mixed_rows = $repeater->sanitize(
+	array(
+		array( 'rpick' => 'a', 'ronly_b' => 'smuggled' ),
+		array( 'rpick' => 'b', 'ronly_b' => 'legitimate' ),
+	),
+	wpcmb_repeater( $conditional_subs )
+);
+
+assert( '' === $mixed_rows[0]['ronly_b'], 'a hidden sub field drops the value posted for it' );
+assert( 'legitimate' === $mixed_rows[1]['ronly_b'], 'while the row that shows it keeps its own value' );
+assert( 'a' === $mixed_rows[0]['rpick'] && 'b' === $mixed_rows[1]['rpick'], 'and the field the condition reads is untouched' );
+
+// Every row keeps the same shape, so a template can index into it either way.
+assert( array_keys( $mixed_rows[0] ) === array_keys( $mixed_rows[1] ), 'both rows still have the same keys' );

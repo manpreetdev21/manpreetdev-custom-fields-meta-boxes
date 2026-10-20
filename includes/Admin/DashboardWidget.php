@@ -48,7 +48,7 @@ final class DashboardWidget extends Module {
 
 		wp_add_dashboard_widget(
 			'wpcmb_dashboard',
-			__( 'Custom Meta Box', 'manpreetdev-custom-fields-meta-boxes' ),
+			__( 'Manpreetdev Custom Fields', 'manpreetdev-custom-fields-meta-boxes' ),
 			array( $this, 'render' )
 		);
 	}

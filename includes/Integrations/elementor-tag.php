@@ -42,7 +42,7 @@ class ElementorTag extends \Elementor\Core\DynamicTags\Tag {
 	 * Tag title, as shown in the picker.
 	 */
 	public function get_title(): string {
-		return __( 'Custom Meta Box Field', 'manpreetdev-custom-fields-meta-boxes' );
+		return __( 'Manpreetdev Custom Field', 'manpreetdev-custom-fields-meta-boxes' );
 	}
 
 	/**

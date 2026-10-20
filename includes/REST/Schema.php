@@ -73,10 +73,26 @@ final class Schema {
 	 * Structural fields hold nothing, so exposing them would advertise
 	 * properties that can never be read or written.
 	 *
+	 * A password field is left out for a different reason. `register_meta()`
+	 * with `show_in_rest` puts a value in the post response, and a published
+	 * post's response is readable by anybody — so a field whose entire purpose
+	 * is to hold something secret would have been handed to anonymous visitors
+	 * in plain text, by default, because groups are exposed unless the author
+	 * turns it off. Nothing else about the field changes: it still renders,
+	 * still saves from the edit screen, and is still readable in a template
+	 * with `wpcmb_get_field()`. It simply does not leave the site on its own.
+	 *
+	 * This is the single gate both REST paths use — core's registered meta and
+	 * this plugin's own `/values` route — so excluding it here is enough.
+	 *
 	 * @param array<string, mixed> $field Field definition.
 	 */
 	public static function is_exposable( array $field ): bool {
-		return ! in_array( (string) ( $field['type'] ?? '' ), array( 'message', 'tab', 'accordion' ), true );
+		return ! in_array(
+			(string) ( $field['type'] ?? '' ),
+			array( 'message', 'tab', 'accordion', 'password' ),
+			true
+		);
 	}
 
 	/**

@@ -96,6 +96,22 @@ foreach ( array( 'text', 'repeater', 'group', 'flexible_content' ) as $type ) {
 	assert( Schema::is_exposable( wpcmb_rest_field( $type ) ), "{$type} must be exposed" );
 }
 
+/*
+ * And neither is a password, for a different reason: register_meta() with
+ * show_in_rest puts the value in the post response, a published post's
+ * response is readable by anybody, and groups are exposed unless the author
+ * turns it off — so the one field type whose purpose is to hold a secret was
+ * being handed to anonymous visitors in plain text.
+ *
+ * This is the gate both REST paths share, core's registered meta and this
+ * plugin's own /values route, so it is the only place the exclusion is needed.
+ */
+assert( ! Schema::is_exposable( wpcmb_rest_field( 'password' ) ), 'a password must never be exposed over REST' );
+
+// Still a real field everywhere else: it renders, it saves, and a template can
+// read it. Only leaving the site on its own is refused.
+assert( Schema::is_exposable( wpcmb_rest_field( 'hidden' ) ), 'a hidden field is still exposed, being hidden only in the browser' );
+
 /* -------------------------------------------------------------------------
  * Composite types describe their contents.
  * ---------------------------------------------------------------------- */
