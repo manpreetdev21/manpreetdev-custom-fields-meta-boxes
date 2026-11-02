@@ -171,7 +171,6 @@ assert( array() === $repeater->format( '', $simple ), 'an unset repeater formats
 $empty_definition = wpcmb_repeater( array() );
 assert( array( array() ) === $repeater->sanitize( array( array( 'anything' => 'x' ) ), $empty_definition ), 'a repeater with no sub fields stores nothing per row' );
 
-echo "repeater-check: OK\n";
 
 /* -------------------------------------------------------------------------
  * A sub field hidden by conditional logic, in a row that posted a value for
@@ -208,3 +207,48 @@ assert( 'a' === $mixed_rows[0]['rpick'] && 'b' === $mixed_rows[1]['rpick'], 'and
 
 // Every row keeps the same shape, so a template can index into it either way.
 assert( array_keys( $mixed_rows[0] ) === array_keys( $mixed_rows[1] ), 'both rows still have the same keys' );
+
+/* -------------------------------------------------------------------------
+ * The table layout.
+ *
+ * The Layout setting has offered "Table" since the repeater existed and only
+ * ever changed a class, which no stylesheet matched — so a repeater set to
+ * Table drew the same stacked rows as Block. The markup now carries what a
+ * shared-column layout needs: a heading row, and the column count.
+ * ---------------------------------------------------------------------- */
+
+$table_subs = array(
+	array( 'key' => 'field_treat00001', 'name' => 'treatment', 'label' => 'Treatment', 'type' => 'text', 'required' => true ),
+	array( 'key' => 'field_fee0000001', 'name' => 'fee', 'label' => 'Fee', 'type' => 'text' ),
+	// Structural: holds nothing, so it gets no column of its own.
+	array( 'key' => 'field_rsep000001', 'name' => 'rsep', 'label' => 'Divider', 'type' => 'separator' ),
+);
+
+ob_start();
+$repeater->render( wpcmb_repeater( $table_subs, array( 'layout' => 'table' ) ), array( array( 'treatment' => 'Check-up', 'fee' => '45' ) ), 'wpcmb_values[fees]', 'wpcmb-fees' );
+$table_html = (string) ob_get_clean();
+
+assert( str_contains( $table_html, 'wpcmb-repeater--table' ), 'the layout reaches the wrapper' );
+assert( str_contains( $table_html, '--wpcmb-repeater-columns:2' ), 'the column count is published for the stylesheet, structural sub fields excluded' );
+assert( str_contains( $table_html, 'wpcmb-repeater__columns' ), 'a heading row is drawn' );
+assert( str_contains( $table_html, '>Treatment<' ), 'with each column named' );
+assert( str_contains( $table_html, '>Fee<' ), 'for every column' );
+assert( ! str_contains( $table_html, '>Divider<' ), 'and nothing for a sub field that holds no value' );
+assert( str_contains( $table_html, 'wpcmb-repeater__column--gutter' ), 'plus a trailing cell for the row actions' );
+
+// A required column says so once, at the top, rather than in every row.
+assert(
+	1 === substr_count( $table_html, 'wpcmb-repeater__column">Treatment<span class="wpcmb-field__required">' ),
+	'a required column is marked in the heading'
+);
+
+// Block layout is unchanged: no heading row, no column count.
+ob_start();
+$repeater->render( wpcmb_repeater( $table_subs, array( 'layout' => 'block' ) ), array(), 'wpcmb_values[fees]', 'wpcmb-fees' );
+$block_html = (string) ob_get_clean();
+
+assert( str_contains( $block_html, 'wpcmb-repeater--block' ), 'block layout still says so' );
+assert( ! str_contains( $block_html, 'wpcmb-repeater__columns' ), 'and draws no heading row' );
+assert( ! str_contains( $block_html, '--wpcmb-repeater-columns' ), 'nor a column count it has no use for' );
+
+echo "repeater-check: OK\n";

@@ -4,7 +4,7 @@ Tags: custom fields, meta box, repeater, options page, custom post type
 Requires at least: 6.8
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.17.5
+Stable tag: 1.17.6
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -95,6 +95,13 @@ Yes. Every string is translatable under the `manpreetdev-custom-fields-meta-boxe
 5. The field group list, with each group's key, field count and location.
 
 == Changelog ==
+
+= 1.17.6 =
+* Fixed: a repeater set to the "Table" layout drew the same stacked rows as "Block". The setting has been offered since the repeater existed and only ever changed a class on the wrapper, which no stylesheet matched — so choosing it did nothing at all.
+* Table layout now does what it says: one heading row naming each column, every row laid out across shared columns that line up, per-row labels dropped (the heading names them, and the control keeps its accessible name), and the row controls moved to the end where a table keeps its actions.
+* Sub fields that hold no value — a separator, a message, a tab — get no column, since an empty stripe down the table is not a column. A required column is marked once in the heading rather than in every row.
+* Below 782px the table falls back to the stacked layout, labels and all: a table squeezed onto a phone reads worse than the rows it replaced.
+
 
 = 1.17.5 =
 * Local JSON no longer writes into the active theme. Uploads is the one directory a plugin may write to; a theme is replaced when it updates, taking the files with it, and a plugin has no business writing into a directory it does not own. Files now go to `wp-content/uploads/manpreetdev-custom-fields-meta-boxes/`, resolved at runtime rather than hard-coded, and the folder turns away direct requests.

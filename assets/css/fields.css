@@ -1802,3 +1802,125 @@ input.wpcmb-input[type="datetime-local"] {
 .wpcmb-menu-settings__fallback {
 	color: var( --wpcmb-muted );
 }
+
+/*
+ * The table layout.
+ *
+ * The Layout setting has offered "Table" since the repeater existed and only
+ * ever changed this class, which nothing styled — so a repeater set to Table
+ * drew the same stacked rows as Block. The columns are shared across rows, so
+ * every row lays its sub fields out on one grid: the heading row and each
+ * row's fields use the same template, and the count comes from the field, as
+ * --wpcmb-repeater-columns.
+ */
+.wpcmb-repeater--table {
+	/* Wide enough for the handle and the four row buttons on one line, and
+	   the same on the heading row so the columns line up with the cells. */
+	--wpcmb-repeater-actions: 10.5rem;
+}
+
+.wpcmb-repeater--table .wpcmb-repeater__columns,
+.wpcmb-repeater--table .wpcmb-repeater__row {
+	align-items: stretch;
+	display: grid;
+	gap: var( --wpcmb-field-gap );
+	grid-template-columns: repeat( var( --wpcmb-repeater-columns, 1 ), minmax( 0, 1fr ) ) var( --wpcmb-repeater-actions );
+}
+
+.wpcmb-repeater--table .wpcmb-repeater__columns {
+	color: var( --wpcmb-muted );
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	/* 1px, matching the row border below, so a heading sits over its column. */
+	padding: 0 1px 6px;
+	text-transform: uppercase;
+}
+
+/*
+ * The row header moves to the end, where a table keeps its row actions, and
+ * stays one horizontal line so a row is only as tall as its controls.
+ */
+.wpcmb-repeater--table .wpcmb-repeater__header {
+	background: none;
+	order: 1;
+	padding: 8px 10px;
+}
+
+.wpcmb-repeater--table .wpcmb-repeater__fields {
+	display: contents;
+}
+
+/*
+ * Each sub field is a cell. The label is already a column heading, so showing
+ * it again in every row is the thing this layout exists to avoid — but it
+ * stays in the accessibility tree, because a control still needs its name.
+ */
+.wpcmb-repeater--table .wpcmb-repeater__fields > .wpcmb-field {
+	flex: none;
+	max-width: none;
+	padding: 10px 0;
+	width: auto;
+}
+
+.wpcmb-repeater--table .wpcmb-repeater__fields > .wpcmb-field:last-child {
+	padding-inline-end: 14px;
+}
+
+.wpcmb-repeater--table .wpcmb-repeater__fields > .wpcmb-field > .wpcmb-field__label {
+	clip: rect( 1px, 1px, 1px, 1px );
+	height: 1px;
+	overflow: hidden;
+	position: absolute;
+	width: 1px;
+}
+
+/* Shown always, not only on hover: a table row has no title to hover over. */
+.wpcmb-repeater--table .wpcmb-repeater__buttons {
+	flex-wrap: nowrap;
+	opacity: 1;
+}
+
+.wpcmb-repeater--table .wpcmb-repeater__title,
+.wpcmb-repeater--table .wpcmb-repeater__preview,
+.wpcmb-repeater--table .wpcmb-repeater__toggle {
+	display: none;
+}
+
+/*
+ * Narrow screens cannot hold the columns. Below that the layout falls back to
+ * the stacked one, labels and all, because a table squeezed into a phone is
+ * less readable than the rows it replaced.
+ */
+@media screen and ( max-width: 782px ) {
+	.wpcmb-repeater--table .wpcmb-repeater__columns {
+		display: none;
+	}
+
+	.wpcmb-repeater--table .wpcmb-repeater__row {
+		display: block;
+	}
+
+	.wpcmb-repeater--table .wpcmb-repeater__header {
+		background: var( --wpcmb-sunken );
+		order: 0;
+		padding: 7px 10px;
+	}
+
+	.wpcmb-repeater--table .wpcmb-repeater__fields {
+		display: flex;
+	}
+
+	.wpcmb-repeater--table .wpcmb-repeater__fields > .wpcmb-field > .wpcmb-field__label {
+		clip: auto;
+		height: auto;
+		overflow: visible;
+		position: static;
+		width: auto;
+	}
+
+	.wpcmb-repeater--table .wpcmb-repeater__title,
+	.wpcmb-repeater--table .wpcmb-repeater__toggle {
+		display: block;
+	}
+}

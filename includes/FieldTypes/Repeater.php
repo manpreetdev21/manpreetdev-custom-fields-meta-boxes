@@ -122,11 +122,27 @@ class Repeater extends FieldType {
 			)
 		);
 
+		$layout = (string) $this->setting( $field, 'layout', 'block' );
+
+		/*
+		 * The table layout lays every row's sub fields out in shared columns,
+		 * so the stylesheet has to know how many there are. Carried as a
+		 * custom property rather than a class, because the count is data.
+		 */
+		$columns = 'table' === $layout
+			? sprintf( ' style="--wpcmb-repeater-columns:%d"', max( 1, count( $this->columns( $sub_fields ) ) ) )
+			: '';
+
 		printf(
-			'<div class="wpcmb-repeater wpcmb-repeater--%s" %s>',
-			esc_attr( (string) $this->setting( $field, 'layout', 'block' ) ),
+			'<div class="wpcmb-repeater wpcmb-repeater--%s"%s %s>',
+			esc_attr( $layout ),
+			$columns, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- An integer formatted with %d above.
 			$attributes // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- attributes() escapes every name and value.
 		);
+
+		if ( 'table' === $layout ) {
+			$this->render_columns( $sub_fields );
+		}
 
 		echo '<div class="wpcmb-repeater__rows">';
 
@@ -457,6 +473,53 @@ class Repeater extends FieldType {
 	 */
 	public function sub_fields( array $field ): array {
 		return is_array( $field['sub_fields'] ?? null ) ? array_values( $field['sub_fields'] ) : array();
+	}
+
+	/**
+	 * The sub fields a table layout gives a column of their own.
+	 *
+	 * Structural sub fields hold no value and draw no control, so a column for
+	 * one would be an empty stripe down the table.
+	 *
+	 * @param array<int, mixed> $sub_fields Sub field definitions.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function columns( array $sub_fields ): array {
+		$columns = array();
+
+		foreach ( $sub_fields as $sub ) {
+			if ( is_array( $sub ) && ! in_array( (string) ( $sub['type'] ?? '' ), array( 'tab', 'accordion', 'separator', 'message' ), true ) ) {
+				$columns[] = $sub;
+			}
+		}
+
+		return $columns;
+	}
+
+	/**
+	 * The heading row of a table layout.
+	 *
+	 * The labels move up here once, instead of repeating above every control
+	 * in every row, which is the whole reason to pick this layout.
+	 *
+	 * @param array<int, mixed> $sub_fields Sub field definitions.
+	 */
+	private function render_columns( array $sub_fields ): void {
+		echo '<div class="wpcmb-repeater__columns" aria-hidden="true">';
+
+		foreach ( $this->columns( $sub_fields ) as $sub ) {
+			printf(
+				'<span class="wpcmb-repeater__column">%s%s</span>',
+				esc_html( (string) ( $sub['label'] ?? $sub['name'] ?? '' ) ),
+				! empty( $sub['required'] ) ? '<span class="wpcmb-field__required">*</span>' : ''
+			);
+		}
+
+		// The trailing cell each row keeps for its handle and buttons.
+		echo '<span class="wpcmb-repeater__column wpcmb-repeater__column--gutter"></span>';
+
+		echo '</div>';
 	}
 
 	/**
