@@ -916,3 +916,19 @@ function get_post_status( int $id = 0 ) {
 function sanitize_file_name( string $name ): string {
 	return (string) preg_replace( '/[^A-Za-z0-9._-]/', '', $name );
 }
+
+$GLOBALS['wpcmb_test_uploads'] = sys_get_temp_dir() . '/wpcmb-uploads';
+
+/**
+ * Uploads directory. A plugin may write here and nowhere else by default, so
+ * the checks resolve it the same way the plugin does.
+ *
+ * @return array<string, mixed>
+ */
+function wp_upload_dir(): array {
+	return array(
+		'basedir' => (string) $GLOBALS['wpcmb_test_uploads'],
+		'baseurl' => 'https://example.test/wp-content/uploads',
+		'error'   => false,
+	);
+}

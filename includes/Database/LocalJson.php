@@ -37,9 +37,17 @@ defined( 'ABSPATH' ) || exit;
 final class LocalJson extends Module {
 
 	/**
-	 * The folder looked for inside a theme.
+	 * The folder looked for inside a theme, for reading only.
 	 */
 	private const DIRECTORY = 'wpcmb-json';
+
+	/**
+	 * The folder written to inside the uploads directory.
+	 *
+	 * The plugin slug, as the directory guidelines ask: a plugin may write in
+	 * uploads and nowhere else by default.
+	 */
+	private const UPLOAD_DIRECTORY = 'manpreetdev-custom-fields-meta-boxes';
 
 	/**
 	 * Query arg carrying a sync request.
@@ -81,14 +89,24 @@ final class LocalJson extends Module {
 		/**
 		 * Filters the directory field group files are written to.
 		 *
-		 * The directory is not created: it existing is what switches saving
-		 * on, so creating it here would switch it on for everybody.
+		 * Inside uploads, resolved at runtime, because that is the one place a
+		 * plugin may write. Earlier versions of this plugin wrote into the
+		 * active theme, copying a convention from elsewhere: a theme folder is
+		 * replaced on update, so the files were lost, and a plugin has no
+		 * business writing into somebody else's directory.
+		 *
+		 * A site that does want its field groups beside its templates filters
+		 * this to point there. That is the site's own decision about its own
+		 * files, which is a different thing from the plugin assuming it.
+		 *
+		 * The directory is not created here: it existing is what switches
+		 * saving on, so creating it would switch it on for everybody.
 		 *
 		 * @since 1.17.0
 		 *
 		 * @param string $path Absolute directory path, no trailing slash.
 		 */
-		return (string) apply_filters( 'wpcmb/json/save_path', get_stylesheet_directory() . '/' . self::DIRECTORY );
+		return (string) apply_filters( 'wpcmb/json/save_path', $this->default_save_path() );
 	}
 
 	/**
@@ -101,13 +119,17 @@ final class LocalJson extends Module {
 	 * @return array<int, string>
 	 */
 	public function load_paths(): array {
-		$paths = array( $this->save_path() );
-
-		$parent = get_template_directory() . '/' . self::DIRECTORY;
-
-		if ( ! in_array( $parent, $paths, true ) ) {
-			$paths[] = $parent;
-		}
+		/*
+		 * Reading a theme is not writing to one. A site that keeps its field
+		 * groups in version control commits them to its theme, and this still
+		 * finds them there and offers to sync them — the whole point of the
+		 * feature — without the plugin ever writing outside uploads.
+		 */
+		$paths = array(
+			$this->save_path(),
+			get_stylesheet_directory() . '/' . self::DIRECTORY,
+			get_template_directory() . '/' . self::DIRECTORY,
+		);
 
 		/**
 		 * Filters the directories field group files are read from.
@@ -154,7 +176,9 @@ final class LocalJson extends Module {
 		 */
 		$payload['modified'] = (int) get_post_modified_time( 'U', true, (int) $post_id );
 
-		$written = file_put_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- A path inside the theme the site chose; WP_Filesystem asks for credentials this has no screen to collect.
+		$this->protect( $this->save_path() );
+
+		$written = file_put_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- A directory in uploads the site opted into; WP_Filesystem asks for credentials this has no screen to collect.
 			$this->path_for( $group->key ),
 			(string) wp_json_encode( $payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . "\n"
 		);
@@ -370,6 +394,54 @@ final class LocalJson extends Module {
 		}
 
 		return $synced;
+	}
+
+	/**
+	 * Keep a written directory from being read over HTTP.
+	 *
+	 * Uploads is a public folder, and these files are the site's field
+	 * configuration: every field name, every choice, every conditional rule.
+	 * That is not a secret, but it is a map of the site and nobody asked for
+	 * it to be downloadable, so the directory turns away a direct request on
+	 * both servers that honour either file.
+	 *
+	 * Written once, when the folder first receives a file. A directory the
+	 * site filtered somewhere of its own is left alone: it is not ours to put
+	 * files in beyond the ones we were asked to write.
+	 *
+	 * @param string $directory Absolute directory path.
+	 */
+	private function protect( string $directory ): void {
+		if ( $directory !== $this->default_save_path() ) {
+			return;
+		}
+
+		$guards = array(
+			'index.php'  => "<?php\n// Silence is golden.\n",
+			'.htaccess'  => "Require all denied\n",
+			'web.config' => '<configuration><system.webServer><authorization>'
+				. "<deny users=\"*\" /></authorization></system.webServer></configuration>\n",
+		);
+
+		foreach ( $guards as $name => $contents ) {
+			$path = $directory . '/' . $name;
+
+			if ( ! file_exists( $path ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Our own directory in uploads; WP_Filesystem asks for credentials this has no screen to collect.
+				file_put_contents( $path, $contents );
+			}
+		}
+	}
+
+	/**
+	 * Where files go when nothing has filtered the path.
+	 */
+	private function default_save_path(): string {
+		$uploads = wp_upload_dir();
+
+		return is_array( $uploads ) && empty( $uploads['error'] ) && ! empty( $uploads['basedir'] )
+			? (string) $uploads['basedir'] . '/' . self::UPLOAD_DIRECTORY
+			: '';
 	}
 
 	/**

@@ -91,16 +91,27 @@ final class Submission extends Module {
 	 * @return array<string, mixed>
 	 */
 	private function process(): array {
+		/*
+		 * Every member of the form's state is a scalar the plugin put there —
+		 * a signed payload, its signature, a timestamp and that timestamp's
+		 * signature — so the array is reduced to plain strings as it is read,
+		 * and anything else a request invents becomes an empty one.
+		 *
+		 * Narrowed rather than run through sanitize_text_field(): the payload
+		 * and the signatures are base64 and hashes, and a sanitizer that
+		 * strips or re-encodes characters would break the comparison they
+		 * exist for, turning a tampering check into a formatting check.
+		 */
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- The nonce is checked below, once we know the request is ours to check.
 		$state = isset( $_POST[ Form::STATE ] ) && is_array( $_POST[ Form::STATE ] )
-			? wp_unslash( $_POST[ Form::STATE ] ) // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Each member is validated below.
+			? array_map(
+				static fn( $member ): string => is_scalar( $member ) ? (string) $member : '',
+				wp_unslash( $_POST[ Form::STATE ] ) // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Narrowed to strings by the array_map above; see the note on why a text sanitizer is the wrong tool here.
+			)
 			: array();
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
-		$config = Form::verify(
-			is_scalar( $state['payload'] ?? null ) ? (string) $state['payload'] : '',
-			is_scalar( $state['signature'] ?? null ) ? (string) $state['signature'] : ''
-		);
+		$config = Form::verify( $state['payload'] ?? '', $state['signature'] ?? '' );
 
 		if ( null === $config ) {
 			return $this->failure( '', __( 'This form could not be verified. Please reload the page.', 'manpreetdev-custom-fields-meta-boxes' ) );
@@ -226,8 +237,9 @@ final class Submission extends Module {
 			return false;
 		}
 
+		// Narrowed to strings by process() before this is reached.
 		$time      = (int) ( $state['t'] ?? 0 );
-		$signature = is_scalar( $state['ts'] ?? null ) ? (string) $state['ts'] : '';
+		$signature = (string) ( $state['ts'] ?? '' );
 
 		// The timestamp is signed, so it cannot simply be back-dated.
 		if ( ! hash_equals( wp_hash( 'wpcmb_form_time|' . $time ), $signature ) ) {

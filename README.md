@@ -1,8 +1,8 @@
-# Manpreetdev Custom Fields and Meta Boxes
+# ManpreetDev Custom Fields and Meta Boxes
 
 Field groups, meta boxes and a developer-friendly field API for WordPress.
 
-- **Version:** 1.17.4
+- **Version:** 1.17.5
 - **Author:** Manpreet Singh
 - **Requires PHP:** 8.1
 - **Requires WordPress:** 6.8
@@ -1247,13 +1247,34 @@ next import create a second group.
 Every field group you save also writes a file:
 
 ```
-wp-content/themes/your-theme/wpcmb-json/group_6a1f….json
+wp-content/uploads/manpreetdev-custom-fields-meta-boxes/group_6a1f….json
 ```
 
 **Create that directory to switch it on, remove it to switch it off.** One
-less setting, and it puts the decision where the consequence is: a theme with
-the folder gets files, a theme without one does not. The plugin never creates
-it, because writing files into somebody's repository uninvited is not a default.
+less setting, and it puts the decision where the consequence is. The plugin
+never creates it, because writing files nobody asked for is not a default.
+
+### Why uploads, and not the theme
+
+Uploads is the one directory a plugin may write to. Earlier versions wrote into
+the active theme, copying a convention from elsewhere, and that was wrong twice
+over: a theme is replaced when it updates, so the files went with it, and a
+plugin has no business writing into a directory it does not own.
+
+The directory is kept out of the web: an `index.php`, an `.htaccess` and a
+`web.config` go in beside the first file written. The JSON is not secret, but it
+is a map of every field, choice and rule on the site, and nobody asked for it to
+be downloadable.
+
+**Theme folders are still read.** A site that keeps its field groups in version
+control commits them to `wpcmb-json/` in its theme, and they are found there,
+registered, and offered for sync — reading a theme is not writing to one, and
+that is where the version-control benefit actually comes from. Both the child
+and parent theme are read, so a child theme can carry its parent's groups.
+
+A site that genuinely wants the plugin to *write* beside its templates filters
+`wpcmb/json/save_path` to point there. That is the site deciding about its own
+files, which is a different thing from the plugin assuming it.
 
 Those files are then **read back as groups registered in code**, through the
 same `wpcmb/register_field_groups` hook the PHP export writes against. So a
@@ -1283,8 +1304,8 @@ rewrite the file to make the two agree (which would put a change in your working
 tree every time you pressed the button).
 
 Filters: `wpcmb/json/save_path` (a string) and `wpcmb/json/load_paths` (an
-array — a child theme reads its parent's groups by default, earlier paths
-winning). Actions: `wpcmb/json/written`, `wpcmb/json/synced`.
+array — uploads first, then the child and parent theme, earlier paths winning).
+Actions: `wpcmb/json/written`, `wpcmb/json/synced`.
 
 **Field groups only.** The five record types — post types, taxonomies, block
 types, forms, options pages — move between installs through the export on the

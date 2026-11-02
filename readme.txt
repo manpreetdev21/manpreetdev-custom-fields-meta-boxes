@@ -1,10 +1,10 @@
-=== Manpreetdev Custom Fields and Meta Boxes ===
+=== ManpreetDev Custom Fields and Meta Boxes ===
 Contributors: manpreetdev21
 Tags: custom fields, meta box, repeater, options page, custom post type
 Requires at least: 6.8
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.17.4
+Stable tag: 1.17.5
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -95,6 +95,14 @@ Yes. Every string is translatable under the `manpreetdev-custom-fields-meta-boxe
 5. The field group list, with each group's key, field count and location.
 
 == Changelog ==
+
+= 1.17.5 =
+* Local JSON no longer writes into the active theme. Uploads is the one directory a plugin may write to; a theme is replaced when it updates, taking the files with it, and a plugin has no business writing into a directory it does not own. Files now go to `wp-content/uploads/manpreetdev-custom-fields-meta-boxes/`, resolved at runtime rather than hard-coded, and the folder turns away direct requests.
+* Theme folders are still read, which is where the point of the feature actually lies: commit `wpcmb-json/` in your theme and those groups are found, registered and offered for sync. Both the child and parent theme are read. A site that wants the plugin to write beside its templates filters `wpcmb/json/save_path`, which is the site deciding about its own files.
+* Anyone already using this: move the contents of your theme's `wpcmb-json` folder nowhere — it keeps working, read-only. New saves land in uploads.
+* The front-end form's signed state is narrowed to strings as it is read rather than at each use. Not run through a text sanitizer: the payload and signatures are base64 and hashes, and stripping or re-encoding them would turn a tampering check into a formatting check.
+* The plugin name is spelled ManpreetDev throughout, matching the plugin header.
+
 
 = 1.17.4 =
 * Security: a term's field values were readable by anybody, for any term. Every other object type weighed up whether its values were public — a draft post, an unapproved comment, an options page — but terms answered yes unconditionally, so a term id was all it took to read field values on a taxonomy registered to hold what a site does not show. A term on a public taxonomy is still public, like a published post; one on a taxonomy that is not public now needs that taxonomy's own assign_terms capability, which is the test core applies to its own term endpoints.

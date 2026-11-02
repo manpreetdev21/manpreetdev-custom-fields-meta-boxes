@@ -224,4 +224,42 @@ assert( array() === $json->syncable(), 'and to nobody who may not edit field gro
 
 $GLOBALS['wpcmb_test_can'] = true;
 
+
+/* -------------------------------------------------------------------------
+ * Where the files are allowed to go.
+ *
+ * Reported by a plugin reviewer: this wrote into the active theme, copying a
+ * convention from elsewhere. A theme is replaced on update, so the files were
+ * lost with it, and it is not a directory this plugin may write to. Writes go
+ * to uploads; theme folders stay readable, because reading one is how a site
+ * keeps its field groups in version control.
+ * ---------------------------------------------------------------------- */
+
+$GLOBALS['wpcmb_test_filters'] = array();
+
+$fresh = new LocalJson( new Container() );
+
+$uploads = sys_get_temp_dir() . '/wpcmb-uploads';
+
+assert(
+	$fresh->save_path() === $uploads . '/manpreetdev-custom-fields-meta-boxes',
+	'files are written inside uploads, in a folder named for the plugin, got: ' . $fresh->save_path()
+);
+
+assert(
+	! str_contains( $fresh->save_path(), 'themes' ),
+	'and never into a theme'
+);
+
+$reads = $fresh->load_paths();
+
+assert( $reads[0] === $fresh->save_path(), 'the written directory is read first' );
+assert(
+	3 === count( $reads ) && str_contains( $reads[1], 'wpcmb-json' ),
+	'a theme folder is still read, which is how files in version control are found: ' . wp_json_encode( $reads )
+);
+
+// Both theme directories, so a child theme can carry its parent's groups.
+assert( $reads[1] !== $reads[2], 'the child and parent theme folders are both read' );
+
 echo "json check passed\n";
