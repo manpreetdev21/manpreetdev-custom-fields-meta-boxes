@@ -251,4 +251,40 @@ assert( str_contains( $block_html, 'wpcmb-repeater--block' ), 'block layout stil
 assert( ! str_contains( $block_html, 'wpcmb-repeater__columns' ), 'and draws no heading row' );
 assert( ! str_contains( $block_html, '--wpcmb-repeater-columns' ), 'nor a column count it has no use for' );
 
+/* -------------------------------------------------------------------------
+ * Collapsing past `collapse_after`, and the one layout it must not apply to.
+ *
+ * A block row collapses to its title, preview and toggle, so it can be
+ * reopened. A table row has none of those — it is a line of cells under a
+ * shared heading — so a collapsed one is an empty bar with no way back.
+ * ---------------------------------------------------------------------- */
+
+/**
+ * Render three rows with a collapse threshold of one.
+ *
+ * @param string $layout Layout name.
+ *
+ * @return string
+ */
+function wpcmb_collapse_html( string $layout ): string {
+	global $repeater, $table_subs;
+
+	ob_start();
+	$repeater->render(
+		wpcmb_repeater( $table_subs, array( 'layout' => $layout, 'collapse_after' => '1' ) ),
+		array(
+			array( 'treatment' => 'One', 'fee' => '1' ),
+			array( 'treatment' => 'Two', 'fee' => '2' ),
+			array( 'treatment' => 'Three', 'fee' => '3' ),
+		),
+		'wpcmb_values[fees]',
+		'wpcmb-fees'
+	);
+
+	return (string) ob_get_clean();
+}
+
+assert( 2 === substr_count( wpcmb_collapse_html( 'block' ), 'is-collapsed' ), 'block rows past the threshold start collapsed' );
+assert( ! str_contains( wpcmb_collapse_html( 'table' ), 'is-collapsed' ), 'a table row never starts collapsed, because nothing could reopen it' );
+
 echo "repeater-check: OK\n";

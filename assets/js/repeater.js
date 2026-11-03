@@ -127,6 +127,10 @@
 		}
 
 		rows.forEach( updatePreview );
+
+		// A row has been added, removed or reordered, so the
+		// collapse-all control may now mean something else.
+		syncCollapseAll( repeater );
 	}
 
 	/**
@@ -584,6 +588,7 @@
 			if ( event.target.closest( '.wpcmb-repeater__toggle' ) ) {
 				var collapsed = row.classList.toggle( 'is-collapsed' );
 				event.target.closest( '.wpcmb-repeater__toggle' ).setAttribute( 'aria-expanded', String( ! collapsed ) );
+				syncCollapseAll( repeater );
 				return;
 			}
 
@@ -634,7 +639,101 @@
 		}
 
 		initCsv( repeater );
+		initCollapseAll( repeater );
 		refresh( repeater );
+	}
+
+	/**
+	 * A repeater's own rows, when they are rows that can be collapsed.
+	 *
+	 * A table row is a line of cells under a shared heading, with no title
+	 * and no toggle — it is never collapsed, so it has nothing to collapse
+	 * all of. Nested rows belong to the nested repeater's own control.
+	 *
+	 * @param {Element} repeater Repeater root.
+	 * @return {Element[]} Row elements.
+	 */
+	function collapsibleRows( repeater ) {
+		return repeater.classList.contains( 'wpcmb-repeater--table' ) ? [] : rowsOf( repeater );
+	}
+
+	/**
+	 * Name a repeater's collapse-all control after what a click will do.
+	 *
+	 * Read from the rows every time rather than remembered: rows are also
+	 * collapsed one at a time, and added and removed, and the button has to
+	 * agree with what is on screen.
+	 *
+	 * @param {Element} [repeater] Repeater root, if it has such a control.
+	 */
+	function syncCollapseAll( repeater ) {
+		var button = repeater && repeater.querySelector( ':scope > .wpcmb-repeater__bar > .wpcmb-collapse-all' );
+
+		if ( ! button ) {
+			return;
+		}
+
+		var rows = collapsibleRows( repeater );
+		var open = rows.some( function ( row ) {
+			return ! row.classList.contains( 'is-collapsed' );
+		} );
+
+		// Hide the line, not just the button: an empty bar is still a gap.
+		button.parentElement.hidden = ! rows.length;
+		button.classList.toggle( 'is-collapsed', ! open );
+		button.querySelector( '.wpcmb-collapse-all__label' ).textContent = open ? i18n.collapseAll : i18n.expandAll;
+	}
+
+	/**
+	 * Put a collapse-all control above a repeater's rows.
+	 *
+	 * Added from the script rather than rendered by PHP: collapsing is a
+	 * behaviour of this file, so without it the control would be a button
+	 * that does nothing. It borrows a row toggle's own chevron so there is
+	 * one icon to maintain rather than two.
+	 *
+	 * @param {Element} repeater Repeater root.
+	 */
+	function initCollapseAll( repeater ) {
+		if ( repeater.classList.contains( 'wpcmb-repeater--table' ) ) {
+			return;
+		}
+
+		var chevron = repeater.querySelector( '.wpcmb-repeater__toggle' );
+		var button = document.createElement( 'button' );
+		var label = document.createElement( 'span' );
+		var bar = document.createElement( 'div' );
+
+		button.type = 'button';
+		button.className = 'wpcmb-collapse-all';
+		button.innerHTML = chevron ? chevron.innerHTML : '';
+
+		label.className = 'wpcmb-collapse-all__label';
+		button.appendChild( label );
+
+		button.addEventListener( 'click', function () {
+			var rows = collapsibleRows( repeater );
+			var collapse = rows.some( function ( row ) {
+				return ! row.classList.contains( 'is-collapsed' );
+			} );
+
+			rows.forEach( function ( row ) {
+				var toggle = row.querySelector( ':scope > .wpcmb-repeater__header > .wpcmb-repeater__toggle' );
+
+				row.classList.toggle( 'is-collapsed', collapse );
+
+				if ( toggle ) {
+					toggle.setAttribute( 'aria-expanded', String( ! collapse ) );
+				}
+			} );
+
+			syncCollapseAll( repeater );
+		} );
+
+		bar.className = 'wpcmb-repeater__bar';
+		bar.appendChild( button );
+
+		repeater.prepend( bar );
 	}
 
 	/**

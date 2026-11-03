@@ -26,6 +26,8 @@ const globals = {
 			importEmpty: 'No rows',
 			importDone: '%d rows added.',
 			exportFailed: 'Export failed',
+			collapseAll: 'Collapse all',
+			expandAll: 'Expand all',
 		},
 	},
 };
@@ -287,6 +289,67 @@ test( 'collapsing a row hides its fields and reports the state', async () => {
 
 	assert.equal( row.classList.contains( 'is-collapsed' ), false );
 	assert.equal( toggle.getAttribute( 'aria-expanded' ), 'true' );
+} );
+
+test( 'one control collapses and expands every row of its own repeater', async () => {
+	const page = repeaterPage();
+
+	await addRow( page );
+	await addRow( page );
+
+	const repeater = outer( page );
+	const button = repeater.querySelector( ':scope > .wpcmb-repeater__bar > .wpcmb-collapse-all' );
+
+	assert.ok( button, 'the repeater has a collapse-all control' );
+	assert.equal( button.textContent.trim(), 'Collapse all' );
+
+	page.click( button );
+
+	assert.deepEqual(
+		rows( page ).map( ( row ) => row.classList.contains( 'is-collapsed' ) ),
+		[ true, true ],
+		'every row collapses'
+	);
+	assert.equal(
+		rows( page )[ 0 ].querySelector( '.wpcmb-repeater__toggle' ).getAttribute( 'aria-expanded' ),
+		'false',
+		'and each row says so'
+	);
+
+	// The control now offers the opposite, because that is all it could do.
+	assert.equal( button.textContent.trim(), 'Expand all' );
+
+	page.click( button );
+
+	assert.deepEqual(
+		rows( page ).map( ( row ) => row.classList.contains( 'is-collapsed' ) ),
+		[ false, false ],
+		'and they all come back'
+	);
+	assert.equal( button.textContent.trim(), 'Collapse all' );
+
+	// Collapsing one row by hand leaves one open, so the control still
+	// offers to collapse the rest rather than to expand.
+	page.click( rows( page )[ 0 ].querySelector( '.wpcmb-repeater__toggle' ) );
+
+	assert.equal( button.textContent.trim(), 'Collapse all' );
+} );
+
+test( 'a table repeater gets no collapse-all control, having nothing to collapse', async () => {
+	const page = repeaterPage();
+
+	await addRow( page );
+
+	const table = outer( page ).cloneNode( true );
+
+	table.classList.add( 'wpcmb-repeater--table' );
+	delete table.dataset.wpcmbReady;
+	table.querySelectorAll( '.wpcmb-repeater__bar' ).forEach( ( bar ) => bar.remove() );
+	page.$( 'body' ).appendChild( table );
+
+	page.window.wpcmb.initRepeaters( page.$( 'body' ) );
+
+	assert.equal( table.querySelector( ':scope > .wpcmb-repeater__bar' ), null );
 } );
 
 test( 'a nested repeater is wired up and keeps its own indices', async () => {

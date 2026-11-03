@@ -428,6 +428,8 @@ final class Assets extends Module {
 					/* translators: %d: row number. Kept as a literal token so the script can substitute it. */
 					'row'          => __( 'Row %d', 'manpreetdev-custom-fields-meta-boxes' ),
 					'rowFailed'    => __( 'That row could not be added. Try saving and reloading.', 'manpreetdev-custom-fields-meta-boxes' ),
+					'collapseAll'  => __( 'Collapse all', 'manpreetdev-custom-fields-meta-boxes' ),
+					'expandAll'    => __( 'Expand all', 'manpreetdev-custom-fields-meta-boxes' ),
 					'importCsv'    => __( 'Import CSV', 'manpreetdev-custom-fields-meta-boxes' ),
 					'exportCsv'    => __( 'Export CSV', 'manpreetdev-custom-fields-meta-boxes' ),
 					'importFailed' => __( 'That file could not be imported.', 'manpreetdev-custom-fields-meta-boxes' ),

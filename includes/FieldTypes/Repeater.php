@@ -146,8 +146,15 @@ class Repeater extends FieldType {
 
 		echo '<div class="wpcmb-repeater__rows">';
 
+		/*
+		 * A table row is a single line of cells under a shared heading, with
+		 * no title or toggle of its own — so there is nothing worth hiding,
+		 * and a collapsed one would be an empty bar nothing could reopen.
+		 */
+		$collapses = 'table' !== $layout;
+
 		foreach ( $rows as $index => $row ) {
-			$this->render_row( $field, $sub_fields, is_array( $row ) ? $row : array(), (int) $index, $input_name, $input_id, $index >= $collapse );
+			$this->render_row( $field, $sub_fields, is_array( $row ) ? $row : array(), (int) $index, $input_name, $input_id, $collapses && $index >= $collapse );
 		}
 
 		echo '</div>';

@@ -1924,3 +1924,46 @@ input.wpcmb-input[type="datetime-local"] {
 		display: block;
 	}
 }
+
+/*
+ * The collapse-all control, above the rows of the repeater it collapses.
+ *
+ * One per repeater rather than one per meta box: a group can hold several
+ * repeaters, and a control that collapsed all of them would be a control
+ * for whichever one the person did not mean.
+ */
+.wpcmb-repeater__bar {
+	display: flex;
+	justify-content: flex-end;
+	margin-bottom: 6px;
+}
+
+.wpcmb-collapse-all {
+	align-items: center;
+	background: none;
+	border: 0;
+	border-radius: var( --wpcmb-radius-chip );
+	color: var( --wpcmb-muted );
+	cursor: pointer;
+	display: inline-flex;
+	flex: none;
+	font-size: 12px;
+	gap: 4px;
+	padding: 4px 8px;
+	transition: background-color var( --wpcmb-fast ) var( --wpcmb-ease ),
+		color var( --wpcmb-fast ) var( --wpcmb-ease );
+}
+
+.wpcmb-collapse-all:hover {
+	background: var( --wpcmb-wash );
+	color: var( --wpcmb-accent );
+}
+
+/* The chevron is the row toggle's own, turned the same way its rows are. */
+.wpcmb-collapse-all > svg {
+	transition: transform var( --wpcmb-base ) var( --wpcmb-ease );
+}
+
+.wpcmb-collapse-all.is-collapsed > svg {
+	transform: rotate( -90deg );
+}

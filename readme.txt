@@ -4,7 +4,7 @@ Tags: custom fields, meta box, repeater, options page, custom post type
 Requires at least: 6.8
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.17.6
+Stable tag: 1.17.7
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -95,6 +95,12 @@ Yes. Every string is translatable under the `manpreetdev-custom-fields-meta-boxe
 5. The field group list, with each group's key, field count and location.
 
 == Changelog ==
+
+= 1.17.7 =
+* Fixed: a repeater in the "Table" layout stopped being editable past the tenth row. Rows beyond `collapse_after` start collapsed, but a table row has no title and no toggle of its own — the layout hides them, because a table's heading already names every column — so a collapsed row was an empty bar with nothing on it that could open it again, and the values inside it were unreachable.
+* A table row is a single line of cells, so there is nothing worth collapsing: table rows now always render open, however many there are. Block layout is unchanged — a collapsed row there still shows its title, a preview of its first value and a toggle, which is the point of collapsing in the first place.
+* Regression introduced in 1.17.6, when the table layout first had styles of its own.
+* New: a "Collapse all" control above each repeater's rows, which turns into "Expand all" once they are closed. It follows the rows — collapse one by hand and it still offers to collapse the rest — and it is not drawn for a table repeater, which has no collapsed state to undo.
 
 = 1.17.6 =
 * Fixed: a repeater set to the "Table" layout drew the same stacked rows as "Block". The setting has been offered since the repeater existed and only ever changed a class on the wrapper, which no stylesheet matched — so choosing it did nothing at all.

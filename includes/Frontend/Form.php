@@ -303,8 +303,10 @@ final class Form extends Module {
 				'csv'     => false,
 				'i18n'    => array(
 					/* translators: %d: row number. Kept as a literal token so the script can substitute it. */
-					'row'       => __( 'Row %d', 'manpreetdev-custom-fields-meta-boxes' ),
-					'rowFailed' => __( 'That row could not be added. Please try again.', 'manpreetdev-custom-fields-meta-boxes' ),
+					'row'         => __( 'Row %d', 'manpreetdev-custom-fields-meta-boxes' ),
+					'rowFailed'   => __( 'That row could not be added. Please try again.', 'manpreetdev-custom-fields-meta-boxes' ),
+					'collapseAll' => __( 'Collapse all', 'manpreetdev-custom-fields-meta-boxes' ),
+					'expandAll'   => __( 'Expand all', 'manpreetdev-custom-fields-meta-boxes' ),
 				),
 			)
 		);
