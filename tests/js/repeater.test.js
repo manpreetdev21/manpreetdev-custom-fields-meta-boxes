@@ -352,6 +352,22 @@ test( 'a table repeater gets no collapse-all control, having nothing to collapse
 	assert.equal( table.querySelector( ':scope > .wpcmb-repeater__bar' ), null );
 } );
 
+test( 'a flexible row keeps the layout name it was given, not a row number', async () => {
+	const page = repeaterPage();
+
+	await addRow( page );
+
+	// What marks a repeater as flexible content, and what the server titled
+	// the row with: the layout's label.
+	outer( page ).dataset.wpcmbLayouts = '[]';
+	rows( page )[ 0 ].querySelector( '.wpcmb-repeater__title' ).textContent = 'Hero';
+
+	// Anything that renumbers the rows: moving, removing, adding.
+	await addRow( page );
+
+	assert.equal( rows( page )[ 0 ].querySelector( '.wpcmb-repeater__title' ).textContent, 'Hero' );
+} );
+
 test( 'a nested repeater is wired up and keeps its own indices', async () => {
 	const page = repeaterPage();
 

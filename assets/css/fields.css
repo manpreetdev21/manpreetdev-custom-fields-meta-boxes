@@ -186,19 +186,56 @@
 /* Labels beside fields, when the group asks for it. */
 
 @media screen and ( min-width: 783px ) {
+	/*
+	 * Top-aligned, not baseline-aligned: the baseline of a textarea or an
+	 * editor is its last line, which put the label at the bottom of a tall
+	 * control instead of beside its first line.
+	 */
 	.wpcmb-labels--left .wpcmb-field {
-		align-items: baseline;
+		align-items: flex-start;
 		display: flex;
 		gap: var( --wpcmb-field-gap );
 	}
 
 	.wpcmb-labels--left .wpcmb-field__label {
 		flex: 0 0 180px;
+		padding-block-start: 8px;
 	}
 
 	.wpcmb-labels--left .wpcmb-field__control {
 		flex: 1 1 auto;
 		min-width: 0;
+	}
+}
+
+/*
+ * The rule above sets `display`, at the same weight as the one that hides a
+ * field and later in the file — so with labels beside the fields, a field
+ * hidden by conditional logic stayed on screen. Hidden has to win.
+ */
+.wpcmb-labels--left .wpcmb-field[hidden],
+.wpcmb-labels--left .wpcmb-field--hidden {
+	display: none;
+}
+
+/*
+ * Labels beside the fields need room for both. The width that matters is the
+ * group's own, not the window's: a group in the Side position, or in the
+ * block editor's sidebar, is a few hundred pixels wide on any screen, and
+ * there a 180px label left the control with nothing. Below that the labels
+ * go back on top.
+ */
+.wpcmb-labels--left {
+	container-type: inline-size;
+}
+
+@container ( max-width: 480px ) {
+	.wpcmb-labels--left .wpcmb-field:not( [hidden] ):not( .wpcmb-field--hidden ) {
+		display: block;
+	}
+
+	.wpcmb-labels--left .wpcmb-field__label {
+		padding-block-start: 0;
 	}
 }
 
@@ -1635,6 +1672,17 @@ input.wpcmb-input[type="datetime-local"] {
 }
 
 /*
+ * The block editor has no permalink box and no slug meta box: it has one
+ * "Slug" row in the post summary, which is what either option means there.
+ * That row is not a panel the editor can be asked to remove, so it is matched
+ * by the control inside it.
+ */
+.wpcmb-hide-permalink .editor-post-panel__row:has( .editor-post-url__panel-dropdown ),
+.wpcmb-hide-slug .editor-post-panel__row:has( .editor-post-url__panel-dropdown ) {
+	display: none;
+}
+
+/*
  * A separator is a rule with an optional legend sitting on it. The label is
  * drawn by the field rather than the wrapper, because a rule with a label
  * above it is two horizontal lines where one was asked for.
@@ -1966,4 +2014,22 @@ input.wpcmb-input[type="datetime-local"] {
 
 .wpcmb-collapse-all.is-collapsed > svg {
 	transform: rotate( -90deg );
+}
+
+/* `display: flex` above would otherwise outrank the attribute. */
+.wpcmb-repeater__bar[hidden] {
+	display: none;
+}
+
+/*
+ * A hidden field has no control to show, so on an edit screen its wrapper
+ * was a label over nothing. The input is still in the form and still posts.
+ */
+.wpcmb-field--hidden {
+	display: none;
+}
+
+/* Nothing chosen, nothing to clear. */
+.wpcmb-media__list:empty + .wpcmb-media__actions > .wpcmb-media__clear {
+	display: none;
 }

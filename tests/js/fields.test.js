@@ -126,6 +126,53 @@ test( 'clicking a tab switches panels', () => {
 	assert.equal( buttons[ 0 ].getAttribute( 'aria-selected' ), 'false' );
 } );
 
+test( 'fields before the first tab stay above the tab bar', () => {
+	// The fixture opens with a tab. Put a field ahead of it, inside the group.
+	const html = fixture( 'tabs' ).replace( />/, '><div class="wpcmb-field" data-wpcmb-name="loose"></div>' );
+	const page = setup( { html, scripts: [ 'fields.js' ], globals } );
+
+	const loose = page.$( '[data-wpcmb-name="loose"]' );
+	const bar = page.$( '.wpcmb-tabs' );
+	const children = Array.from( bar.parentElement.children );
+
+	// It belongs to no tab, so the bar must not be drawn over it as though
+	// it belonged to whichever one is open.
+	assert.ok( children.indexOf( loose ) > -1 && children.indexOf( loose ) < children.indexOf( bar ), 'the bar comes after it' );
+	assert.equal( bar.nextElementSibling, page.$$( '.wpcmb-tab-panel' )[ 0 ], 'and directly above the first panel' );
+	assert.equal( loose.closest( '.wpcmb-tab-panel' ), null, 'and it is in no panel' );
+} );
+
+test( 'panels a group asked to hide are switched off in the block editor', () => {
+	const removed = [];
+
+	setup( {
+		html: fixture( 'tabs' ),
+		scripts: [ 'fields.js' ],
+		globals: Object.assign( {}, globals, {
+			wpcmb: { hiddenPanels: [ 'post-excerpt', 'featured-image' ] },
+			wp: {
+				data: {
+					dispatch: ( store ) => ( 'core/editor' === store
+						? { removeEditorPanel: ( panel ) => removed.push( panel ) }
+						: {} ),
+				},
+			},
+		} ),
+	} );
+
+	// Removing the meta box, which is all the server can do, hides nothing
+	// there: the editor has to be told in its own terms.
+	assert.deepEqual( removed, [ 'post-excerpt', 'featured-image' ] );
+} );
+
+test( 'and the classic editor, which has no such panels, is left alone', () => {
+	assert.doesNotThrow( () => setup( {
+		html: fixture( 'tabs' ),
+		scripts: [ 'fields.js' ],
+		globals: Object.assign( {}, globals, { wpcmb: { hiddenPanels: [ 'post-excerpt' ] } } ),
+	} ) );
+} );
+
 test( 'the media picker opens the WordPress media library and stores the choice', () => {
 	let frameOpened = false;
 	let requestedLibrary = null;

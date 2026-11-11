@@ -57,6 +57,31 @@ final class MetaBoxes extends Module {
 	private const SCRIPTED_ELEMENTS = array( 'permalink', 'the_content' );
 
 	/**
+	 * Hideable elements the block editor draws as a sidebar panel.
+	 *
+	 * There they are not meta boxes, so remove_meta_box() finds nothing to
+	 * remove and the option did nothing at all on any post type that uses the
+	 * block editor — which is most of them. The editor has its own switch for
+	 * each panel, and these are the names it knows them by.
+	 */
+	private const EDITOR_PANELS = array(
+		'excerpt'         => 'post-excerpt',
+		'featured_image'  => 'featured-image',
+		'discussion'      => 'discussion-panel',
+		'comments'        => 'discussion-panel',
+		'categories'      => 'taxonomy-panel-category',
+		'tags'            => 'taxonomy-panel-post_tag',
+		'page_attributes' => 'page-attributes',
+	);
+
+	/**
+	 * The block editor panels this screen's groups ask to hide.
+	 *
+	 * @var array<int, string>
+	 */
+	private array $panels = array();
+
+	/**
 	 * Which of those elements this screen's groups ask to hide.
 	 *
 	 * Filled while meta boxes are registered, read when the body class is
@@ -107,6 +132,9 @@ final class MetaBoxes extends Module {
 
 		add_action( 'admin_notices', array( $this, 'render_errors' ) );
 		add_filter( 'admin_body_class', array( $this, 'body_class' ) );
+
+		// After Assets has registered the script this rides on.
+		add_action( 'admin_enqueue_scripts', array( $this, 'hide_editor_panels' ), 20 );
 	}
 
 	/**
@@ -118,10 +146,33 @@ final class MetaBoxes extends Module {
 		$classes = is_array( $classes ) ? implode( ' ', $classes ) : (string) $classes;
 
 		foreach ( $this->scripted as $element ) {
-			$classes .= 'permalink' === $element ? ' wpcmb-hide-permalink' : ' wpcmb-hide-content';
+			$classes .= match ( $element ) {
+				'permalink' => ' wpcmb-hide-permalink',
+				'slug'      => ' wpcmb-hide-slug',
+				default     => ' wpcmb-hide-content',
+			};
 		}
 
 		return $classes;
+	}
+
+	/**
+	 * Hand the block editor the panels to switch off.
+	 *
+	 * The block editor registers meta boxes before it prints its header, so
+	 * the list is known by now; the classic editor registers them after, and
+	 * has no such panels to hide.
+	 */
+	public function hide_editor_panels(): void {
+		if ( array() === $this->panels ) {
+			return;
+		}
+
+		wp_add_inline_script(
+			Assets::FIELDS_HANDLE,
+			'window.wpcmb = window.wpcmb || {}; window.wpcmb.hiddenPanels = ' . wp_json_encode( $this->panels ) . ';',
+			'before'
+		);
 	}
 
 	/**
@@ -930,7 +981,11 @@ final class MetaBoxes extends Module {
 			remove_meta_box( $this->meta_box_id( $element ), get_current_screen(), $this->meta_box_context( $element ) );
 		}
 
-		$this->scripted = array_values( array_intersect( self::SCRIPTED_ELEMENTS, $hidden ) );
+		// The slug is a meta box in the classic editor, removed above, and a
+		// row of the summary panel in the block editor, which only a class on
+		// the body can reach — so it is both.
+		$this->scripted = array_values( array_intersect( array_merge( self::SCRIPTED_ELEMENTS, array( 'slug' ) ), $hidden ) );
+		$this->panels   = array_values( array_unique( array_intersect_key( self::EDITOR_PANELS, array_flip( $hidden ) ) ) );
 	}
 
 	/**

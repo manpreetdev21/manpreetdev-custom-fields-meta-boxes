@@ -4,7 +4,7 @@ Tags: custom fields, meta box, repeater, options page, custom post type
 Requires at least: 6.8
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.17.7
+Stable tag: 1.17.9
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -95,6 +95,21 @@ Yes. Every string is translatable under the `manpreetdev-custom-fields-meta-boxe
 5. The field group list, with each group's key, field count and location.
 
 == Changelog ==
+
+= 1.17.9 =
+* "Hide on screen" now works in the block editor. Excerpt, featured image, discussion, comments, categories, tags and page attributes are sidebar panels there rather than meta boxes, so removing the meta box — all the option did — hid nothing on any post type that uses the block editor. They are now switched off through the editor's own panel list, and Permalink and Slug hide the Slug row of the post summary. Content editor, author, format and revisions remain classic-editor only: the block editor offers no way to remove them that would not also take the title or the whole summary with it.
+* Fixed: "Beside fields" label placement in the Side position, or in the block editor's sidebar, left the control with no width at all — a 180px label in a column barely wider than that. Label placement now answers to the width of the group rather than the window, and stacks the labels when there is no room beside them.
+* Fixed: with labels beside the fields, a field hidden by conditional logic stayed on screen. The rule laying the label out set `display` at the same weight as the one that hides a field, later in the file.
+* Labels beside a tall control — a textarea, an editor — sit by its first line rather than its last.
+* Saving a field group says "Field group updated." rather than "Post updated.", and says whether it is now active.
+
+= 1.17.8 =
+* Fixed: image, file, gallery, video and audio fields returned nothing to a logged-out visitor. The check that keeps an attachment on a draft private asked only for the `read_post` capability, which on a published post comes down to `read` — a capability a visitor does not hold. So every template printing an image field was blank for exactly the people a front end is for, and correct for the logged-in person checking it. The status is now asked first; an attachment hanging off a draft or private post is still withheld.
+* Fixed: a password manager filled the editor's own login into a Password field and the text or email field above it. The username then failed validation and blocked the save, and the real password would have been stored as post meta by the next one. The field now declares `autocomplete="new-password"`.
+* Fixed: flexible content rows lost their layout name. The server titled each row "Hero" or "Gallery", and the script renumbering the rows replaced that with "Row 1", "Row 2" — leaving nothing to tell two collapsed rows apart.
+* Fixed: the "Collapse all" control added in 1.17.7 showed, reading "Expand all", above a repeater with no rows.
+* Fixed: the tab bar was drawn at the top of the group even when fields came before the first tab, as though those fields belonged to whichever tab was open. It now sits above the first tab's fields.
+* A Hidden field no longer draws a label over nothing on an edit screen, and a media field no longer offers "Clear" when nothing is chosen.
 
 = 1.17.7 =
 * Fixed: a repeater in the "Table" layout stopped being editable past the tenth row. Rows beyond `collapse_after` start collapsed, but a table row has no title and no toggle of its own — the layout hides them, because a table's heading already names every column — so a collapsed row was an empty bar with nothing on it that could open it again, and the values inside it were unreachable.

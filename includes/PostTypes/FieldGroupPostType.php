@@ -41,6 +41,36 @@ final class FieldGroupPostType extends Module {
 	public function boot(): void {
 		add_action( 'init', array( $this, 'register' ), 5 );
 		add_filter( 'wp_post_revision_meta_keys', array( $this, 'revision_meta_keys' ), 10, 2 );
+		add_filter( 'post_updated_messages', array( $this, 'updated_messages' ) );
+	}
+
+	/**
+	 * Say what was saved.
+	 *
+	 * Without this the notice after saving a field group reads "Post
+	 * updated.", which is core's wording for a thing this is not.
+	 *
+	 * @param array<string, array<int, string>> $messages Messages by post type.
+	 *
+	 * @return array<string, array<int, string>>
+	 */
+	public function updated_messages( $messages ): array {
+		$messages = is_array( $messages ) ? $messages : array();
+
+		$saved     = __( 'Field group updated.', 'manpreetdev-custom-fields-meta-boxes' );
+		$published = __( 'Field group published. It is now active.', 'manpreetdev-custom-fields-meta-boxes' );
+		$draft     = __( 'Field group saved as a draft. It is inactive until published.', 'manpreetdev-custom-fields-meta-boxes' );
+
+		$messages[ self::POST_TYPE ] = array(
+			1  => $saved,
+			4  => $saved,
+			6  => $published,
+			7  => $saved,
+			8  => $published,
+			10 => $draft,
+		) + (array) ( $messages['post'] ?? array() );
+
+		return $messages;
 	}
 
 	/**

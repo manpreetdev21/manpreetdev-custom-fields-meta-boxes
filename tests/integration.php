@@ -1236,6 +1236,55 @@ wpcmb_group(
 );
 
 wpcmb_group(
+	'an image field reaches a logged-out visitor, unless what it hangs off is not public',
+	static function (): void {
+		$attach = static function ( int $parent ): int {
+			$id = (int) wp_insert_attachment(
+				array( 'post_title' => 'Integration attachment', 'post_mime_type' => 'image/png', 'post_status' => 'inherit' ),
+				false,
+				$parent
+			);
+
+			$GLOBALS['wpcmb_created'][] = array( 'type' => 'post', 'id' => $id );
+
+			return $id;
+		};
+
+		$draft = (int) wp_insert_post( array( 'post_type' => 'post', 'post_status' => 'draft', 'post_title' => 'Integration draft parent' ) );
+
+		$GLOBALS['wpcmb_created'][] = array( 'type' => 'post', 'id' => $draft );
+
+		$library = $attach( 0 );
+		$public  = $attach( wpcmb_post_fixture( 'post', 'Integration published parent' ) );
+		$private = $attach( $draft );
+
+		$registry = wpcmb()->container()->get( WPCMB\Fields\Registry::class );
+		$image    = array( 'type' => 'image', 'name' => 'i', 'settings' => array() );
+		$gallery  = array( 'type' => 'gallery', 'name' => 'g', 'settings' => array() );
+
+		$was = get_current_user_id();
+
+		/*
+		 * The whole point of a front end. `read_post` alone said no here,
+		 * because it comes down to a capability a visitor does not hold.
+		 */
+		wp_set_current_user( 0 );
+
+		wpcmb_is( $library === $registry->get( 'image' )->format( (string) $library, $image ), 'a visitor is given an image from the library' );
+		wpcmb_is( $public === $registry->get( 'image' )->format( (string) $public, $image ), 'and one attached to a published post' );
+		wpcmb_is( 0 === $registry->get( 'image' )->format( (string) $private, $image ), 'but not one attached to a draft' );
+		wpcmb_is(
+			array( $library, $public ) === $registry->get( 'gallery' )->format( array( $library, $private, $public ), $gallery ),
+			'and a gallery drops only the one that is not public'
+		);
+
+		wp_set_current_user( $was );
+
+		wpcmb_is( $private === $registry->get( 'image' )->format( (string) $private, $image ), 'which its editor still sees' );
+	}
+);
+
+wpcmb_group(
 	'a post type and a taxonomy join up from either side',
 	static function (): void {
 		$types = wpcmb()->container()->get( WPCMB\PostTypes\CustomPostTypes::class );

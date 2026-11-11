@@ -130,6 +130,18 @@ final class Input extends FieldType {
 			$attributes['autocapitalize'] = 'none';
 		}
 
+		/*
+		 * A password manager that sees a password box on an edit screen
+		 * fills in the editor's own login: their username lands in whichever
+		 * text or email field sits above it, where it fails validation and
+		 * blocks the save, and their real password lands here, where the
+		 * next save stores it as post meta. This field holds a value for
+		 * the content, never a login, and says so.
+		 */
+		if ( 'password' === $type ) {
+			$attributes['autocomplete'] = 'new-password';
+		}
+
 		if ( 'uuid' === $type ) {
 			$attributes['readonly']        = true;
 			$attributes['data-wpcmb-uuid'] = '1';

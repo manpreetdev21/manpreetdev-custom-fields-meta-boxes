@@ -289,4 +289,23 @@ assert( 'https://e.com/i.png' === $enhanced->sanitize( 'https://e.com/i.png', $e
 assert( '' === $enhanced->sanitize( 'dashicons-x" onload="alert(1)', $enhanced_icon ), 'an injected attribute is rejected' );
 assert( '' === $enhanced->sanitize( 'javascript:alert(1)', $enhanced_icon ), 'a javascript URL is rejected' );
 
+/* -------------------------------------------------------------------------
+ * A password field is not a login.
+ *
+ * A password manager that sees a password box fills in the editor's own
+ * credentials: the username into the field above, the real password into
+ * this one, where the next save stores it as post meta.
+ * ---------------------------------------------------------------------- */
+
+ob_start();
+( new Input() )->render( wpcmb_field( 'password' ), '', 'wpcmb_values[secret]', 'wpcmb-g-secret' );
+$password_html = (string) ob_get_clean();
+
+assert( str_contains( $password_html, 'autocomplete="new-password"' ), 'a password field tells the browser it is not a login' );
+
+ob_start();
+( new Input() )->render( wpcmb_field( 'text' ), '', 'wpcmb_values[plain]', 'wpcmb-g-plain' );
+
+assert( ! str_contains( (string) ob_get_clean(), 'autocomplete' ), 'and an ordinary field is left to the browser' );
+
 echo "types-check: OK\n";

@@ -194,11 +194,19 @@ final class Media extends FieldType {
 		 * This is not a seal on the file itself: a web server hands that over
 		 * by URL whatever WordPress thinks. It keeps the metadata off a page
 		 * the reader should not be seeing.
+		 *
+		 * The status is asked first, and the capability only when it is not
+		 * public. `read_post` on a published post comes down to the `read`
+		 * capability, which a logged-out visitor does not have — so asking
+		 * the capability alone returned no image, file or gallery to exactly
+		 * the people a front end is for. get_post_status() resolves an
+		 * attachment's "inherit" to its parent's status, which is the rule
+		 * described above.
 		 */
 		$ids = array_values(
 			array_filter(
 				$this->ids( $value ),
-				static fn( int $id ): bool => current_user_can( 'read_post', $id )
+				static fn( int $id ): bool => 'publish' === get_post_status( $id ) || current_user_can( 'read_post', $id )
 			)
 		);
 

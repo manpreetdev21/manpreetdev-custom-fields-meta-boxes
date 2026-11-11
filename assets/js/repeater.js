@@ -102,7 +102,11 @@
 
 			var title = row.querySelector( ':scope > .wpcmb-repeater__header > .wpcmb-repeater__title' );
 
-			if ( title ) {
+			// A flexible row is titled by its layout — "Hero", "Gallery" — which
+			// the server printed and which is the only thing telling two
+			// collapsed rows apart. Numbering it would replace that with
+			// "Row 2".
+			if ( title && ! repeater.dataset.wpcmbLayouts ) {
 				title.textContent = template
 					? template.replace( '{index}', String( index + 1 ) )
 					: i18n.row.replace( '%d', String( index + 1 ) );

@@ -385,11 +385,11 @@
 			panels.push( { panel: panel, button: button } );
 		} );
 
-		root.insertBefore( bar, root.firstChild );
-
-		if ( panels.length ) {
-			panels[ 0 ].button.click();
-		}
+		// Above the first tab's fields, not above the whole group: fields
+		// that come before the first tab belong to no tab, and a bar drawn
+		// over them would claim them for whichever tab is open.
+		panels[ 0 ].panel.before( bar );
+		panels[ 0 ].button.click();
 	}
 
 	/**
@@ -666,8 +666,30 @@
 	window.wpcmb = window.wpcmb || {};
 	window.wpcmb.initFields = init;
 
+	/**
+	 * Switch off the block editor panels a field group asked to hide.
+	 *
+	 * In the block editor the excerpt, the featured image and the rest are
+	 * sidebar panels rather than meta boxes, so removing the meta box — all
+	 * the server can do — hid nothing. The editor keeps its own list of
+	 * removed panels, and this adds to it.
+	 */
+	function hidePanels() {
+		var panels = ( window.wpcmb && window.wpcmb.hiddenPanels ) || [];
+		var editor = window.wp && window.wp.data && window.wp.data.dispatch( 'core/editor' );
+
+		if ( ! editor || 'function' !== typeof editor.removeEditorPanel ) {
+			return;
+		}
+
+		panels.forEach( function ( panel ) {
+			editor.removeEditorPanel( panel );
+		} );
+	}
+
 	document.addEventListener( 'DOMContentLoaded', function () {
 		init( document );
+		hidePanels();
 
 		// Everything already on the page is done; the observer is only for
 		// what turns up later.
