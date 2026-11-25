@@ -115,9 +115,10 @@
 	 * @param {Object} options  Values keyed by value, or groups of those.
 	 * @param {string} selected Currently selected value.
 	 * @param {bool}   grouped  Whether `options` is a map of optgroups.
+	 * @param {bool}   [keep]   Whether a selected value not among them is kept.
 	 * @return {HTMLSelectElement} The select.
 	 */
-	function select( options, selected, grouped ) {
+	function select( options, selected, grouped, keep ) {
 		var node = el( 'select', { class: 'wpcmb-field-row__control' } );
 
 		function addOption( parent, value, label ) {
@@ -126,19 +127,55 @@
 			parent.appendChild( option );
 		}
 
-		Object.keys( options || {} ).forEach( function ( key ) {
+		var known = false;
+
+		choiceKeys( options ).forEach( function ( key ) {
 			if ( grouped ) {
 				var group = el( 'optgroup', { label: key } );
+				known = known || Object.prototype.hasOwnProperty.call( options[ key ], String( selected ) );
 				Object.keys( options[ key ] ).forEach( function ( value ) {
 					addOption( group, value, options[ key ][ value ] );
 				} );
 				node.appendChild( group );
 			} else {
+				known = known || String( key ) === String( selected );
 				addOption( node, key, options[ key ] );
 			}
 		} );
 
+		/*
+		 * A stored value the site no longer offers — a post type whose plugin
+		 * is off, a menu since deleted. A select shows its first option for a
+		 * value it does not have, so without one of its own the screen would
+		 * claim the setting says something it does not.
+		 */
+		if ( keep && ! known && '' !== String( selected || '' ) ) {
+			addOption( node, selected, ( i18n.unavailable || '%s' ).replace( '%s', selected ) );
+		}
+
 		return node;
+	}
+
+	/**
+	 * The keys of a choice map, in the order they should be offered.
+	 *
+	 * "All" first. JavaScript puts keys that look like numbers ahead of every
+	 * other whatever order they were written in, so a list of menus — keyed
+	 * by id — began with whichever menu was oldest, and a new Menu rule
+	 * quietly meant that one.
+	 *
+	 * @param {Object} options Choices keyed by value.
+	 * @return {string[]} Keys.
+	 */
+	function choiceKeys( options ) {
+		var keys = Object.keys( options || {} );
+		var all = keys.indexOf( 'all' );
+
+		if ( all > 0 ) {
+			keys.unshift( keys.splice( all, 1 )[ 0 ] );
+		}
+
+		return keys;
 	}
 
 	/**
@@ -1726,9 +1763,9 @@
 	 * Make every rule's stored value the one its control will show.
 	 *
 	 * A value control with a fixed set of choices is a select, and a select
-	 * always shows something: given a value that is not one of its options
-	 * — a rule just added, or one whose parameter has just changed — the
-	 * browser shows the first option while the stored value stays empty.
+	 * always shows something: given no value — a rule just added, or one
+	 * whose parameter has just changed — the browser shows the first option
+	 * while the stored value stays empty.
 	 * The screen then reads "Post Type is Posts" while the group saves as
 	 * "post type is nothing", matches nothing, and appears nowhere.
 	 *
@@ -1748,11 +1785,14 @@
 					return;
 				}
 
-				var keys = Object.keys( choices );
+				var keys = choiceKeys( choices );
 
 				// A parameter with no choices at all takes free text, where an
-				// empty value means the author has not typed one yet.
-				if ( keys.length && -1 === keys.indexOf( String( rule.value ) ) ) {
+				// empty value means the author has not typed one yet. A value
+				// that is set but not offered is left exactly as it is: the
+				// control shows it as unavailable, and replacing it would move
+				// the group somewhere nobody asked for it to be.
+				if ( keys.length && '' === String( rule.value || '' ) ) {
 					rule.value = keys[ 0 ];
 				}
 			} );
@@ -1800,7 +1840,7 @@
 		var choices = ( config.locationChoices || {} )[ rule.param ];
 
 		if ( choices && Object.keys( choices ).length ) {
-			return this.bind( select( choices, rule.value, false ), rule, 'value' );
+			return this.bind( select( choices, rule.value, false, true ), rule, 'value' );
 		}
 
 		return this.bind(
@@ -1856,6 +1896,10 @@
 			} );
 
 			status.textContent = results.length ? '' : i18n.noMatches;
+
+			// The sentence above the rules was written before the name of what
+			// this one points at had arrived.
+			builder.refreshSummary();
 		}
 
 		/**
@@ -1917,7 +1961,7 @@
 
 		rules.forEach( function ( rule, ruleIndex ) {
 			var paramSelect = builder.bind(
-				select( builder.paramOptions(), rule.param, true ),
+				select( builder.paramOptions(), rule.param, true, true ),
 				rule,
 				'param',
 				function () {

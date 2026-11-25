@@ -102,7 +102,8 @@ const globals = {
 			removeRule: 'Remove rule',
 			appearsWhen: 'Appears when:',
 			appearsNowhere: 'This group has no rules, so it will not appear anywhere.',
-			anythingLabel: '(anything)',
+			anythingLabel: '(nothing chosen yet)',
+			unavailable: '%s (not available)',
 			summaryIs: 'is',
 			summaryIsNot: 'is not',
 			settings: 'Settings',
@@ -920,6 +921,42 @@ test( 'a failed search tells the user they can still type an id', async () => {
 	await page.settle();
 
 	assert.match( page.$( '.wpcmb-rule__status' ).textContent, /failed/i );
+} );
+
+test( 'a rule naming something the site no longer offers is left as it is', () => {
+	// A post type whose plugin is off, and a parameter that plugin added.
+	// Opening the group used to repoint the first at Posts, and the second
+	// showed as whatever came first in the list.
+	const stored = [ [
+		{ param: 'post_type', operator: '==', value: 'product' },
+		{ param: 'wc_product_type', operator: '==', value: 'simple' },
+	] ];
+	const page = builderPage( '[]', JSON.stringify( stored ) );
+
+	assert.deepEqual( page.location(), stored, 'what would be saved is what was stored' );
+
+	const selects = page.$$( '.wpcmb-rule' )[ 0 ].querySelectorAll( 'select' );
+
+	assert.equal( selects[ 2 ].value, 'product', 'and the screen shows it' );
+	assert.equal( selects[ 2 ].selectedOptions[ 0 ].textContent, 'product (not available)', 'saying it is not available' );
+	assert.equal( page.$$( '.wpcmb-rule__param' )[ 1 ].value, 'wc_product_type', 'the parameter is kept too' );
+} );
+
+test( 'a rule with no value yet takes the one its control shows, "All" first', () => {
+	const choices = globals.wpcmbBuilder.locationChoices;
+
+	// Keyed by id, so JavaScript lists 14 ahead of "all" whatever order the
+	// server sent them in.
+	choices.page_template = { all: 'All menus', 14: 'Primary' };
+
+	try {
+		const page = builderPage( '[]', JSON.stringify( [ [ { param: 'page_template', operator: '==', value: '' } ] ] ) );
+
+		assert.equal( page.location()[ 0 ][ 0 ].value, 'all' );
+		assert.equal( page.$( '.wpcmb-rule' ).querySelectorAll( 'select' )[ 2 ].value, 'all' );
+	} finally {
+		delete choices.page_template;
+	}
 } );
 
 test( 'a parameter with no known values falls back to free text', () => {

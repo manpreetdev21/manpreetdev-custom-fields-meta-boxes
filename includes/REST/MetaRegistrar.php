@@ -129,8 +129,9 @@ final class MetaRegistrar extends Module {
 				$value = (string) ( $rule['value'] ?? '' );
 
 				$target = match ( $param ) {
-					'post_type', 'post', 'page', 'post_template', 'page_template', 'post_status', 'post_format'
+					'post_type', 'post', 'post_template', 'post_status', 'post_format', 'post_category', 'post_taxonomy', 'page_type', 'page_parent'
 						=> array( 'post', 'post_type' === $param ? $value : '' ),
+					'page', 'page_template' => array( 'post', 'page' ),
 					'attachment'    => array( 'post', 'attachment' ),
 					'nav_menu_item' => array( 'post', 'nav_menu_item' ),
 					'taxonomy'      => array( 'term', $value ),

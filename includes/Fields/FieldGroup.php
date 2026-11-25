@@ -440,7 +440,6 @@ final class FieldGroup {
 			return array();
 		}
 
-		$params = array_keys( Locations::params() );
 		$groups = array();
 
 		foreach ( $raw as $group ) {
@@ -455,7 +454,16 @@ final class FieldGroup {
 					continue;
 				}
 				$param = sanitize_key( (string) ( $rule['param'] ?? '' ) );
-				if ( ! in_array( $param, $params, true ) ) {
+
+				/*
+				 * A parameter nobody offers right now is kept, not dropped.
+				 * Every rule in a group has to match, so a rule that cannot
+				 * match keeps its group off every screen — while removing it
+				 * leaves the others to match more than they were meant to.
+				 * "Product AND simple product", saved while the shop plugin
+				 * was off, became every product.
+				 */
+				if ( '' === $param ) {
 					continue;
 				}
 				$rules[] = array(

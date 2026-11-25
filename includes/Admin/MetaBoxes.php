@@ -13,8 +13,10 @@ use WPCMB\Abstracts\Module;
 use WPCMB\Fields\Conditional;
 use WPCMB\Fields\Context;
 use WPCMB\Fields\FieldGroup;
+use WPCMB\Fields\Locations;
 use WPCMB\Fields\ObjectRef;
 use WPCMB\Fields\Renderer;
+use WPCMB\Fields\Repository;
 use WPCMB\Fields\Resolver;
 use WPCMB\Fields\Validator;
 use WPCMB\Fields\Values;
@@ -126,6 +128,8 @@ final class MetaBoxes extends Module {
 		add_action( 'edit_user_profile', array( $this, 'render_user' ) );
 		add_action( 'personal_options_update', array( $this, 'save_user' ) );
 		add_action( 'edit_user_profile_update', array( $this, 'save_user' ) );
+		add_action( 'user_new_form', array( $this, 'render_new_user' ) );
+		add_action( 'user_register', array( $this, 'save_new_user' ) );
 
 		add_action( 'add_meta_boxes_comment', array( $this, 'add_comment_meta_boxes' ) );
 		add_action( 'edit_comment', array( $this, 'save_comment' ) );
@@ -182,7 +186,7 @@ final class MetaBoxes extends Module {
 	 * @param \WP_Post|null $post      Post being edited.
 	 */
 	public function add_post_meta_boxes( $post_type, $post = null ): void {
-		if ( FieldGroupPostType::POST_TYPE === $post_type || ! $post instanceof \WP_Post ) {
+		if ( Locations::is_internal( (string) $post_type ) || ! $post instanceof \WP_Post ) {
 			return;
 		}
 
@@ -367,6 +371,37 @@ final class MetaBoxes extends Module {
 	}
 
 	/**
+	 * Render matching groups on the Add New User form.
+	 *
+	 * @param string $type Which of the screen's forms this is.
+	 */
+	public function render_new_user( $type ): void {
+		// On a network the same hook also fires for "Add Existing User",
+		// which makes no user for the values to belong to.
+		if ( 'add-new-user' !== $type ) {
+			return;
+		}
+
+		$ref = new ObjectRef( ObjectRef::USER, 0 );
+
+		foreach ( $this->groups( $ref ) as $group ) {
+			printf( '<h2>%s</h2>', esc_html( $group->title ) );
+			echo '<table class="form-table" role="presentation"><tr><td>';
+			$this->render_group( $group, $ref );
+			echo '</td></tr></table>';
+		}
+	}
+
+	/**
+	 * Save field values for a user made on the Add New User form.
+	 *
+	 * @param int $user_id The new user's id.
+	 */
+	public function save_new_user( $user_id ): void {
+		$this->save( new ObjectRef( ObjectRef::USER, (int) $user_id ), 'edit_user', (int) $user_id, new ObjectRef( ObjectRef::USER, 0 ) );
+	}
+
+	/**
 	 * Render a group's fields with a nonce.
 	 *
 	 * @param FieldGroup $group Field group.
@@ -380,9 +415,74 @@ final class MetaBoxes extends Module {
 			$nonce_printed = true;
 		}
 
+		// Says this group was on this object's form; see form_fields().
+		printf(
+			'<input type="hidden" name="wpcmb_groups[%s]" value="%s" />',
+			esc_attr( $group->key ),
+			esc_attr( wp_create_nonce( self::group_action( $group->key, $ref ) ) )
+		);
+
 		$renderer = $this->container->get( Renderer::class );
 		$renderer->set_errors( $this->take_errors( $ref ) );
 		$renderer->group( $group, $ref );
+	}
+
+	/**
+	 * The nonce action proving a group was drawn for an object.
+	 *
+	 * @param string    $key Group key.
+	 * @param ObjectRef $ref Object the form was for.
+	 */
+	private static function group_action( string $key, ObjectRef $ref ): string {
+		return 'wpcmb_group_' . $key . '_' . $ref;
+	}
+
+	/**
+	 * The fields a submission may carry: those that apply to the object now,
+	 * and those that applied when the form was drawn.
+	 *
+	 * The two differ whenever the save changes what a rule looks at. A group
+	 * for drafts is on the form when Publish is pressed and no longer applies
+	 * by the time the values arrive; the same goes for a template, a format,
+	 * a category or a role. Matching the rules again at that point threw away
+	 * whatever had been typed into it.
+	 *
+	 * The nonce each group prints is bound to the group, the object and the
+	 * user, so a submission can only name a group this person was shown.
+	 *
+	 * @param ObjectRef      $ref  Object being saved.
+	 * @param ObjectRef|null $form Object the form was for, when that differs.
+	 *
+	 * @return array<string, array<string, mixed>>
+	 */
+	private function form_fields( ObjectRef $ref, ?ObjectRef $form = null ): array {
+		$fields = $this->container->get( Resolver::class )->fields( new Context( $ref ) );
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Each entry is itself a nonce, verified below; callers verified the form's own.
+		$shown = isset( $_POST['wpcmb_groups'] ) && is_array( $_POST['wpcmb_groups'] )
+			? wp_unslash( $_POST['wpcmb_groups'] )
+			: array();
+		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+
+		foreach ( $shown as $key => $nonce ) {
+			$key = sanitize_key( (string) $key );
+
+			if ( ! is_string( $nonce ) || ! wp_verify_nonce( sanitize_text_field( $nonce ), self::group_action( $key, $form ?? $ref ) ) ) {
+				continue;
+			}
+
+			$group = $this->container->get( Repository::class )->all()[ $key ] ?? null;
+
+			foreach ( null === $group ? array() : $group->fields as $field ) {
+				$name = (string) ( $field['name'] ?? '' );
+
+				if ( '' !== $name ) {
+					$fields[ $name ] ??= $field;
+				}
+			}
+		}
+
+		return $fields;
 	}
 
 	/**
@@ -457,11 +557,12 @@ final class MetaBoxes extends Module {
 	 * on the next screen with the values still in the form, so the problem is
 	 * visible and fixable rather than silently discarded.
 	 *
-	 * @param ObjectRef $ref        Object being saved.
-	 * @param string    $capability Capability required.
-	 * @param int|null  $object_id  Id to pass to the capability check.
+	 * @param ObjectRef      $ref        Object being saved.
+	 * @param string         $capability Capability required.
+	 * @param int|null       $object_id  Id to pass to the capability check.
+	 * @param ObjectRef|null $form       Object the form was for, when that differs.
 	 */
-	private function save( ObjectRef $ref, string $capability, ?int $object_id = null ): void {
+	private function save( ObjectRef $ref, string $capability, ?int $object_id = null, ?ObjectRef $form = null ): void {
 		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
 			return;
 		}
@@ -488,7 +589,7 @@ final class MetaBoxes extends Module {
 
 		$renderer = $this->container->get( Renderer::class );
 		$values   = $this->container->get( Values::class );
-		$fields   = $this->container->get( Resolver::class )->fields( new Context( $ref ) );
+		$fields   = $this->form_fields( $ref, $form );
 		$present  = array();
 
 		foreach ( $fields as $name => $field ) {
@@ -788,7 +889,7 @@ final class MetaBoxes extends Module {
 		$fields   = array();
 		$values   = array();
 
-		foreach ( $this->container->get( Resolver::class )->fields( new Context( $ref ) ) as $name => $field ) {
+		foreach ( $this->form_fields( $ref ) as $name => $field ) {
 			if ( ! $renderer->stores_value( $field ) ) {
 				continue;
 			}

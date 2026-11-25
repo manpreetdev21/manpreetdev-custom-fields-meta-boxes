@@ -142,11 +142,6 @@ final class Locations {
 				'icon'  => 'dashicons-screenoptions',
 				'group' => $forms,
 			),
-			'block'             => array(
-				'label' => __( 'Block', 'manpreetdev-custom-fields-meta-boxes' ),
-				'icon'  => 'dashicons-block-default',
-				'group' => $forms,
-			),
 			'options_page'      => array(
 				'label' => __( 'Options Page', 'manpreetdev-custom-fields-meta-boxes' ),
 				'icon'  => 'dashicons-admin-generic',
@@ -195,7 +190,7 @@ final class Locations {
 
 		$choices = array(
 			'post_type'         => self::post_types(),
-			'post_status'       => self::labelled( get_post_stati( array(), 'objects' ), 'label' ),
+			'post_status'       => self::statuses(),
 			'post_format'       => get_post_format_strings(),
 			'post_template'     => self::templates(),
 			'page_template'     => self::templates( 'page' ),
@@ -207,9 +202,8 @@ final class Locations {
 				'child'      => __( 'Child Page', 'manpreetdev-custom-fields-meta-boxes' ),
 			),
 			'user_form'         => array(
-				'add'      => __( 'Add User', 'manpreetdev-custom-fields-meta-boxes' ),
-				'edit'     => __( 'Edit User', 'manpreetdev-custom-fields-meta-boxes' ),
-				'register' => __( 'Register User', 'manpreetdev-custom-fields-meta-boxes' ),
+				'add'  => __( 'Add User', 'manpreetdev-custom-fields-meta-boxes' ),
+				'edit' => __( 'Edit User', 'manpreetdev-custom-fields-meta-boxes' ),
 			),
 			'taxonomy'          => self::taxonomies(),
 			'post_taxonomy'     => self::taxonomies(),
@@ -221,11 +215,10 @@ final class Locations {
 			'current_user_role' => self::roles(),
 			'user_role'         => self::roles(),
 			'attachment'        => array( 'all' => __( 'All', 'manpreetdev-custom-fields-meta-boxes' ) ),
-			'comment'           => self::post_types(),
+			'comment'           => array_filter( self::post_types(), static fn( string $type ): bool => post_type_supports( $type, 'comments' ), ARRAY_FILTER_USE_KEY ),
 			'nav_menu'          => self::nav_menus(),
 			'nav_menu_item'     => array( 'all' => __( 'All', 'manpreetdev-custom-fields-meta-boxes' ) ),
 			'widget'            => self::widgets(),
-			'block'             => array(),
 			'options_page'      => array(),
 			'post_category'     => self::terms( 'category' ),
 		);
@@ -393,17 +386,13 @@ final class Locations {
 	/**
 	 * Post types worth searching.
 	 *
-	 * The plugin's own field groups are excluded: a location rule pointing at
-	 * a field group is never meaningful.
+	 * The plugin's own records are excluded: a location rule pointing at a
+	 * field group or a form is never meaningful.
 	 *
 	 * @return array<int, string>
 	 */
 	private static function searchable_post_types(): array {
-		$types = get_post_types( array( 'show_ui' => true ), 'names' );
-
-		unset( $types[ \WPCMB\PostTypes\FieldGroupPostType::POST_TYPE ] );
-
-		return array_values( $types );
+		return array_keys( self::post_types() );
 	}
 
 	/**
@@ -461,7 +450,7 @@ final class Locations {
 		if ( 'term' === $kind ) {
 			$term = get_term_by( 'slug', $value, (string) $params[ $param ]['taxonomy'] );
 
-			return $term instanceof \WP_Term ? $term->name : $value;
+			return $term instanceof \WP_Term ? self::plain_title( $term->name ) : $value;
 		}
 
 		$post = get_post( (int) $value );
@@ -566,6 +555,7 @@ final class Locations {
 
 		$params  = self::params();
 		$choices = self::choices();
+		$objects = self::object_params();
 		$groups  = array();
 
 		foreach ( $location as $rules ) {
@@ -573,7 +563,13 @@ final class Locations {
 
 			foreach ( $rules as $rule ) {
 				$label = $params[ $rule['param'] ]['label'] ?? $rule['param'];
-				$value = $choices[ $rule['param'] ][ $rule['value'] ] ?? $rule['value'];
+				$value = isset( $objects[ $rule['param'] ] )
+					? self::label_for( (string) $rule['param'], (string) $rule['value'] )
+					: ( $choices[ $rule['param'] ][ $rule['value'] ] ?? $rule['value'] );
+
+				if ( '' === (string) $value ) {
+					$value = __( '(nothing chosen yet)', 'manpreetdev-custom-fields-meta-boxes' );
+				}
 
 				$parts[] = sprintf(
 					'%s %s %s',
@@ -597,10 +593,45 @@ final class Locations {
 	 * @return array<string, string>
 	 */
 	private static function post_types(): array {
-		$types = get_post_types( array( 'show_ui' => true ), 'objects' );
-		unset( $types[ \WPCMB\PostTypes\FieldGroupPostType::POST_TYPE ] );
+		$types = array_filter(
+			get_post_types( array( 'show_ui' => true ), 'objects' ),
+			static fn( string $name ): bool => ! self::is_internal( $name ),
+			ARRAY_FILTER_USE_KEY
+		);
 
 		return self::labelled( $types, 'label' );
+	}
+
+	/**
+	 * Whether a post type is one of the plugin's own screens.
+	 *
+	 * Field groups, block types, forms and the rest are post types so that
+	 * WordPress will store and list them. None of them is content, and a
+	 * rule as ordinary as "post type is not page" put field groups on them.
+	 *
+	 * @param string $post_type Post type name.
+	 */
+	public static function is_internal( string $post_type ): bool {
+		return str_starts_with( $post_type, 'wpcmb_' );
+	}
+
+	/**
+	 * Statuses an editor can see a post in.
+	 *
+	 * WordPress registers several more for its own bookkeeping — the status
+	 * of a file, of an unsaved post, of a privacy request — and no edit
+	 * screen ever shows one, so a rule naming it could not match.
+	 *
+	 * @return array<string, string>
+	 */
+	private static function statuses(): array {
+		return self::labelled(
+			array_filter(
+				get_post_stati( array(), 'objects' ),
+				static fn( object $status ): bool => empty( $status->internal ) || empty( $status->_builtin )
+			),
+			'label'
+		);
 	}
 
 	/**

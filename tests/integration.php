@@ -1285,6 +1285,68 @@ wpcmb_group(
 );
 
 wpcmb_group(
+	'location rules match only the kind of object they are about',
+	static function (): void {
+		$suffix = strtolower( wp_generate_password( 4, false, false ) );
+		$post   = wpcmb_post_fixture( 'post', 'Location scope post ' . $suffix );
+		$page   = wpcmb_post_fixture( 'page', 'Location scope page ' . $suffix );
+		$file   = wpcmb_post_fixture( 'attachment', 'Location scope file ' . $suffix );
+		$item   = wpcmb_post_fixture( 'nav_menu_item', 'Location scope item ' . $suffix );
+		$new    = wpcmb_post_fixture( 'post', 'Location scope new ' . $suffix );
+
+		wp_update_post( array( 'ID' => $new, 'post_status' => 'auto-draft' ) );
+		wp_delete_object_term_relationships( $new, 'category' );
+		clean_post_cache( $new );
+
+		$match = static fn( int $id, string $param, string $operator, string $value ): bool => WPCMB\Fields\Locations::match(
+			array( array( array( 'param' => $param, 'operator' => $operator, 'value' => $value ) ) ),
+			new WPCMB\Fields\Context( new WPCMB\Fields\ObjectRef( WPCMB\Fields\ObjectRef::POST, $id ) )
+		);
+
+		/* "Is not" is where a rule leaks: anything it answers for, it matches. */
+		foreach ( array( 'page_template' => 'x.php', 'page_type' => 'child', 'page_parent' => '999999', 'page' => '999999' ) as $param => $value ) {
+			wpcmb_is( $match( $page, $param, '!=', $value ), $param . ' is-not still matches a page' );
+			wpcmb_is( ! $match( $post, $param, '!=', $value ), $param . ' is-not does not follow onto a post' );
+			wpcmb_is( ! $match( $file, $param, '!=', $value ), $param . ' is-not does not follow onto a file' );
+		}
+
+		wpcmb_is( $match( $post, 'post_category', '!=', 'itest-none' ), 'a category is-not rule matches a post' );
+		wpcmb_is( ! $match( $page, 'post_category', '!=', 'itest-none' ), 'and not a page, which has no categories' );
+		wpcmb_is( ! $match( $page, 'post_format', '==', 'standard' ), 'a page has no format, rather than the standard one' );
+		wpcmb_is( ! $match( $item, 'post_status', '==', 'publish' ), 'a menu item is not a published post' );
+		wpcmb_is( $match( $item, 'nav_menu_item', '==', 'all' ), 'and is still a menu item' );
+
+		/* Add New: an auto-draft is a draft, in the category it will be given. */
+		$default = get_term( (int) get_option( 'default_category' ), 'category' );
+
+		wpcmb_is( $match( $new, 'post_status', '==', 'draft' ), 'a post not saved yet is a draft' );
+		wpcmb_is( ! $match( $new, 'post_status', '!=', 'draft' ), 'and not something other than one' );
+		wpcmb_is( $match( $new, 'post_category', '==', $default->slug ), 'and in the category it is about to be given' );
+
+		/* A user rule answers the same wherever it is asked. */
+		$user = new WPCMB\Fields\Context( new WPCMB\Fields\ObjectRef( WPCMB\Fields\ObjectRef::USER, 1 ) );
+		$none = new WPCMB\Fields\Context( new WPCMB\Fields\ObjectRef( WPCMB\Fields\ObjectRef::USER, 0 ) );
+
+		wpcmb_is( 'edit' === $user->value( 'user_form' ), 'an existing user is being edited, without the screen saying so' );
+		wpcmb_is( 'add' === $none->value( 'user_form' ), 'one that does not exist is being added' );
+		wpcmb_is( array( get_option( 'default_role' ) ) === $none->value( 'user_role' ), 'with the default role' );
+
+		/* Nothing is offered that cannot match. */
+		$choices = WPCMB\Fields\Locations::choices();
+
+		wpcmb_is( array() === preg_grep( '/^wpcmb_/', array_keys( $choices['post_type'] ) ), 'the plugin screens are not offered as post types' );
+		wpcmb_is( ! isset( $choices['post_status']['auto-draft'] ) && ! isset( $choices['post_status']['request-pending'] ) && isset( $choices['post_status']['draft'] ), 'nor are statuses no edit screen shows' );
+		wpcmb_is( ! isset( WPCMB\Fields\Locations::params()['block'] ), 'nor a Block rule nothing ever answered' );
+
+		/* The list names what an object rule points at. */
+		wpcmb_is(
+			str_contains( WPCMB\Fields\Locations::describe( array( array( array( 'param' => 'post', 'operator' => '==', 'value' => (string) $post ) ) ) ), 'Location scope post' ),
+			'a rule naming a post is described by its title rather than its id'
+		);
+	}
+);
+
+wpcmb_group(
 	'a post type and a taxonomy join up from either side',
 	static function (): void {
 		$types = wpcmb()->container()->get( WPCMB\PostTypes\CustomPostTypes::class );
@@ -1921,6 +1983,124 @@ wpcmb_group(
 		wpcmb_is( 'kept' === wpcmb_get_field( 'ionly_b', $page, false ), 'a field hidden again keeps what it had' );
 	}
 );
+
+wpcmb_group(
+	'values typed into a group are kept when the save changes what its rule looks at',
+	static function (): void {
+		$suffix = strtolower( wp_generate_password( 6, false, false ) );
+		$repo   = wpcmb()->container()->get( WPCMB\Fields\Repository::class );
+		$boxes  = new WPCMB\Admin\MetaBoxes( wpcmb()->container() );
+
+		$register = static function ( string $name, array $rule ) use ( $repo ): void {
+			$repo->register(
+				array(
+					'key'      => 'group_' . $name,
+					'title'    => $name,
+					'fields'   => array( array( 'key' => 'field_' . $name, 'name' => $name, 'label' => $name, 'type' => 'text' ) ),
+					'location' => array( array( $rule ) ),
+				)
+			);
+		};
+
+		$draft_only = 'itd' . $suffix;
+		$elsewhere  = 'ite' . $suffix;
+		$add_user   = 'itu' . $suffix;
+
+		$register( $draft_only, array( 'param' => 'post_status', 'operator' => '==', 'value' => 'draft' ) );
+		$register( $elsewhere, array( 'param' => 'post_type', 'operator' => '==', 'value' => 'itest_elsewhere' ) );
+		$register( $add_user, array( 'param' => 'user_form', 'operator' => '==', 'value' => 'add' ) );
+
+		$post  = wpcmb_post_fixture( 'post', 'Location moved ' . $suffix );
+		$other = wpcmb_post_fixture( 'post', 'Location moved other ' . $suffix );
+
+		wp_update_post( array( 'ID' => $post, 'post_status' => 'draft' ) );
+
+		$ref = new WPCMB\Fields\ObjectRef( WPCMB\Fields\ObjectRef::POST, $post );
+
+		/* Draw the group the way the meta box does, and read what it posts. */
+		$render = new ReflectionMethod( $boxes, 'render_group' );
+
+		$token = static function ( string $key, WPCMB\Fields\ObjectRef $on ) use ( $boxes, $render, $repo ): string {
+			ob_start();
+			$render->invoke( $boxes, $repo->all()[ $key ], $on );
+
+			return preg_match( '/name="wpcmb_groups\[' . $key . '\]" value="([^"]+)"/', (string) ob_get_clean(), $m ) ? $m[1] : '';
+		};
+
+		$submit = static function ( array $groups, array $values, callable $save ): void {
+			$_POST = array(
+				'wpcmb_values_nonce' => wp_create_nonce( 'wpcmb_save_values' ),
+				'wpcmb_groups'       => $groups,
+				'wpcmb_values'       => $values,
+			);
+
+			$save();
+
+			$_POST = array();
+		};
+
+		$shown = $token( 'group_' . $draft_only, $ref );
+
+		wpcmb_is( '' !== $shown, 'a group says it was on the form' );
+
+		/*
+		 * The block editor publishes over REST and posts its meta boxes
+		 * afterwards, by which time the post is no longer a draft.
+		 */
+		wp_update_post( array( 'ID' => $post, 'post_status' => 'publish' ) );
+
+		$submit( array( 'group_' . $draft_only => $shown ), array( $draft_only => 'typed' ), static fn() => $boxes->save_post( $post ) );
+
+		wpcmb_is( 'typed' === get_post_meta( $post, $draft_only, true ), 'what was typed while it was a draft is kept' );
+
+		/* Being shown one group is not permission to write another. */
+		$submit( array( 'group_' . $elsewhere => $shown ), array( $elsewhere => 'forged' ), static fn() => $boxes->save_post( $post ) );
+		$submit( array( 'group_' . $elsewhere => 'x' ), array( $elsewhere => 'forged' ), static fn() => $boxes->save_post( $post ) );
+		$submit( array(), array( $elsewhere => 'forged' ), static fn() => $boxes->save_post( $post ) );
+
+		wpcmb_is( ! metadata_exists( 'post', $post, $elsewhere ), 'a group that was not on the form cannot be named by the request' );
+
+		/* Nor the same group on another object. */
+		$submit( array( 'group_' . $draft_only => $shown ), array( $draft_only => 'forged' ), static fn() => $boxes->save_post( $other ) );
+
+		wpcmb_is( ! metadata_exists( 'post', $other, $draft_only ), 'and the token for one post does not open another' );
+
+		/* Add New User: drawn for nobody, saved to the user it makes. */
+		ob_start();
+		$boxes->render_new_user( 'add-new-user' );
+		$form = (string) ob_get_clean();
+
+		wpcmb_is( str_contains( $form, 'wpcmb_values[' . $add_user . ']' ), 'a group for the Add User form is on it' );
+
+		preg_match( '/name="wpcmb_groups\[group_' . $add_user . '\]" value="([^"]+)"/', $form, $m );
+
+		$user = (int) wp_insert_user(
+			array(
+				'user_login' => 'itest_' . $suffix,
+				'user_pass'  => wp_generate_password( 24 ),
+				'user_email' => 'itest_' . $suffix . '@example.test',
+				'role'       => 'administrator',
+			)
+		);
+
+		$submit( array( 'group_' . $add_user => $m[1] ?? '' ), array( $add_user => 'new user' ), static fn() => $boxes->save_new_user( $user ) );
+
+		wpcmb_is( 'new user' === get_user_meta( $user, $add_user, true ), 'and its values reach the user it makes' );
+
+		/* Nor does one person's token work for another. */
+		$was = get_current_user_id();
+
+		wp_set_current_user( $user );
+		$submit( array( 'group_' . $draft_only => $shown ), array( $draft_only => 'forged' ), static fn() => $boxes->save_post( $post ) );
+		wp_set_current_user( $was );
+
+		wpcmb_is( 'typed' === get_post_meta( $post, $draft_only, true ), 'and a token belongs to the person it was printed for' );
+
+		require_once ABSPATH . 'wp-admin/includes/user.php';
+		wp_delete_user( $user );
+	}
+);
+
 wpcmb_group(
 	'a term on a hidden taxonomy does not hand out its values',
 	function (): void {

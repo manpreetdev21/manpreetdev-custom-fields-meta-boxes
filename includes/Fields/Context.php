@@ -97,21 +97,23 @@ final class Context {
 		$value = match ( $param ) {
 			'post_type'                           => $this->post_value( 'post_type' ),
 			'comment'                             => $this->comment_post_type(),
-			'post_status'                         => $this->post_value( 'post_status' ),
+			'post_status'                         => $this->post_status(),
 			'post_format'                         => $this->post_format(),
-			'post_template', 'page_template'      => $this->template(),
+			'post_template'                       => $this->template(),
+			'page_template'                       => $this->is_post_type( 'page' ) ? $this->template() : null,
 			'page_type'                           => $this->page_type(),
-			'page_parent'                         => $this->post_value( 'post_parent' ),
-			'post', 'page'                        => $this->post_id_string(),
+			'page_parent'                         => $this->is_hierarchical() ? $this->post_value( 'post_parent' ) : null,
+			'post'                                => $this->post_id_string(),
+			'page'                                => $this->is_post_type( 'page' ) ? $this->post_id_string() : null,
 			'post_category'                       => $this->term_slugs( 'category' ),
 			'post_taxonomy'                       => $this->post_taxonomies(),
 			'attachment'                          => $this->is_post_type( 'attachment' ) ? 'all' : null,
-			'nav_menu_item'                       => $this->is_post_type( 'nav_menu_item' ) ? 'all' : null,
+			'nav_menu_item'                       => $this->is_menu_item() ? 'all' : null,
 			'taxonomy'                            => $this->taxonomy(),
 			'nav_menu'                            => $this->nav_menu(),
 			'user_role'                           => $this->user_roles(),
-			'user_form'                           => $this->extra['user_form'] ?? null,
-			'options_page'                        => ObjectRef::OPTION === $this->ref->type ? (string) $this->ref->id : null,
+			'user_form'                           => $this->user_form(),
+			'options_page'                        => ObjectRef::OPTION === $this->ref->type && ! isset( $this->extra['widget'] ) ? (string) $this->ref->id : null,
 			'widget'                              => $this->widget(),
 			'block'                               => $this->extra['block'] ?? null,
 			'current_user'                        => $this->current_user(),
@@ -162,6 +164,10 @@ final class Context {
 
 	/**
 	 * The referenced post, if this context describes one.
+	 *
+	 * A menu item is stored as a post and is not one in any sense a rule
+	 * means: "post status is published" put its fields on every item of every
+	 * menu. It has a rule of its own, and answers to that one only.
 	 */
 	private function post(): ?\WP_Post {
 		if ( ObjectRef::POST !== $this->ref->type ) {
@@ -170,7 +176,63 @@ final class Context {
 
 		$post = get_post( (int) $this->ref->id );
 
-		return $post instanceof \WP_Post ? $post : null;
+		return $post instanceof \WP_Post && 'nav_menu_item' !== $post->post_type ? $post : null;
+	}
+
+	/**
+	 * Whether the referenced object is a menu item.
+	 */
+	private function is_menu_item(): bool {
+		return ObjectRef::POST === $this->ref->type && 'nav_menu_item' === get_post_type( (int) $this->ref->id );
+	}
+
+	/**
+	 * Whether the referenced post is of a kind that can have a parent.
+	 *
+	 * The page tree rules ask about a page's place in a tree. A post has no
+	 * such place, and answering "top level" for one — its parent being 0 like
+	 * any post's — put those fields on every post, file and menu item.
+	 */
+	private function is_hierarchical(): bool {
+		$post = $this->post();
+
+		return $post instanceof \WP_Post && is_post_type_hierarchical( $post->post_type );
+	}
+
+	/**
+	 * The post's status, where a post not saved yet is also a draft.
+	 *
+	 * The Add New screen holds an `auto-draft`, which is nothing an editor
+	 * has ever heard of: to them it is a draft that has not been saved. A
+	 * group for drafts was missing from the one screen every draft starts on.
+	 *
+	 * @return string|array<int, string>|null
+	 */
+	private function post_status(): string|array|null {
+		$status = $this->post_value( 'post_status' );
+
+		return 'auto-draft' === $status ? array( 'auto-draft', 'draft' ) : $status;
+	}
+
+	/**
+	 * Which user form this is.
+	 *
+	 * Said by the screen when it knows, and otherwise read from the user: one
+	 * that exists is being edited, one that does not is being added. Only the
+	 * screen that drew the form used to say, so the group was matched when it
+	 * was drawn and not when it was saved, validated or given its scripts —
+	 * the fields appeared and nothing typed into them was kept.
+	 */
+	private function user_form(): ?string {
+		if ( isset( $this->extra['user_form'] ) ) {
+			return (string) $this->extra['user_form'];
+		}
+
+		if ( ObjectRef::USER !== $this->ref->type ) {
+			return null;
+		}
+
+		return (int) $this->ref->id > 0 ? 'edit' : 'add';
 	}
 
 	/**
@@ -193,11 +255,14 @@ final class Context {
 
 	/**
 	 * The post format, falling back to `standard`.
+	 *
+	 * Null for a type with no formats: it has none, rather than the standard
+	 * one.
 	 */
 	private function post_format(): ?string {
 		$post = $this->post();
 
-		if ( ! $post instanceof \WP_Post ) {
+		if ( ! $post instanceof \WP_Post || ! post_type_supports( $post->post_type, 'post-formats' ) ) {
 			return null;
 		}
 
@@ -212,7 +277,8 @@ final class Context {
 	private function template(): ?string {
 		$post = $this->post();
 
-		if ( ! $post instanceof \WP_Post ) {
+		// A media file is never given a template.
+		if ( ! $post instanceof \WP_Post || 'attachment' === $post->post_type ) {
 			return null;
 		}
 
@@ -231,7 +297,7 @@ final class Context {
 	private function page_type(): ?array {
 		$post = $this->post();
 
-		if ( ! $post instanceof \WP_Post ) {
+		if ( ! $post instanceof \WP_Post || ! $this->is_hierarchical() ) {
 			return null;
 		}
 
@@ -273,13 +339,31 @@ final class Context {
 	private function term_slugs( string $taxonomy ): ?array {
 		$post = $this->post();
 
-		if ( ! $post instanceof \WP_Post ) {
+		// Null, not "none of them", for a type that does not use the taxonomy:
+		// an "is not" rule would otherwise match everything that has no
+		// categories to be in.
+		if ( ! $post instanceof \WP_Post || ! is_object_in_taxonomy( $post->post_type, $taxonomy ) ) {
 			return null;
 		}
 
 		$terms = get_the_terms( $post, $taxonomy );
 
-		return is_array( $terms ) ? wp_list_pluck( $terms, 'slug' ) : array();
+		if ( is_array( $terms ) ) {
+			return wp_list_pluck( $terms, 'slug' );
+		}
+
+		/*
+		 * A post not saved yet is in no category and will be in the default
+		 * one the moment it is, because WordPress puts it there. The group
+		 * belongs on the Add New screen for the same reason.
+		 */
+		if ( 'category' === $taxonomy && 'auto-draft' === $post->post_status ) {
+			$default = get_term( (int) get_option( 'default_category' ), 'category' );
+
+			return $default instanceof \WP_Term ? array( $default->slug ) : array();
+		}
+
+		return array();
 	}
 
 	/**
@@ -374,6 +458,11 @@ final class Context {
 	private function user_roles(): ?array {
 		if ( ObjectRef::USER !== $this->ref->type ) {
 			return null;
+		}
+
+		// Nobody yet: the form offers the site's default role.
+		if ( 0 === (int) $this->ref->id ) {
+			return array( (string) get_option( 'default_role' ) );
 		}
 
 		$user = get_userdata( (int) $this->ref->id );

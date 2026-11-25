@@ -242,7 +242,10 @@ final class Assets extends Module {
 					'removeRule'          => __( 'Remove rule', 'manpreetdev-custom-fields-meta-boxes' ),
 					'appearsWhen'         => __( 'Appears when:', 'manpreetdev-custom-fields-meta-boxes' ),
 					'appearsNowhere'      => __( 'This group has no rules, so it will not appear anywhere.', 'manpreetdev-custom-fields-meta-boxes' ),
-					'anythingLabel'       => __( '(anything)', 'manpreetdev-custom-fields-meta-boxes' ),
+					'anythingLabel'       => __( '(nothing chosen yet)', 'manpreetdev-custom-fields-meta-boxes' ),
+
+					/* translators: %s: a stored rule value that the site no longer offers. */
+					'unavailable'         => __( '%s (not available)', 'manpreetdev-custom-fields-meta-boxes' ),
 					// Matches Locations::describe(), so the sentence in the editor
 					// and the one in the field group list are word for word the same.
 					'summaryIs'           => __( 'is', 'manpreetdev-custom-fields-meta-boxes' ),
@@ -506,6 +509,9 @@ final class Assets extends Module {
 			'edit-tags' => new ObjectRef( ObjectRef::TERM, 0 ),
 			'user-edit' => new ObjectRef( ObjectRef::USER, $id( 'user_id' ) ),
 			'profile'   => new ObjectRef( ObjectRef::USER, get_current_user_id() ),
+
+			// Add New User: a form with fields on it and no user yet.
+			'user'      => new ObjectRef( ObjectRef::USER, 0 ),
 			'comment'   => new ObjectRef( ObjectRef::COMMENT, $id( 'c' ) ),
 			default     => null,
 		};

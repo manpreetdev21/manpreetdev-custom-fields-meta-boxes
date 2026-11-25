@@ -93,9 +93,11 @@ assert( ! isset( $field['conditional']['rules'], $field['conditional']['logic'] 
 assert( 1 === count( $field['sub_fields'] ), 'sub fields are sanitized' );
 assert( 'child' === $field['sub_fields'][0]['name'], 'sub field names survive' );
 
-// Unknown location params are dropped, and empty rule groups with them.
+// An unknown location param is kept: it can match nothing, so it holds its
+// rule group closed. Dropping it left the rest of the group to match more than
+// it was meant to, as a WooCommerce rule saved with WooCommerce off did.
 assert( 1 === count( $clean['location'] ), 'empty rule groups must be dropped' );
-assert( 1 === count( $clean['location'][0] ), 'unknown location params must be dropped' );
+assert( 2 === count( $clean['location'][0] ), 'an unknown location param is kept, so its group stays as narrow as it was' );
 assert( '!=' === $clean['location'][0][0]['operator'], 'valid location operators survive' );
 
 // Settings fall back to known values.

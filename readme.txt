@@ -4,7 +4,7 @@ Tags: custom fields, meta box, repeater, options page, custom post type
 Requires at least: 6.8
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.17.9
+Stable tag: 1.17.10
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -16,7 +16,7 @@ Add custom fields to posts, pages, custom post types, terms, users, comments, op
 
 **Fifty-one field types**, grouped by what they do rather than by name: text, number, email, URL, password, range, colour, date, time, phone, slug, UUID, currency, textarea, select, checkbox, radio, toggle, button group, rating, country, region, file, image, gallery, video, audio, post object, page link, relationship, taxonomy, user, link, rich text, code, JSON, HTML, repeater, flexible content, message, separator, tab, accordion, group, icon picker, map, signature, QR code, barcode, embed and address.
 
-**Where a group appears is a rule, not code.** Twenty-five location parameters cover post type, template, status, format, category, taxonomy, a specific post or page, page type and parent, the current user, user role and profile form, terms, attachments, comments, menus, menu items, widgets, blocks, options pages, and WooCommerce product types and order statuses.
+**Where a group appears is a rule, not code.** Twenty-four location parameters cover post type, template, status, format, category, taxonomy, a specific post or page, page type and parent, the current user, user role and profile form, terms, attachments, comments, menus, menu items, widgets, options pages, and WooCommerce product types and order statuses.
 
 **Values live in native WordPress storage.** A field on a post is post meta; a field on a term is term meta; an options page writes prefixed options. Nothing is kept in a custom table, so every value stays readable with `get_post_meta()` and reaches the REST API, exports and migrations like any other metadata.
 
@@ -95,6 +95,18 @@ Yes. Every string is translatable under the `manpreetdev-custom-fields-meta-boxe
 5. The field group list, with each group's key, field count and location.
 
 == Changelog ==
+
+= 1.17.10 =
+* Fixed: values were lost when saving changed what a location rule looks at. A group for drafts is on the form when Publish is pressed and no longer applies by the time the block editor posts its meta boxes, so whatever had been typed into it was discarded; the same went for a format, template, category or role. A submission now carries the groups that were on its form, each with a nonce bound to the group, the object and the user.
+* Fixed: opening a field group and saving it could move it somewhere else. A rule naming something the site no longer offers — a post type whose plugin is off, a deleted menu — was replaced by the first choice in the list, and a rule of a kind it did not know was dropped, leaving the rest to match more than they were meant to. "Product, and simple product", saved with WooCommerce off, became every post. Such rules are now shown as "not available" and saved back unchanged.
+* Fixed: a group located on User Form is Edit User was drawn on the profile and never saved.
+* Fixed: User Form is Add User did nothing. Its fields are now on the Add User screen and saved with the new user. Register User is no longer offered: nothing has ever drawn fields on the registration form.
+* Fixed: Page Template, Page Type, Page Parent and Page answered for posts, files and menu items too, so an "is not" rule put a page group on all of them. Post Format answered "standard" for types with no formats, and Post Category "none" for types with no categories. A menu item is no longer taken for a published post.
+* Fixed: Post Status is Draft, and a rule naming the default category, were missing from the Add New screen.
+* The plugin's own screens are no longer offered as post types, nor given field groups by a rule such as "post type is not page". Post Status lists only statuses an edit screen can show, and Comment only types that take comments.
+* The Block parameter is gone: nothing ever answered it. Blocks are made on the Block Types screen. A stored Block rule is kept and goes on matching nothing.
+* A rule with nothing chosen says so instead of reading "(anything)", a new Menu rule starts at All menus, and a rule naming a post or page is described by its title in the field group list.
+* Groups located only by category, taxonomy, page type or page parent are now in the REST API.
 
 = 1.17.9 =
 * "Hide on screen" now works in the block editor. Excerpt, featured image, discussion, comments, categories, tags and page attributes are sidebar panels there rather than meta boxes, so removing the meta box — all the option did — hid nothing on any post type that uses the block editor. They are now switched off through the editor's own panel list, and Permalink and Slug hide the Slug row of the post summary. Content editor, author, format and revisions remain classic-editor only: the block editor offers no way to remove them that would not also take the title or the whole summary with it.

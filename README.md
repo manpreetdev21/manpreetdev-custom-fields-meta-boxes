@@ -2,7 +2,7 @@
 
 Field groups, meta boxes and a developer-friendly field API for WordPress.
 
-- **Version:** 1.17.9
+- **Version:** 1.17.10
 - **Author:** Manpreet Singh
 - **Requires PHP:** 8.1
 - **Requires WordPress:** 6.8
@@ -217,6 +217,10 @@ Rules are an OR list of AND groups: the group shows when every rule in at least 
 - **An inapplicable parameter never matches, negated or not.** Otherwise "post type is not page" would start matching users, terms and comments.
 
 `Context` computes parameter values on demand and memoises them. A typical rule set tests one or two parameters, and several of the others cost a term or template query — building a full description of the screen up front would run those queries to answer questions nobody asked.
+
+- **A rule the site cannot answer today is kept.** A post type whose plugin is off, a menu since deleted, a parameter another plugin added: the builder shows it as *not available* and saves it back unchanged. It matches nothing, which keeps its group as narrow as it was written.
+
+A submission may carry the fields of every group that was on its form, not only those whose rules still match when it arrives. Publishing from a group for drafts, or changing the template another is for, would otherwise discard what had been typed. Each group prints a nonce bound to the group, the object and the user, so a request can only name a group that person was shown.
 
 ### Two rules that could never match
 
