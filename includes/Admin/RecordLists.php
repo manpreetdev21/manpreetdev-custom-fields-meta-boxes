@@ -89,6 +89,12 @@ final class RecordLists extends Module {
 		}
 
 		if ( 'wpcmb_group' === $column ) {
+			if ( CustomOptionsPages::POST_TYPE === $post->post_type ) {
+				$this->render_page_groups( $record );
+
+				return;
+			}
+
 			$this->render_group( $record );
 
 			return;
@@ -150,6 +156,41 @@ final class RecordLists extends Module {
 	}
 
 	/**
+	 * The field groups on an options page.
+	 *
+	 * An options page does not name a field group: groups point at the page
+	 * with a location rule. So the column lists the groups whose rules do,
+	 * where it used to show a dash for every page.
+	 *
+	 * @param array<string, mixed> $record Stored configuration.
+	 */
+	private function render_page_groups( array $record ): void {
+		$slug = (string) ( $record['slug'] ?? '' );
+
+		$groups = '' === $slug ? array() : $this->container->get( \WPCMB\Fields\Resolver::class )->groups(
+			new \WPCMB\Fields\Context( new \WPCMB\Fields\ObjectRef( \WPCMB\Fields\ObjectRef::OPTION, $slug ) )
+		);
+
+		if ( array() === $groups ) {
+			echo '—';
+
+			return;
+		}
+
+		$links = array();
+
+		foreach ( $groups as $group ) {
+			$links[] = sprintf(
+				'<a href="%s">%s</a>',
+				esc_url( get_edit_post_link( $group->id ) ?? '' ),
+				esc_html( '' !== $group->title ? $group->title : $group->key )
+			);
+		}
+
+		echo implode( ', ', $links ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Each link escaped above.
+	}
+
+	/**
 	 * The one detail worth a column for each kind of record.
 	 *
 	 * @param string               $post_type Record post type.
@@ -157,7 +198,9 @@ final class RecordLists extends Module {
 	 */
 	private function render_detail( string $post_type, array $record ): void {
 		if ( CustomBlocks::POST_TYPE === $post_type ) {
-			$supports = (array) ( $record['supports'] ?? array() );
+			// By the names the Block Types screen gives them, not their keys.
+			$labels   = CustomBlocks::features();
+			$supports = array_map( static fn( $key ): string => (string) ( $labels[ $key ] ?? $key ), (array) ( $record['supports'] ?? array() ) );
 
 			echo esc_html( array() !== $supports ? implode( ', ', $supports ) : '—' );
 
@@ -174,9 +217,22 @@ final class RecordLists extends Module {
 			return;
 		}
 
-		$parent = (string) ( $record['parent'] ?? '' );
+		// "Under Settings", the words the editor's own dropdown uses, rather
+		// than options-general.php.
+		$parent  = (string) ( $record['parent'] ?? '' );
+		$others  = array();
+		$records = $this->container->get( CustomOptionsPages::class )->records( true );
 
-		echo esc_html( '' !== $parent ? $parent : __( 'Top-level menu', 'manpreetdev-custom-fields-meta-boxes' ) );
+		foreach ( $records as $other ) {
+			$slug = (string) ( $other['slug'] ?? '' );
+
+			// The record that builds the page names it; see CustomOptionsPages::pages().
+			if ( '' !== $slug && ! isset( $others[ $slug ] ) ) {
+				$others[ $slug ] = (string) ( '' !== (string) ( $other['menu_title'] ?? '' ) ? $other['menu_title'] : ( $other['title'] ?? $slug ) );
+			}
+		}
+
+		echo esc_html( CustomOptionsPages::parents( $others )[ $parent ] ?? $parent );
 	}
 
 	/**
@@ -211,10 +267,18 @@ final class RecordLists extends Module {
 
 		if ( CustomBlocks::POST_TYPE === $post->post_type && '' === (string) ( $record['name'] ?? '' ) ) {
 			$states['wpcmb_no_name'] = __( 'No name', 'manpreetdev-custom-fields-meta-boxes' );
+		} elseif ( CustomBlocks::POST_TYPE === $post->post_type && ! isset( $this->container->get( CustomBlocks::class )->live()[ $post->ID ] ) ) {
+			// Another record has the name, or the group it needs is missing.
+			$states['wpcmb_dormant'] = __( 'Not registered', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
 		if ( CustomOptionsPages::POST_TYPE === $post->post_type && '' === (string) ( $record['slug'] ?? '' ) ) {
 			$states['wpcmb_no_slug'] = __( 'No slug', 'manpreetdev-custom-fields-meta-boxes' );
+		} elseif ( CustomOptionsPages::POST_TYPE === $post->post_type
+			&& ( $this->container->get( CustomOptionsPages::class )->pages()[ (string) $record['slug'] ]['record'] ?? 0 ) !== $post->ID
+		) {
+			// Another record builds this slug's page.
+			$states['wpcmb_dormant'] = __( 'Not in use', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
 		if ( CustomForms::POST_TYPE === $post->post_type && '' === $key ) {

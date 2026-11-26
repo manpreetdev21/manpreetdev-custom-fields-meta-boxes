@@ -149,8 +149,18 @@ final class CustomOptionsPages extends RecordType {
 			return __( 'An options page needs a slug.', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
+		/*
+		 * Only an older record that is active takes the slug from this one.
+		 * That is the record registration gives it to, so what this screen
+		 * says matches what happens; it used to blame the original for its
+		 * own copy, since each found the other.
+		 */
 		foreach ( $this->records( true ) as $id => $record ) {
-			if ( $id !== $post_id && ( $record['slug'] ?? '' ) === $slug ) {
+			if ( $id === $post_id ) {
+				break;
+			}
+
+			if ( ! empty( $record['active'] ) && ( $record['slug'] ?? '' ) === $slug ) {
 				return sprintf(
 					/* translators: %s: the options page slug. */
 					__( 'Another record already builds the page "%s".', 'manpreetdev-custom-fields-meta-boxes' ),
@@ -188,7 +198,13 @@ final class CustomOptionsPages extends RecordType {
 		foreach ( $this->records() as $post_id => $record ) {
 			$slug = (string) ( $record['slug'] ?? '' );
 
-			if ( '' === $slug ) {
+			/*
+			 * The first record to claim a slug builds the page. It used to be
+			 * the last, so a record its own screen called inactive replaced
+			 * the page's title, its place in the menu, and the capability
+			 * that decides who may open it.
+			 */
+			if ( '' === $slug || isset( $pages[ $slug ] ) ) {
 				continue;
 			}
 

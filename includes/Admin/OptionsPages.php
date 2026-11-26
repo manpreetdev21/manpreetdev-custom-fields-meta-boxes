@@ -224,13 +224,47 @@ final class OptionsPages extends Module {
 		// options screen reads as a settings screen, and that is where
 		// somebody looking for one will look.
 		$position = 80.9;
+		$pages    = $this->pages();
 
-		foreach ( $this->pages() as $slug => $page ) {
+		/*
+		 * The options page a page sits under, if it sits under one of these.
+		 * The editor stores the parent's menu slug, wpcmb-options-{slug}; a
+		 * page defined in code may name the bare slug. Either way it is one
+		 * of ours, and the answer is its slug.
+		 */
+		$own_parent = static function ( array $page ) use ( &$pages ): string {
+			$parent = (string) ( $page['parent'] ?? '' );
+			$bare   = str_starts_with( $parent, self::SLUG_PREFIX ) ? substr( $parent, strlen( self::SLUG_PREFIX ) ) : $parent;
+
+			return '' !== $bare && isset( $pages[ $bare ] ) ? $bare : '';
+		};
+
+		/*
+		 * Parents first. WordPress lists a top-level page as the first entry
+		 * under itself only if it is in the menu before its first sub-page
+		 * is added; added in slug order, a sub-page whose slug sorts first —
+		 * "about" under "site" — came first, and the parent's own link then
+		 * led to the sub-page with no way back to the parent.
+		 */
+		$is_child = static fn( array $page ): bool => '' !== $own_parent( $page );
+
+		uasort( $pages, static fn( array $a, array $b ): int => (int) $is_child( $a ) <=> (int) $is_child( $b ) );
+
+		foreach ( $pages as $slug => $page ) {
+			$parent = (string) ( $page['parent'] ?? '' );
+			$owner  = $own_parent( $page );
+
+			// WordPress lists the parent first under itself, as long as it is
+			// already in the menu: which is why parents are added first.
+			if ( '' !== $owner ) {
+				$parent = self::SLUG_PREFIX . $owner;
+			}
+
 			$args = array(
 				// An empty parent still means a top-level menu; the filter
 				// below takes null for the same thing, which is what it has
 				// always taken.
-				'parent'     => '' !== (string) ( $page['parent'] ?? '' ) ? (string) $page['parent'] : null,
+				'parent'     => '' !== $parent ? $parent : null,
 
 				/*
 				 * A record can name the page title outright. The generated one
@@ -415,8 +449,14 @@ final class OptionsPages extends Module {
 			wp_die( esc_html__( 'You do not have permission to view these options.', 'manpreetdev-custom-fields-meta-boxes' ) );
 		}
 
-		$pages    = $this->pages();
-		$title    = (string) ( $pages[ $slug ]['title'] ?? $this->humanise( $slug ) );
+		$pages = $this->pages();
+
+		// The page's own title when it has one: that is what the setting is
+		// for. The menu title is only the fallback.
+		$title = '' !== (string) ( $pages[ $slug ]['page_title'] ?? '' )
+			? (string) $pages[ $slug ]['page_title']
+			: (string) ( $pages[ $slug ]['title'] ?? $this->humanise( $slug ) );
+
 		$groups   = $this->container->get( Resolver::class )->groups( new Context( $ref ) );
 		$renderer = $this->container->get( Renderer::class );
 

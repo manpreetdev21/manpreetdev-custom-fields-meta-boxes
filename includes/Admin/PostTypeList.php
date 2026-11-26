@@ -93,8 +93,9 @@ final class PostTypeList extends Module {
 		}
 
 		// How many posts exist under this key, which answers "is anything
-		// actually using it" without opening the post type.
-		if ( '' === $name || ! post_type_exists( $name ) ) {
+		// actually using it" without opening the post type. Only for the
+		// record that registered it: a duplicate is not using anything.
+		if ( ! isset( $this->container->get( CustomPostTypes::class )->applied()[ (int) $post_id ] ) ) {
 			echo '—';
 
 			return;
@@ -141,7 +142,7 @@ final class PostTypeList extends Module {
 			return $states;
 		}
 
-		if ( ! post_type_exists( $name ) ) {
+		if ( ! isset( $type->applied()[ $post->ID ] ) ) {
 			$states['wpcmb_dormant'] = __( 'Not registered', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
@@ -165,7 +166,7 @@ final class PostTypeList extends Module {
 
 		$name = (string) ( $this->container->get( CustomPostTypes::class )->config( $post )['name'] ?? '' );
 
-		if ( '' === $name || ! post_type_exists( $name ) ) {
+		if ( '' === $name || ! isset( $this->container->get( CustomPostTypes::class )->applied()[ $post->ID ] ) ) {
 			return $actions;
 		}
 

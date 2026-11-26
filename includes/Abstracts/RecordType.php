@@ -122,6 +122,18 @@ abstract class RecordType extends Module {
 	public function boot(): void {
 		add_action( 'init', array( $this, 'register' ), 5 );
 		add_action( 'init', array( $this, 'apply_records' ), 6 );
+		add_action( 'init', array( $this, 'register_states' ), 5 );
+	}
+
+	/**
+	 * Active or inactive, and nothing else; see RecordStates.
+	 *
+	 * On `init` rather than in boot(), because the names are translated.
+	 */
+	public function register_states(): void {
+		$names = $this->names();
+
+		( new \WPCMB\PostTypes\RecordStates( $this->post_type(), $names['singular'], $names['plural'] ) )->register();
 	}
 
 	/**
@@ -209,10 +221,23 @@ abstract class RecordType extends Module {
 		$posts = get_posts(
 			array(
 				'post_type'              => $this->post_type(),
-				'post_status'            => $include_inactive ? array( 'publish', 'draft' ) : 'publish',
+				// A record left private, pending or scheduled by an earlier
+				// version is inactive, not missing: it still counts when two
+				// records claim one name, and it is still exported.
+				'post_status'            => $include_inactive ? array_merge( array( 'publish' ), \WPCMB\PostTypes\RecordStates::INACTIVE ) : 'publish',
 				'posts_per_page'         => -1,
-				'orderby'                => 'menu_order title',
-				'order'                  => 'ASC',
+
+				/*
+				 * Oldest first. When two records claim one name the first
+				 * keeps it, and the first has to be the original: ordered by
+				 * title, a copy called "Callout (old)" took the block from
+				 * "Callout", against what each record's own screen said.
+				 */
+				'orderby'                => array(
+					'menu_order' => 'ASC',
+					'date'       => 'ASC',
+					'ID'         => 'ASC',
+				),
 				'no_found_rows'          => true,
 				'update_post_term_cache' => false,
 				'suppress_filters'       => false,

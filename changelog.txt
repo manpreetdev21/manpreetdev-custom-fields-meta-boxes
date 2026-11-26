@@ -3,6 +3,15 @@
 Every release, newest first. readme.txt carries only the latest few, because the
 plugin directory shows at most 5,000 characters of a changelog.
 
+= 1.17.13 =
+* Fixed: a post type or taxonomy named with a wp_ prefix, or a reserved name WordPress had not registered, was registered anyway, after the editor warned it would not be.
+* Fixed: a post type that was not public still appeared in front-end search results, with its titles and links. Non-public post types are now always excluded from search.
+* Fixed: two block types or options pages with the same name: the last one won, against what each screen said. The oldest record now keeps the name for all record types, the warning is shown only on the newer copy, and a copy can no longer replace an options page's title, menu position or capability.
+* Fixed: a block's Dashicon was passed with its dashicons- prefix, so the inserter drew no icon. Images fall back to the default icon. The Additional CSS class feature ticked on the Block Types screen was ignored.
+* Fixed: an options page's heading showed the menu title instead of the page title, and a sub-page whose slug sorted before its parent's took over the parent's menu link.
+* Post types, taxonomies, block types, forms and options pages are now always Active or Inactive, like field groups: Private, Pending and Scheduled save as inactive, a record restored from the trash keeps its state, Quick Edit is removed, the views read Active and Inactive, and notices name the record type.
+* The lists show "Not registered" or "Not in use" for a record that registers nothing, and only the record in use shows a count or an Open link. The options page list shows the field groups on each page, and Details shows labels instead of raw values.
+
 = 1.17.12 =
 * Fixed: duplicating a field group could switch off the original. The copy's keys were found by a pattern that only matched a key with no underscore after its prefix, so `group_contact_form` and most real keys were copied unchanged. The copy then shared its key with the original and, being inactive and loaded later, replaced it everywhere the group was used. Keys are now taken from where keys live — the group, every field, sub field and layout — and replaced only where a key is kept, so conditional rules follow the copy's fields while names and labels are left alone.
 * Should two groups ever share a key, an inactive one no longer hides an active one.

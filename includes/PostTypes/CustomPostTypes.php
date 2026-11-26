@@ -25,6 +25,13 @@ defined( 'ABSPATH' ) || exit;
 final class CustomPostTypes extends RecordType {
 
 	/**
+	 * What each record registered this request, keyed by record id.
+	 *
+	 * @var array<int, object>
+	 */
+	private array $applied = array();
+
+	/**
 	 * Post type storing these records.
 	 */
 	public const POST_TYPE = 'wpcmb_post_type';
@@ -261,8 +268,18 @@ final class CustomPostTypes extends RecordType {
 			return __( 'Names beginning with wp_ are reserved by WordPress.', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
+		/*
+		 * Only an older record that is active takes the name from this one.
+		 * That is the record registration gives it to, so what this screen
+		 * says matches what happens; it used to blame the original for its
+		 * own copy, since each found the other.
+		 */
 		foreach ( $this->records( true ) as $id => $record ) {
-			if ( $id !== $post_id && ( $record['name'] ?? '' ) === $name ) {
+			if ( $id === $post_id ) {
+				break;
+			}
+
+			if ( ! empty( $record['active'] ) && ( $record['name'] ?? '' ) === $name ) {
 				return sprintf(
 					/* translators: %s: the post type name. */
 					__( 'Another record already registers "%s".', 'manpreetdev-custom-fields-meta-boxes' ),
@@ -285,6 +302,40 @@ final class CustomPostTypes extends RecordType {
 		}
 
 		return '';
+	}
+
+	/**
+	 * Whether a name is one WordPress keeps for itself.
+	 *
+	 * @param string $name Name to check.
+	 */
+	public function is_reserved( string $name ): bool {
+		return in_array( $name, self::RESERVED, true ) || str_starts_with( $name, 'wp_' );
+	}
+
+	/**
+	 * The records that registered something this request, by post id.
+	 *
+	 * The list screen reads this rather than working it out again: whether a
+	 * name exists says nothing about which record registered it, and a
+	 * duplicate showed a count and an Open link for somebody else's.
+	 *
+	 * Still theirs, too. Something that registers the same name later in
+	 * the request — a theme on the default priority — replaces the record's
+	 * registration, and then the record is not what is in use.
+	 *
+	 * @return array<int, string>
+	 */
+	public function applied(): array {
+		$live = array();
+
+		foreach ( $this->applied as $post_id => $object ) {
+			if ( get_post_type_object( $object->name ) === $object ) {
+				$live[ $post_id ] = $object->name;
+			}
+		}
+
+		return $live;
 	}
 
 	/**
@@ -314,7 +365,13 @@ final class CustomPostTypes extends RecordType {
 			// A name that cannot be registered is left alone rather than
 			// forced: the editor already said why, and overwriting somebody
 			// else's post type on every page load would be worse.
-			if ( '' === $name || post_type_exists( $name ) ) {
+
+			/*
+			 * The same rules the editor states, applied here too. A reserved
+			 * name WordPress has not registered, or one beginning with wp_,
+			 * was warned about on the screen and then registered anyway.
+			 */
+			if ( '' === $name || $this->is_reserved( $name ) || post_type_exists( $name ) ) {
 				continue;
 			}
 
@@ -336,6 +393,8 @@ final class CustomPostTypes extends RecordType {
 			if ( is_wp_error( $registered ) ) {
 				continue;
 			}
+
+			$this->applied[ (int) $post_id ] = $registered;
 
 			$this->attach_taxonomies( $name, (array) ( $record['taxonomies'] ?? array() ) );
 		}
@@ -428,7 +487,14 @@ final class CustomPostTypes extends RecordType {
 			'supports'            => array() !== $record['supports'] ? (array) $record['supports'] : array( 'title' ),
 			'taxonomies'          => (array) $record['taxonomies'],
 			'rewrite'             => $rewrite,
-			'exclude_from_search' => (bool) $record['exclude_from_search'],
+
+			/*
+			 * A post type nobody may see is never searchable, whatever the
+			 * box says. WordPress's own default ties the two together; passing
+			 * the box alone put a private post type's titles and links into
+			 * the public search results.
+			 */
+			'exclude_from_search' => (bool) $record['exclude_from_search'] || ! (bool) $record['public'],
 			'capability_type'     => (string) $record['capability_type'],
 			'map_meta_cap'        => true,
 			'can_export'          => true,

@@ -143,8 +143,18 @@ final class CustomBlocks extends RecordType {
 			return __( 'A block needs a field group to take its fields from.', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
+		/*
+		 * Only an older record that is active takes the name from this one.
+		 * That is the record registration gives it to, so what this screen
+		 * says matches what happens; it used to blame the original for its
+		 * own copy, since each found the other.
+		 */
 		foreach ( $this->records( true ) as $id => $record ) {
-			if ( $id !== $post_id && ( $record['name'] ?? '' ) === $name ) {
+			if ( $id === $post_id ) {
+				break;
+			}
+
+			if ( ! empty( $record['active'] ) && ( $record['name'] ?? '' ) === $name ) {
 				return sprintf(
 					/* translators: %s: the block name. */
 					__( 'Another record already registers the block "%s".', 'manpreetdev-custom-fields-meta-boxes' ),
@@ -223,9 +233,8 @@ final class CustomBlocks extends RecordType {
 	public function as_groups(): array {
 		$groups = array();
 
-		foreach ( $this->records() as $record ) {
-			$name  = (string) ( $record['name'] ?? '' );
-			$group = '' === $name ? null : $this->as_group( $record );
+		foreach ( $this->live() as $post_id => $name ) {
+			$group = $this->as_group( $this->records()[ $post_id ] );
 
 			if ( null !== $group ) {
 				$groups[ $name ] = $group;
@@ -233,6 +242,32 @@ final class CustomBlocks extends RecordType {
 		}
 
 		return $groups;
+	}
+
+	/**
+	 * The records that register a block, by post id, with the block's name.
+	 *
+	 * The first record to claim a name keeps it, as it does for post types
+	 * and taxonomies. It used to be the last: a later record with the same
+	 * name — told on its own screen that it registered nothing — quietly
+	 * replaced the block the earlier one had been registering.
+	 *
+	 * @return array<int, string>
+	 */
+	public function live(): array {
+		$live = array();
+
+		foreach ( $this->records() as $post_id => $record ) {
+			$name = (string) ( $record['name'] ?? '' );
+
+			if ( '' === $name || in_array( $name, $live, true ) || null === $this->group( $record ) ) {
+				continue;
+			}
+
+			$live[ (int) $post_id ] = $name;
+		}
+
+		return $live;
 	}
 
 	/**

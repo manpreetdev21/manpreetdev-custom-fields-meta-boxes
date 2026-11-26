@@ -1650,6 +1650,154 @@ wpcmb_group(
 );
 
 wpcmb_group(
+	'records are active or inactive, and the oldest of two with one name is the one in use',
+	static function (): void {
+		$suffix = strtolower( wp_generate_password( 5, false, false ) );
+		$types  = wpcmb()->container()->get( WPCMB\PostTypes\CustomPostTypes::class );
+
+		$make = static function ( string $title, string $name, string $status = 'publish', string $date = '' ) use ( $types ): int {
+			$id = (int) wp_insert_post( array_filter( array( 'post_type' => 'wpcmb_post_type', 'post_status' => $status, 'post_title' => $title, 'post_date' => $date ) ) );
+
+			$GLOBALS['wpcmb_created'][] = array( 'type' => 'post', 'id' => $id );
+
+			$types->save( $id, $types->sanitize( array( 'name' => $name, 'singular' => $title, 'public' => '0', 'exclude_from_search' => '0' ) ) );
+
+			return $id;
+		};
+
+		/* Two statuses only, for records as for field groups. */
+		$private = $make( 'Integration private ' . $suffix, 'itp_' . $suffix, 'private' );
+
+		wpcmb_is( 'draft' === get_post_status( $private ), 'a record set private is saved as inactive' );
+		wpcmb_is( isset( $types->records( true )[ $private ] ), 'and is still one of the records, for exports and the name checks' );
+
+		$active = $make( 'Integration active ' . $suffix, 'ita_' . $suffix );
+
+		wp_trash_post( $active );
+		wp_untrash_post( $active );
+
+		wpcmb_is( 'publish' === get_post_status( $active ), 'an active record restored from the trash is active, so its post type comes back' );
+
+		/* The oldest record keeps a name, whatever the titles say. */
+		$name     = 'itd_' . $suffix;
+		$original = $make( 'Zz integration original ' . $suffix, $name, 'publish', gmdate( 'Y-m-d H:i:s', time() - DAY_IN_SECONDS ) );
+		$copy     = $make( 'Aa integration copy ' . $suffix, $name );
+
+		wpcmb_is( '' === $types->rejection( $name, $original ), 'the original is not told another record has its name' );
+		wpcmb_is( '' !== $types->rejection( $name, $copy ), 'the copy is' );
+
+		$types->apply( $types->records() );
+
+		wpcmb_is( isset( $types->applied()[ $original ] ) && ! isset( $types->applied()[ $copy ] ), 'and the original is the one that registers it' );
+
+		/* What the screen warns about is not registered behind its back. */
+		$reserved = $make( 'Integration wp prefix ' . $suffix, 'wp_it' . $suffix );
+
+		$types->apply( $types->records() );
+
+		wpcmb_is( ! post_type_exists( 'wp_it' . $suffix ) && ! isset( $types->applied()[ $reserved ] ), 'a name beginning with wp_ is not registered' );
+
+		/* A post type nobody may see stays out of search. */
+		$args = $types->arguments( array_merge( WPCMB\PostTypes\CustomPostTypes::defaults(), array( 'name' => 'x', 'public' => false, 'exclude_from_search' => false ) ) );
+
+		wpcmb_is( true === $args['exclude_from_search'], 'a post type that is not public is kept out of search' );
+
+		$args = $types->arguments( array_merge( WPCMB\PostTypes\CustomPostTypes::defaults(), array( 'name' => 'x', 'public' => true, 'exclude_from_search' => false ) ) );
+
+		wpcmb_is( false === $args['exclude_from_search'], 'while a public one is searchable unless asked otherwise' );
+
+		/* A name something registers later is not the record's. */
+		$taken = $make( 'Integration taken later ' . $suffix, 'itl_' . $suffix );
+
+		$types->apply( $types->records() );
+
+		wpcmb_is( isset( $types->applied()[ $taken ] ), 'a record registering its own name is in use' );
+
+		register_post_type( 'itl_' . $suffix, array( 'label' => 'Somebody else' ) );
+
+		wpcmb_is( ! isset( $types->applied()[ $taken ] ), 'until something else registers the same name over it' );
+
+		foreach ( array( 'ita_', 'itd_', 'itl_' ) as $prefix ) {
+			unregister_post_type( $prefix . $suffix );
+		}
+	}
+);
+
+wpcmb_group(
+	'block types draw their icon and honour every feature ticked for them',
+	static function (): void {
+		wpcmb_is( 'megaphone' === WPCMB\Blocks\BlockRegistry::icon( 'dashicons-megaphone' ), 'a stored Dashicon class becomes the name a block uses' );
+		wpcmb_is( 'feedback' === WPCMB\Blocks\BlockRegistry::icon( 'https://example.com/icon.png' ), 'and an image, which a block icon cannot be, falls back to the default' );
+
+		$registry = wpcmb()->container()->get( WPCMB\Blocks\BlockRegistry::class );
+		$supports = new ReflectionMethod( $registry, 'supports' );
+
+		wpcmb_is( true === $supports->invoke( $registry, array( 'block_supports' => array( 'className' ) ) )['customClassName'], 'the CSS class feature ticked on the Block Types screen is switched on' );
+		wpcmb_is( true === $supports->invoke( $registry, array( 'block_supports' => array( 'custom_class_name' ) ) )['customClassName'], 'as is the same feature saved on a field group before that screen existed' );
+	}
+);
+
+wpcmb_group(
+	'an options page shows its own title and sits under the page it names',
+	static function (): void {
+		$suffix = strtolower( wp_generate_password( 5, false, false ) );
+		$pages  = wpcmb()->container()->get( WPCMB\PostTypes\CustomOptionsPages::class );
+
+		$make = static function ( string $title, array $config, string $date = '' ) use ( $pages ): int {
+			$id = (int) wp_insert_post( array_filter( array( 'post_type' => 'wpcmb_options_page', 'post_status' => 'publish', 'post_title' => $title, 'post_date' => $date ) ) );
+
+			$GLOBALS['wpcmb_created'][] = array( 'type' => 'post', 'id' => $id );
+
+			$pages->save( $id, $pages->sanitize( $config ) );
+
+			return $id;
+		};
+
+		$parent = 'zop-' . $suffix;
+		$child  = 'aoc-' . $suffix;
+
+		$original = $make( 'Zz options ' . $suffix, array( 'slug' => $parent, 'menu_title' => 'Menu ' . $suffix, 'page_title' => 'Heading ' . $suffix ), gmdate( 'Y-m-d H:i:s', time() - DAY_IN_SECONDS ) );
+		$copy     = $make( 'Aa options copy ' . $suffix, array( 'slug' => $parent, 'menu_title' => 'Copy ' . $suffix, 'capability' => 'read' ) );
+
+		$make( 'Integration child ' . $suffix, array( 'slug' => $child, 'parent' => 'wpcmb-options-' . $parent ) );
+
+		$built = $pages->pages();
+
+		wpcmb_is( $original === ( $built[ $parent ]['record'] ?? 0 ), 'the oldest record with a slug builds its page' );
+		wpcmb_is( 'manage_options' === ( $built[ $parent ]['capability'] ?? '' ), 'so a newer copy cannot change who may open it' );
+		wpcmb_is( '' !== $pages->rejection( array( 'slug' => $parent ), $copy ) && '' === $pages->rejection( array( 'slug' => $parent ), $original ), 'and only the copy is told so' );
+
+		/*
+		 * Build the menu as an administrator would see it. The child's slug
+		 * sorts before its parent's, which is the order that broke.
+		 */
+		global $menu, $submenu, $admin_page_hooks, $_registered_pages;
+
+		$saved = array( $menu, $submenu, $admin_page_hooks, $_registered_pages );
+		$menu  = array();
+		$submenu = array();
+
+		wpcmb()->container()->get( WPCMB\Admin\OptionsPages::class )->register();
+
+		$under = array_column( (array) ( $submenu[ 'wpcmb-options-' . $parent ] ?? array() ), 2 );
+
+		wpcmb_is( array( 'wpcmb-options-' . $parent, 'wpcmb-options-' . $child ) === $under, 'a page set under another is listed under it, after the parent itself, got: ' . wp_json_encode( $under ) );
+		wpcmb_is( ! in_array( 'wpcmb-options-' . $child, array_column( $menu, 2 ), true ), 'and not as a menu of its own' );
+
+		list( $menu, $submenu, $admin_page_hooks, $_registered_pages ) = $saved;
+
+		/* The page draws its own title. */
+		$render = new ReflectionMethod( WPCMB\Admin\OptionsPages::class, 'render' );
+
+		ob_start();
+		$render->invoke( wpcmb()->container()->get( WPCMB\Admin\OptionsPages::class ), $parent );
+		$html = (string) ob_get_clean();
+
+		wpcmb_is( 1 === preg_match( '#<h1>\s*Heading ' . $suffix . '#', $html ), 'the heading is the page title, not the menu title' );
+	}
+);
+
+wpcmb_group(
 	'a post type and a taxonomy join up from either side',
 	static function (): void {
 		$types = wpcmb()->container()->get( WPCMB\PostTypes\CustomPostTypes::class );

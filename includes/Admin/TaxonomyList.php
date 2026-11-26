@@ -98,7 +98,7 @@ final class TaxonomyList extends Module {
 			return;
 		}
 
-		if ( '' === $name || ! taxonomy_exists( $name ) ) {
+		if ( ! isset( $this->container->get( CustomTaxonomies::class )->applied()[ (int) $post_id ] ) ) {
 			echo '—';
 
 			return;
@@ -142,7 +142,7 @@ final class TaxonomyList extends Module {
 			return $states;
 		}
 
-		if ( ! taxonomy_exists( $name ) ) {
+		if ( ! isset( $this->container->get( CustomTaxonomies::class )->applied()[ $post->ID ] ) ) {
 			$states['wpcmb_dormant'] = __( 'Not registered', 'manpreetdev-custom-fields-meta-boxes' );
 
 			return $states;
@@ -175,7 +175,7 @@ final class TaxonomyList extends Module {
 
 		$name = (string) ( $this->container->get( CustomTaxonomies::class )->config( $post )['name'] ?? '' );
 
-		if ( '' === $name || ! taxonomy_exists( $name ) ) {
+		if ( '' === $name || ! isset( $this->container->get( CustomTaxonomies::class )->applied()[ $post->ID ] ) ) {
 			return $actions;
 		}
 

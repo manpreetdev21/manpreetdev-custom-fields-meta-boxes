@@ -4,7 +4,7 @@ Tags: custom fields, meta box, repeater, options page, custom post type
 Requires at least: 6.8
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.17.12
+Stable tag: 1.17.13
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -96,6 +96,12 @@ Yes. Every string is translatable under the `manpreetdev-custom-fields-meta-boxe
 
 == Changelog ==
 
+= 1.17.13 =
+* Fixed: post type and taxonomy names beginning with wp_, or reserved by WordPress, were registered despite the warning. A post type that is not public is now kept out of search.
+* Fixed: when two records claim one name, the oldest keeps it everywhere: registration, the editor's warning and the list. A newer options page with the same slug can no longer change who may open it.
+* Fixed: block icons now show in the inserter, and the CSS class feature works. Options pages show their page title, and a sub-page sits under its parent.
+* All record types are now only Active or Inactive, restore from the trash as they were, and drop Quick Edit. The lists flag records that register nothing.
+
 = 1.17.12 =
 * Fixed: duplicating a field group could switch off the original. Keys with an underscore after their prefix — most of them — were not renamed, so the inactive copy took over the original's key. Every key is now renamed, conditional rules follow, and an inactive group can never hide an active one.
 * Fixed: the Modified column showed when a group was created, not when it last changed, and an inactive group showed 1970. Sorting by Key did nothing and is removed.
@@ -113,11 +119,6 @@ Yes. Every string is translatable under the `manpreetdev-custom-fields-meta-boxe
 * Fixed: opening and saving a field group could rewrite a location rule naming something the site no longer offers.
 * Fixed: User Form rules now save on Edit User and work on Add User. The Register User and Block options, which never worked, are removed.
 * Fixed: page, format and category rules no longer match content they do not apply to.
-
-= 1.17.9 =
-* "Hide on screen" now works in the block editor.
-* Fixed: "Beside fields" labels left no room for the field in narrow positions.
-
 
 = Earlier versions =
 The full history of every release is in `changelog.txt`, included with the plugin.

@@ -139,7 +139,7 @@ final class BlockRegistry extends Module {
 				'title'           => '' !== $group->title ? $group->title : (string) $settings['block_name'],
 				'description'     => (string) $settings['block_description'],
 				'category'        => '' !== (string) $settings['block_category'] ? (string) $settings['block_category'] : self::CATEGORY,
-				'icon'            => '' !== (string) $settings['block_icon'] ? (string) $settings['block_icon'] : 'feedback',
+				'icon'            => self::icon( (string) $settings['block_icon'] ),
 				'keywords'        => array_values( array_filter( array_map( 'trim', explode( ',', (string) $settings['block_keywords'] ) ) ) ),
 				'supports'        => $this->supports( $settings ),
 				'attributes'      => $this->attributes( $group ),
@@ -198,7 +198,9 @@ final class BlockRegistry extends Module {
 		$supports = array(
 			'align'           => in_array( 'align', $chosen, true ),
 			'anchor'          => in_array( 'anchor', $chosen, true ),
-			'customClassName' => in_array( 'custom_class_name', $chosen, true ),
+			// The Block Types screen stores className; block settings on a
+			// field group, from before that screen, stored custom_class_name.
+			'customClassName' => in_array( 'className', $chosen, true ) || in_array( 'custom_class_name', $chosen, true ),
 			'html'            => false,
 		);
 
@@ -209,6 +211,23 @@ final class BlockRegistry extends Module {
 		}
 
 		return $supports;
+	}
+
+	/**
+	 * A block icon the editor can draw.
+	 *
+	 * The icon picker stores a Dashicon as its class, `dashicons-megaphone`,
+	 * and a block names it without the prefix, `megaphone`. Passed as stored,
+	 * the editor looked for a Dashicon called "dashicons-megaphone" and drew
+	 * nothing. The picker also takes images and URLs, which a block icon
+	 * cannot be; those fall back to the default.
+	 *
+	 * @param string $icon Stored icon.
+	 */
+	public static function icon( string $icon ): string {
+		$icon = str_starts_with( $icon, 'dashicons-' ) ? substr( $icon, strlen( 'dashicons-' ) ) : $icon;
+
+		return 1 === preg_match( '/^[a-z0-9-]+$/', $icon ) ? $icon : 'feedback';
 	}
 
 	/**

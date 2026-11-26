@@ -58,9 +58,7 @@ final class FieldGroupList extends Module {
 		add_filter( "manage_edit-{$type}_sortable_columns", array( $this, 'sortable_columns' ) );
 		add_filter( 'post_row_actions', array( $this, 'row_actions' ), 10, 2 );
 		add_filter( 'post_class', array( $this, 'row_class' ), 10, 3 );
-		add_filter( 'display_post_states', array( $this, 'post_states' ), 10, 2 );
 		add_filter( 'post_date_column_status', array( $this, 'hide_date_status' ), 10, 2 );
-		add_filter( "views_edit-{$type}", array( $this, 'views' ) );
 		add_filter( 'disable_months_dropdown', array( $this, 'no_months' ), 10, 2 );
 		add_filter( 'posts_search', array( $this, 'search_config' ), 10, 2 );
 		add_action( 'pre_get_posts', array( $this, 'default_order' ) );
@@ -162,31 +160,6 @@ final class FieldGroupList extends Module {
 		return (string) preg_replace( '/^\s*AND\s*\(/', ' AND (' . $config . ' OR ', $search, 1 );
 	}
 
-	/**
-	 * Name the two views for what they mean here.
-	 *
-	 * A draft group is inactive, which is what its row already says; the
-	 * view above the list called the same groups "Drafts".
-	 *
-	 * @param array<string, string> $views View links.
-	 *
-	 * @return array<string, string>
-	 */
-	public function views( $views ): array {
-		$views  = is_array( $views ) ? $views : array();
-		$labels = array(
-			'publish' => __( 'Active', 'manpreetdev-custom-fields-meta-boxes' ),
-			'draft'   => __( 'Inactive', 'manpreetdev-custom-fields-meta-boxes' ),
-		);
-
-		foreach ( $labels as $status => $label ) {
-			if ( isset( $views[ $status ] ) ) {
-				$views[ $status ] = (string) preg_replace( '/>[^<>]+(<span class="count">)/', '>' . esc_html( $label ) . ' $1', $views[ $status ], 1 );
-			}
-		}
-
-		return $views;
-	}
 
 	/**
 	 * No month filter on this list.
@@ -347,11 +320,6 @@ final class FieldGroupList extends Module {
 			return $actions;
 		}
 
-		// Quick Edit offers a date, a password and a private status, none of
-		// which a field group has. Bulk Edit stays, for switching many on or
-		// off at once.
-		unset( $actions['inline hide-if-no-js'], $actions['inline hide-if-js'] );
-
 		$url = wp_nonce_url(
 			admin_url( 'admin.php?action=' . self::ACTION_DUPLICATE . '&post=' . $post->ID ),
 			self::ACTION_DUPLICATE . '_' . $post->ID
@@ -492,30 +460,6 @@ final class FieldGroupList extends Module {
 		exit;
 	}
 
-	/**
-	 * Label inactive groups in the list.
-	 *
-	 * @param array<string, string> $states Post states.
-	 * @param \WP_Post              $post   Current post.
-	 *
-	 * @return array<string, string>
-	 */
-	public function post_states( $states, $post ): array {
-		$states = is_array( $states ) ? $states : array();
-
-		if ( $post instanceof \WP_Post
-			&& FieldGroupPostType::POST_TYPE === $post->post_type
-			&& 'publish' !== $post->post_status
-			&& 'trash' !== $post->post_status
-		) {
-			// Draft is what inactive is. A group left pending or private by an
-			// earlier version is inactive too, and says so the same way.
-			unset( $states['draft'], $states['pending'], $states['private'], $states['scheduled'] );
-			$states['wpcmb_inactive'] = __( 'Inactive', 'manpreetdev-custom-fields-meta-boxes' );
-		}
-
-		return $states;
-	}
 
 	/**
 	 * Drop the "Last Modified" prefix from the date column.
