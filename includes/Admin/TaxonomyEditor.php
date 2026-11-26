@@ -372,8 +372,8 @@ final class TaxonomyEditor extends Module {
 		$raw = array();
 
 		if ( isset( $_POST['wpcmb_taxonomy'] ) && is_array( $_POST['wpcmb_taxonomy'] ) ) {
-			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitize() below is this record type's trust boundary and cleans every value against its own schema; a blanket sanitizer here would flatten the arrays the checkbox groups post.
-			$raw = wp_unslash( $_POST['wpcmb_taxonomy'] );
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Cleaned on receipt by wpcmb_clean_input() (includes/API/functions.php), then sanitized against this record's own schema by sanitize() below, its trust boundary. A text sanitizer cannot be used here: it would strip markup and percent-encoded icon data that the schema allows.
+			$raw = wpcmb_clean_input( wp_unslash( $_POST['wpcmb_taxonomy'] ) );
 		}
 
 		$type   = $this->type();

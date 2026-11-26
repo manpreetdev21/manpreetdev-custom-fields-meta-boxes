@@ -22,6 +22,57 @@ use WPCMB\Frontend\Form;
 
 defined( 'ABSPATH' ) || exit;
 
+if ( ! function_exists( 'wpcmb_clean_input' ) ) {
+	/**
+	 * Clean a submitted value the moment it is received.
+	 *
+	 * Removes what no field may ever hold — invalid UTF-8, null bytes, and
+	 * anything that is not a string, number, boolean or list of those — and
+	 * caps nesting, while leaving every legitimate value exactly as it was
+	 * typed. That last part is the reason this is not sanitize_text_field():
+	 * a rich text, HTML or code field holds markup on purpose, and stripping
+	 * it here would lose it before the field's own sanitizer ever saw it.
+	 *
+	 * Every value still goes through its field type's sanitizer before it is
+	 * stored, and before any validation hook is shown it.
+	 *
+	 * @param mixed $value Unslashed request data.
+	 * @param int   $depth Current nesting depth.
+	 *
+	 * @return mixed
+	 */
+	function wpcmb_clean_input( mixed $value, int $depth = 0 ): mixed {
+		if ( is_string( $value ) ) {
+			$value = wp_check_invalid_utf8( $value, true );
+
+			// Stripping depends on what the server's PHP was built with, and
+			// can leave the bytes where they were. Then they are replaced.
+			if ( function_exists( 'mb_check_encoding' ) && ! mb_check_encoding( $value, 'UTF-8' ) ) {
+				$value = (string) mb_convert_encoding( $value, 'UTF-8', 'UTF-8' );
+			}
+
+			return str_replace( "\0", '', $value );
+		}
+
+		if ( is_array( $value ) ) {
+			// Deeper than any field nests; a request this deep is not ours.
+			if ( $depth >= 32 ) {
+				return array();
+			}
+
+			$clean = array();
+
+			foreach ( $value as $key => $item ) {
+				$clean[ is_string( $key ) ? (string) wpcmb_clean_input( $key, $depth + 1 ) : $key ] = wpcmb_clean_input( $item, $depth + 1 );
+			}
+
+			return $clean;
+		}
+
+		return is_scalar( $value ) || null === $value ? $value : '';
+	}
+}
+
 if ( ! function_exists( 'wpcmb_get_field' ) ) {
 	/**
 	 * Read a field value.

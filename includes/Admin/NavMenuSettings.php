@@ -199,8 +199,8 @@ JS;
 		$submitted = array();
 
 		if ( isset( $_POST[ self::INPUT_PREFIX ] ) && is_array( $_POST[ self::INPUT_PREFIX ] ) ) {
-			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Each value is sanitized by its own field type below; a blanket sanitizer here would flatten the arrays composite types post.
-			$submitted = wp_unslash( $_POST[ self::INPUT_PREFIX ] );
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Cleaned on receipt by wpcmb_clean_input() (includes/API/functions.php), then each value is sanitized by its own field type before any hook sees it or it is stored. A text sanitizer cannot be used here: rich text, HTML and code fields hold markup on purpose.
+			$submitted = wpcmb_clean_input( wp_unslash( $_POST[ self::INPUT_PREFIX ] ) );
 		}
 
 		$ref      = new ObjectRef( ObjectRef::TERM, $menu_id );

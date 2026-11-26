@@ -39,9 +39,19 @@ final class Submission extends Module {
 	public const NONCE = 'wpcmb_form_submit';
 
 	/**
-	 * Transient prefix for the result of a submission.
+	 * Transient prefix for the result of a signed-in visitor's submission.
 	 */
 	private const RESULT_PREFIX = 'wpcmb_form_result_';
+
+	/**
+	 * Query args carrying a logged-out visitor's result across the redirect.
+	 */
+	private const RESULT_ARGS = array( 'wpcmb_form', 'wpcmb_status', 'wpcmb_errors', 'wpcmb_t', 'wpcmb_sig' );
+
+	/**
+	 * How long a result in the address stays readable.
+	 */
+	private const RESULT_TTL = 10 * MINUTE_IN_SECONDS;
 
 	/**
 	 * Register hooks.
@@ -60,16 +70,132 @@ final class Submission extends Module {
 	 * from submitting the form a second time.
 	 */
 	public function handle_post(): void {
-		$result = $this->process();
+		$result      = $this->process();
+		$redirecting = $result['success'] && '' !== (string) $result['redirect'];
+		$destination = $redirecting ? (string) $result['redirect'] : (string) wp_get_referer();
+		$destination = '' !== $destination ? $destination : home_url( '/' );
 
-		set_transient( self::result_key( (string) $result['group'] ), $result, MINUTE_IN_SECONDS * 5 );
+		/*
+		 * Nothing is written to the database for a visitor who is not signed
+		 * in. Anyone can post to this endpoint, verified or not, and a row per
+		 * request — keyed by anything a request can vary — is storage a
+		 * stranger can grow at will. A signed-in visitor has one key per form,
+		 * so theirs is bounded and still carries the full messages.
+		 *
+		 * Everybody else gets their result back in the address of the page
+		 * they return to: a status and the names of the fields to look at,
+		 * never a value or a message, and signed, so a link cannot be made to
+		 * show somebody a result they did not have.
+		 */
+		if ( is_user_logged_in() ) {
+			set_transient( self::result_key( (string) $result['group'] ), $result, MINUTE_IN_SECONDS * 5 );
+		} elseif ( ! $redirecting ) {
+			$destination = add_query_arg( self::result_args( $result ), remove_query_arg( self::RESULT_ARGS, $destination ) );
+		}
 
-		$destination = $result['success'] && '' !== (string) $result['redirect']
-			? (string) $result['redirect']
-			: (string) wp_get_referer();
-
-		wp_safe_redirect( '' !== $destination ? $destination : home_url( '/' ) );
+		wp_safe_redirect( $destination );
 		exit;
+	}
+
+	/**
+	 * The query args reporting a result, signed.
+	 *
+	 * @param array<string, mixed> $result Result of process().
+	 *
+	 * @return array<string, string>
+	 */
+	public static function result_args( array $result ): array {
+		$group = (string) ( $result['group'] ?? '' );
+
+		// A request that could not be tied to a form has no form to report on.
+		if ( '' === $group ) {
+			return array();
+		}
+
+		$errors = array_keys( (array) ( $result['errors'] ?? array() ) );
+		$status = ! empty( $result['success'] ) ? 'ok' : ( array() === $errors ? 'failed' : 'fields' );
+		$fields = implode( ',', array_slice( array_filter( array_map( array( self::class, 'field_name' ), $errors ) ), 0, 50 ) );
+		$time   = (string) time();
+
+		return array(
+			'wpcmb_form'   => $group,
+			'wpcmb_status' => $status,
+			'wpcmb_errors' => $fields,
+			'wpcmb_t'      => $time,
+			'wpcmb_sig'    => self::result_signature( $group, $status, $fields, $time ),
+		);
+	}
+
+	/**
+	 * A logged-out visitor's result for a form, read from the address.
+	 *
+	 * @param string $group_key Field group the form shows.
+	 * @param string $thanks    The form's own success message, if it has one.
+	 *
+	 * @return array<string, mixed>|null
+	 */
+	public static function result_from_request( string $group_key, string $thanks = '' ): ?array {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only, and authenticated by its own signature below.
+		$read = static fn( string $key ): string => isset( $_GET[ $key ] ) ? sanitize_text_field( wp_unslash( $_GET[ $key ] ) ) : '';
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+		$group  = $read( 'wpcmb_form' );
+		$status = $read( 'wpcmb_status' );
+		$fields = $read( 'wpcmb_errors' );
+		$time   = $read( 'wpcmb_t' );
+
+		if ( $group !== $group_key
+			|| ! in_array( $status, array( 'ok', 'failed', 'fields' ), true )
+			|| ! hash_equals( self::result_signature( $group, $status, $fields, $time ), $read( 'wpcmb_sig' ) )
+			|| abs( time() - (int) $time ) > self::RESULT_TTL
+		) {
+			return null;
+		}
+
+		$errors = array();
+
+		foreach ( array_filter( array_map( array( self::class, 'field_name' ), explode( ',', $fields ) ) ) as $name ) {
+			$errors[ $name ] = 'post_title' === $name
+				? __( 'A title is required.', 'manpreetdev-custom-fields-meta-boxes' )
+				: __( 'Please check this field.', 'manpreetdev-custom-fields-meta-boxes' );
+		}
+
+		$message = match ( $status ) {
+			'ok'     => '' !== $thanks ? $thanks : __( 'Thanks, that has been saved.', 'manpreetdev-custom-fields-meta-boxes' ),
+			'fields' => __( 'Please check the highlighted fields.', 'manpreetdev-custom-fields-meta-boxes' ),
+			default  => __( 'This form could not be submitted. Please reload the page and try again.', 'manpreetdev-custom-fields-meta-boxes' ),
+		};
+
+		return array(
+			'success'  => 'ok' === $status,
+			'group'    => $group,
+			'message'  => $message,
+			'errors'   => $errors,
+			'redirect' => '',
+		);
+	}
+
+	/**
+	 * The signature over a result in the address.
+	 *
+	 * @param string $group  Field group key.
+	 * @param string $status Result status.
+	 * @param string $fields Comma separated field names.
+	 * @param string $time   When it was issued.
+	 */
+	private static function result_signature( string $group, string $status, string $fields, string $time ): string {
+		return substr( wp_hash( 'wpcmb_form_result|' . $group . '|' . $status . '|' . $fields . '|' . $time ), 0, 24 );
+	}
+
+	/**
+	 * A field name as it may appear in the address, or an empty string.
+	 *
+	 * @param mixed $name Candidate.
+	 */
+	private static function field_name( mixed $name ): string {
+		$name = is_scalar( $name ) ? (string) $name : '';
+
+		return 1 === preg_match( '/^[A-Za-z0-9_\-]{1,64}$/', $name ) ? $name : '';
 	}
 
 	/**
@@ -92,24 +218,19 @@ final class Submission extends Module {
 	 */
 	private function process(): array {
 		/*
-		 * Every member of the form's state is a scalar the plugin put there —
-		 * a signed payload, its signature, a timestamp and that timestamp's
-		 * signature — so the array is reduced to plain strings as it is read,
-		 * and anything else a request invents becomes an empty one.
-		 *
-		 * Narrowed rather than run through sanitize_text_field(): the payload
-		 * and the signatures are base64 and hashes, and a sanitizer that
-		 * strips or re-encodes characters would break the comparison they
-		 * exist for, turning a tampering check into a formatting check.
+		 * Every member of the form's state is a string the plugin put there —
+		 * a signed payload in hex, its signature, a timestamp and that
+		 * timestamp's signature. None holds a character a text sanitizer
+		 * changes, so each is sanitized as it is read and still verifies;
+		 * anything else a request invents becomes an empty string.
 		 */
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- The nonce is checked below, once we know the request is ours to check.
 		$state = isset( $_POST[ Form::STATE ] ) && is_array( $_POST[ Form::STATE ] )
-			? array_map(
-				static fn( $member ): string => is_scalar( $member ) ? (string) $member : '',
-				wp_unslash( $_POST[ Form::STATE ] ) // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Narrowed to strings by the array_map above; see the note on why a text sanitizer is the wrong tool here.
-			)
+			? map_deep( wp_unslash( $_POST[ Form::STATE ] ), 'sanitize_text_field' )
 			: array();
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		$state = array_map( static fn( $member ): string => is_scalar( $member ) ? (string) $member : '', (array) $state );
 
 		$config = Form::verify( $state['payload'] ?? '', $state['signature'] ?? '' );
 
@@ -394,9 +515,9 @@ final class Submission extends Module {
 	 * @return array<string, mixed>
 	 */
 	private function submitted_values(): array {
-		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Called from process() after the nonce check; each value is sanitized by its own field type.
+		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Called from process() after the nonce check. Cleaned on receipt by wpcmb_clean_input() (includes/API/functions.php), then each value is sanitized by its own field type before any hook sees it or it is stored. A text sanitizer cannot be used here: rich text, HTML and code fields hold markup on purpose.
 		$values = isset( $_POST[ Renderer::INPUT_PREFIX ] ) && is_array( $_POST[ Renderer::INPUT_PREFIX ] )
-			? wp_unslash( $_POST[ Renderer::INPUT_PREFIX ] )
+			? wpcmb_clean_input( wp_unslash( $_POST[ Renderer::INPUT_PREFIX ] ) )
 			: array();
 		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
@@ -500,34 +621,14 @@ final class Submission extends Module {
 	}
 
 	/**
-	 * The transient key holding one visitor's last result for a group.
+	 * The transient key holding a signed-in visitor's last result for a group.
 	 *
-	 * Keyed by user for signed-in visitors and by session cookie otherwise,
-	 * so two people submitting the same form never see each other's message.
+	 * One per person per form, which is what keeps the number of rows
+	 * bounded. Logged-out visitors never get one; see handle_post().
 	 *
 	 * @param string $group_key Field group key.
 	 */
 	public static function result_key( string $group_key ): string {
-		$who = is_user_logged_in()
-			? 'u' . get_current_user_id()
-			: 'g' . substr( wp_hash( self::visitor_token() ), 0, 12 );
-
-		return self::RESULT_PREFIX . $who . '_' . $group_key;
-	}
-
-	/**
-	 * A stable-enough identifier for an anonymous visitor.
-	 *
-	 * Only used to hand a message back across one redirect, so it does not
-	 * need to be reliable — and it is hashed rather than stored, so it is not
-	 * a record of who visited.
-	 */
-	private static function visitor_token(): string {
-		$parts = array(
-			isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '',
-			isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '',
-		);
-
-		return implode( '|', $parts );
+		return self::RESULT_PREFIX . 'u' . get_current_user_id() . '_' . $group_key;
 	}
 }

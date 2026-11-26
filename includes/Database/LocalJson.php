@@ -68,6 +68,11 @@ final class LocalJson extends Module {
 	private const META_SYNCED = '_wpcmb_json_synced';
 
 	/**
+	 * Option holding this site's file name suffix.
+	 */
+	private const OPTION_TOKEN = 'wpcmb_json_token';
+
+	/**
 	 * Register hooks.
 	 */
 	public function boot(): void {
@@ -80,33 +85,20 @@ final class LocalJson extends Module {
 	}
 
 	/**
-	 * Where files are written.
+	 * Where files are written: this plugin's own folder in uploads.
 	 *
-	 * The active theme, so the groups travel with the templates that read
-	 * them. A site keeping them in a plugin instead filters this.
+	 * Resolved at runtime with wp_upload_dir(), and deliberately not
+	 * filterable. It used to be, and a filter is a way to write anywhere — a
+	 * theme, another plugin, outside the install — which is exactly what a
+	 * plugin may not do. A site that keeps its field groups in a theme commits
+	 * them there itself; this reads them from there (see load_paths()) and
+	 * never writes to it.
+	 *
+	 * The directory is not created here: it existing is what switches saving
+	 * on, so creating it would switch it on for everybody.
 	 */
 	public function save_path(): string {
-		/**
-		 * Filters the directory field group files are written to.
-		 *
-		 * Inside uploads, resolved at runtime, because that is the one place a
-		 * plugin may write. Earlier versions of this plugin wrote into the
-		 * active theme, copying a convention from elsewhere: a theme folder is
-		 * replaced on update, so the files were lost, and a plugin has no
-		 * business writing into somebody else's directory.
-		 *
-		 * A site that does want its field groups beside its templates filters
-		 * this to point there. That is the site's own decision about its own
-		 * files, which is a different thing from the plugin assuming it.
-		 *
-		 * The directory is not created here: it existing is what switches
-		 * saving on, so creating it would switch it on for everybody.
-		 *
-		 * @since 1.17.0
-		 *
-		 * @param string $path Absolute directory path, no trailing slash.
-		 */
-		return (string) apply_filters( 'wpcmb/json/save_path', $this->default_save_path() );
+		return $this->default_save_path();
 	}
 
 	/**
@@ -145,7 +137,7 @@ final class LocalJson extends Module {
 	 * Whether files are being written.
 	 */
 	public function is_writing(): bool {
-		return is_dir( $this->save_path() );
+		return '' !== $this->save_path() && is_dir( $this->save_path() );
 	}
 
 	/**
@@ -178,7 +170,7 @@ final class LocalJson extends Module {
 
 		$this->protect( $this->save_path() );
 
-		$written = file_put_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- A directory in uploads the site opted into; WP_Filesystem asks for credentials this has no screen to collect.
+		$written = file_put_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- This plugin's own folder in uploads, which the site opted into; WP_Filesystem asks for credentials this has no screen to collect.
 			$this->path_for( $group->key ),
 			(string) wp_json_encode( $payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . "\n"
 		);
@@ -186,6 +178,10 @@ final class LocalJson extends Module {
 		if ( false === $written ) {
 			return;
 		}
+
+		// A file from before names were unguessable is replaced, not kept
+		// beside its successor.
+		$this->remove_legacy( $group->key );
 
 		update_post_meta( (int) $post_id, self::META_SYNCED, $payload['modified'] );
 
@@ -217,6 +213,23 @@ final class LocalJson extends Module {
 
 		if ( '' !== $path && is_file( $path ) ) {
 			wp_delete_file( $path );
+		}
+
+		if ( $group instanceof FieldGroup ) {
+			$this->remove_legacy( $group->key );
+		}
+	}
+
+	/**
+	 * Delete a group's file under the name it had before 1.17.11.
+	 *
+	 * @param string $key Group key.
+	 */
+	private function remove_legacy( string $key ): void {
+		$legacy = $this->save_path() . '/' . sanitize_file_name( $key ) . '.json';
+
+		if ( $legacy !== $this->path_for( $key ) && is_file( $legacy ) ) {
+			wp_delete_file( $legacy );
 		}
 	}
 
@@ -405,14 +418,15 @@ final class LocalJson extends Module {
 	 * it to be downloadable, so the directory turns away a direct request on
 	 * both servers that honour either file.
 	 *
-	 * Written once, when the folder first receives a file. A directory the
-	 * site filtered somewhere of its own is left alone: it is not ours to put
-	 * files in beyond the ones we were asked to write.
+	 * Written once, when the folder first receives a file. The deny rules are
+	 * the first defence; the second is that the file names cannot be guessed
+	 * (see path_for()), which is what still protects them on a server that
+	 * ignores both rule files, such as nginx.
 	 *
 	 * @param string $directory Absolute directory path.
 	 */
 	private function protect( string $directory ): void {
-		if ( $directory !== $this->default_save_path() ) {
+		if ( '' === $directory || $directory !== $this->default_save_path() ) {
 			return;
 		}
 
@@ -447,9 +461,29 @@ final class LocalJson extends Module {
 	/**
 	 * The file one group is written to.
 	 *
+	 * The group key followed by a random token kept for this site. Group keys
+	 * are readable — `group_contact_details` — so a name made of the key alone
+	 * could be requested directly from any server that ignores the deny rules.
+	 * The key stays at the front so a person can still find a group's file.
+	 *
 	 * @param string $key Group key.
 	 */
 	private function path_for( string $key ): string {
-		return $this->save_path() . '/' . sanitize_file_name( $key ) . '.json';
+		return $this->save_path() . '/' . sanitize_file_name( $key ) . '-' . $this->token() . '.json';
+	}
+
+	/**
+	 * This site's file name token, made once.
+	 */
+	private function token(): string {
+		$token = (string) get_option( self::OPTION_TOKEN, '' );
+
+		if ( 1 !== preg_match( '/^[a-z0-9]{20}$/', $token ) ) {
+			$token = strtolower( wp_generate_password( 20, false, false ) );
+
+			update_option( self::OPTION_TOKEN, $token, false );
+		}
+
+		return $token;
 	}
 }

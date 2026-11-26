@@ -36,6 +36,15 @@
 		</properties>
 	</rule>
 
+	<!-- Cleans request data on receipt; see includes/API/functions.php. -->
+	<rule ref="WordPress.Security.ValidatedSanitizedInput">
+		<properties>
+			<property name="customSanitizingFunctions" type="array">
+				<element value="wpcmb_clean_input"/>
+			</property>
+		</properties>
+	</rule>
+
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
 		<properties>
 			<property name="prefixes" type="array">

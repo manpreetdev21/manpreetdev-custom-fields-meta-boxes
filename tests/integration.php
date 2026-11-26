@@ -1347,6 +1347,151 @@ wpcmb_group(
 );
 
 wpcmb_group(
+	'request data is cleaned on receipt, and validation hooks see only sanitized values',
+	static function (): void {
+		/*
+		 * Reported by a plugin reviewer: submitted values reached extensible
+		 * validation callbacks before any sanitizer had been near them.
+		 */
+		$clean = wpcmb_clean_input(
+			array(
+				'html'   => '<p>Kept <strong>as typed</strong></p>',
+				'nul'    => "a\0b",
+				'utf8'   => "ok\xC3\x28",
+				"k\0ey"  => 'value',
+				'nested' => array( 'deep' => array( 'x' => "y\0" ) ),
+				'number' => 5,
+				'object' => new stdClass(),
+			)
+		);
+
+		wpcmb_is( '<p>Kept <strong>as typed</strong></p>' === $clean['html'], 'markup a field holds on purpose is left alone' );
+		wpcmb_is( 'ab' === $clean['nul'], 'null bytes are removed' );
+		wpcmb_is( mb_check_encoding( $clean['utf8'], 'UTF-8' ) && str_starts_with( $clean['utf8'], 'ok' ) && str_ends_with( $clean['utf8'], '(' ), 'an invalid UTF-8 byte is removed and the valid text around it kept' );
+		wpcmb_is( isset( $clean['key'] ), 'keys are cleaned too' );
+		wpcmb_is( 'y' === $clean['nested']['deep']['x'], 'at every depth' );
+		wpcmb_is( 5 === $clean['number'], 'numbers are left as numbers' );
+		wpcmb_is( '' === $clean['object'], 'and anything that is not data becomes nothing' );
+
+		$deep = array();
+		$at   = &$deep;
+
+		for ( $i = 0; $i < 40; $i++ ) {
+			$at['n'] = array();
+			$at      = &$at['n'];
+		}
+
+		unset( $at );
+
+		wpcmb_is( substr_count( (string) wp_json_encode( wpcmb_clean_input( $deep ) ), '"n"' ) <= 32, 'nesting no field needs is cut off' );
+
+		$seen = array();
+		$spy  = static function ( $error, $value ) use ( &$seen ) {
+			$seen[] = $value;
+
+			return $error;
+		};
+
+		add_filter( 'wpcmb/validate/name=itest_hooked', $spy, 10, 2 );
+
+		$validator = wpcmb()->container()->get( WPCMB\Fields\Validator::class );
+		$text      = array( 'key' => 'field_itest_hooked', 'name' => 'itest_hooked', 'label' => 'Hooked', 'type' => 'text', 'settings' => array() );
+
+		$validator->validate( array( 'itest_hooked' => $text ), array( 'itest_hooked' => "  <script>alert(1)</script>Hello\0  " ) );
+
+		remove_filter( 'wpcmb/validate/name=itest_hooked', $spy, 10 );
+
+		wpcmb_is( array( 'Hello' ) === $seen, 'a validation hook is given the sanitized value, got: ' . wp_json_encode( $seen ) );
+
+		// While the type's own rule still reads what was typed, so a bad
+		// value is reported rather than quietly turned into nothing.
+		$email = array( 'key' => 'field_itest_mail', 'name' => 'itest_mail', 'label' => 'Mail', 'type' => 'email', 'settings' => array() );
+
+		wpcmb_is( '' !== $validator->validate_field( $email, 'not-an-email' ), 'a malformed email is still reported' );
+		wpcmb_is( '' === $validator->validate_field( $email, 'person@example.com' ), 'and a good one is accepted' );
+
+		/* A block preview's values are each sanitized by their own type. */
+		$group = new WPCMB\Fields\FieldGroup( 0, 'group_itest_block', 'Block', array( $text ) );
+		$ajax  = wpcmb()->container()->get( WPCMB\Admin\Ajax::class );
+		$for   = new ReflectionMethod( $ajax, 'sanitize_for' );
+		$out   = $for->invoke( $ajax, $group, array( 'itest_hooked' => '<b>Bold</b> text', 'undeclared' => 'x' ) );
+
+		wpcmb_is( array( 'itest_hooked' => 'Bold text' ) === $out, 'a block preview keeps only declared fields, sanitized, got: ' . wp_json_encode( $out ) );
+	}
+);
+
+wpcmb_group(
+	'a logged-out visitor submitting a form causes no database writes',
+	static function (): void {
+		/*
+		 * Reported by a plugin reviewer: every request to the form endpoint,
+		 * valid or not, wrote a transient keyed by IP and user agent — so
+		 * anyone could grow the options table by changing their user agent.
+		 * A logged-out visitor's result now comes back in the address, signed.
+		 */
+		$was = get_current_user_id();
+
+		wp_set_current_user( 0 );
+
+		$args = WPCMB\Frontend\Submission::result_args(
+			array(
+				'success' => false,
+				'group'   => 'group_itest_form',
+				'message' => 'A message that must not travel',
+				'errors'  => array( 'email' => 'Bad address <b>x</b>', 'post_title' => 'Needed' ),
+			)
+		);
+
+		wpcmb_is( 'fields' === $args['wpcmb_status'] && 'email,post_title' === $args['wpcmb_errors'], 'the address carries a status and field names' );
+		wpcmb_is( ! str_contains( (string) wp_json_encode( $args ), 'must not travel' ) && ! str_contains( (string) wp_json_encode( $args ), 'Bad address' ), 'and no message or value' );
+		wpcmb_is( array() === WPCMB\Frontend\Submission::result_args( array( 'success' => false, 'group' => '', 'errors' => array() ) ), 'an unverified request reports nothing' );
+
+		$read = static function ( array $query ): ?array {
+			$_GET   = $query;
+			$result = WPCMB\Frontend\Submission::result_from_request( 'group_itest_form', 'Custom thanks' );
+			$_GET   = array();
+
+			return $result;
+		};
+
+		$result = $read( $args );
+
+		wpcmb_is( is_array( $result ) && ! $result['success'] && isset( $result['errors']['email'], $result['errors']['post_title'] ), 'the form reads its result back' );
+		wpcmb_is( null === $read( array_merge( $args, array( 'wpcmb_errors' => 'email,admin' ) ) ), 'a changed list of fields is refused' );
+		wpcmb_is( null === $read( array_merge( $args, array( 'wpcmb_status' => 'ok' ) ) ), 'a changed status is refused' );
+		wpcmb_is( null === $read( array_merge( $args, array( 'wpcmb_form' => 'group_other' ) ) ), 'as is another form' );
+		wpcmb_is( null === WPCMB\Frontend\Submission::result_from_request( 'group_other' ), 'and a page with nothing in the address' );
+
+		$ok = WPCMB\Frontend\Submission::result_args( array( 'success' => true, 'group' => 'group_itest_form', 'errors' => array() ) );
+
+		wpcmb_is( 'Custom thanks' === ( $read( $ok )['message'] ?? '' ), 'a success shows the form\'s own message' );
+
+		$stale              = $ok;
+		$stale['wpcmb_t']   = (string) ( time() - HOUR_IN_SECONDS );
+		$stale['wpcmb_sig'] = ( new ReflectionMethod( WPCMB\Frontend\Submission::class, 'result_signature' ) )->invoke( null, 'group_itest_form', 'ok', '', $stale['wpcmb_t'] );
+
+		wpcmb_is( null === $read( $stale ), 'and an old one is not shown again' );
+
+		wp_set_current_user( $was );
+	}
+);
+
+wpcmb_group(
+	'a signed form survives the real text sanitizer it is now read through',
+	static function (): void {
+		$form   = wpcmb()->container()->get( WPCMB\Frontend\Form::class );
+		$config = array_merge( WPCMB\Frontend\Form::defaults(), array( 'group' => 'group_itest', 'message' => "Thanks <b>100%ab</b>\n\tsee you  soon" ) );
+		$signed = $form->sign( $config );
+
+		// The real one, which also removes percent-encoded octets and folds
+		// whitespace: all of it would break a raw JSON payload.
+		$read = map_deep( wp_unslash( $signed ), 'sanitize_text_field' );
+
+		wpcmb_is( $read === $signed, 'sanitize_text_field() leaves the form state unchanged' );
+		wpcmb_is( $config['message'] === ( WPCMB\Frontend\Form::verify( $read['payload'], $read['signature'] )['message'] ?? '' ), 'and it verifies with its message intact' );
+	}
+);
+wpcmb_group(
 	'a post type and a taxonomy join up from either side',
 	static function (): void {
 		$types = wpcmb()->container()->get( WPCMB\PostTypes\CustomPostTypes::class );

@@ -329,9 +329,9 @@ final class OptionsPages extends Module {
 			wp_die( esc_html__( 'You do not have permission to edit these options.', 'manpreetdev-custom-fields-meta-boxes' ) );
 		}
 
-		// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Each value is validated and then sanitized by its own field type below; a blanket sanitizer here would flatten the arrays that composite types post.
+		// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Cleaned on receipt by wpcmb_clean_input() (includes/API/functions.php), then each value is sanitized by its own field type before any hook sees it or it is stored. A text sanitizer cannot be used here: rich text, HTML and code fields hold markup on purpose.
 		$submitted = isset( $_POST[ Renderer::INPUT_PREFIX ] ) && is_array( $_POST[ Renderer::INPUT_PREFIX ] )
-			? wp_unslash( $_POST[ Renderer::INPUT_PREFIX ] )
+			? wpcmb_clean_input( wp_unslash( $_POST[ Renderer::INPUT_PREFIX ] ) )
 			: array();
 		// phpcs:enable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 

@@ -136,8 +136,8 @@ final class NavMenuFields extends Module {
 		$all = array();
 
 		if ( isset( $_POST[ Renderer::INPUT_PREFIX ] ) && is_array( $_POST[ Renderer::INPUT_PREFIX ] ) ) {
-			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Each value is sanitized by its own field type below; a blanket sanitizer here would flatten the arrays composite types post.
-			$all = wp_unslash( $_POST[ Renderer::INPUT_PREFIX ] );
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Cleaned on receipt by wpcmb_clean_input() (includes/API/functions.php), then each value is sanitized by its own field type before any hook sees it or it is stored. A text sanitizer cannot be used here: rich text, HTML and code fields hold markup on purpose.
+			$all = wpcmb_clean_input( wp_unslash( $_POST[ Renderer::INPUT_PREFIX ] ) );
 		}
 
 		if ( ! isset( $all[ $item_id ] ) || ! is_array( $all[ $item_id ] ) ) {

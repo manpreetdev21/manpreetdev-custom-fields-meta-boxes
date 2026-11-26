@@ -149,11 +149,13 @@ final class ToolsPage extends Module {
 	 */
 	private function import_json(): void {
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- handle_request() verified the nonce before dispatching here.
-		if ( empty( $_FILES['wpcmb_import']['tmp_name'] ) || ! is_uploaded_file( $_FILES['wpcmb_import']['tmp_name'] ) ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- A path, validated by is_uploaded_file().
+		$upload = isset( $_FILES['wpcmb_import']['tmp_name'] ) ? sanitize_text_field( $_FILES['wpcmb_import']['tmp_name'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- $_FILES is not slashed by WordPress, and unslashing would corrupt a Windows path.
+
+		if ( '' === $upload || ! is_uploaded_file( $upload ) ) {
 			$this->redirect( 'import_failed' );
 		}
 
-		$contents = file_get_contents( $_FILES['wpcmb_import']['tmp_name'] ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Local upload, not a remote request.
+		$contents = file_get_contents( $upload ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- A local upload, not a remote request.
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		$payload = Portability::normalise( is_string( $contents ) ? json_decode( $contents, true ) : null );

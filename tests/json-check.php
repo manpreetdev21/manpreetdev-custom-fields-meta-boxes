@@ -21,22 +21,38 @@ use WPCMB\Database\LocalJson;
 use WPCMB\Fields\FieldGroup;
 use WPCMB\Fields\Repository;
 
-/* A directory of our own, removed at the end whatever happens. */
-$dir = sys_get_temp_dir() . '/wpcmb-json-check-' . getmypid();
+/*
+ * An uploads directory of our own, removed at the end whatever happens. The
+ * plugin writes to its folder inside uploads and nowhere else, so that is
+ * where the test points uploads.
+ */
+$GLOBALS['wpcmb_test_uploads'] = sys_get_temp_dir() . '/wpcmb-json-check-' . getmypid();
+
+$dir = $GLOBALS['wpcmb_test_uploads'] . '/manpreetdev-custom-fields-meta-boxes';
 
 register_shutdown_function(
 	static function () use ( $dir ): void {
-		foreach ( (array) glob( $dir . '/*' ) as $file ) {
-			unlink( (string) $file );
+		foreach ( array( $dir, dirname( $dir ) ) as $folder ) {
+			foreach ( is_dir( $folder ) ? (array) scandir( $folder ) : array() as $name ) {
+				if ( '.' !== $name && '..' !== $name && is_file( $folder . '/' . $name ) ) {
+					unlink( $folder . '/' . $name );
+				}
+			}
 		}
 
-		if ( is_dir( $dir ) ) {
-			rmdir( $dir );
+		foreach ( array( $dir, dirname( $dir ) ) as $folder ) {
+			if ( is_dir( $folder ) ) {
+				rmdir( $folder );
+			}
 		}
 	}
 );
 
-wpcmb_test_filter( 'wpcmb/json/save_path', static fn() => $dir );
+/*
+ * Reported by a plugin reviewer: the save path could be filtered anywhere,
+ * a theme included. It cannot any more, whatever a filter says.
+ */
+wpcmb_test_filter( 'wpcmb/json/save_path', static fn() => sys_get_temp_dir() . '/some-theme/wpcmb-json' );
 wpcmb_test_filter( 'wpcmb/json/load_paths', static fn() => array( $dir ) );
 
 // Syncing writes field groups, so only somebody who may edit them is offered
@@ -46,7 +62,7 @@ $GLOBALS['wpcmb_test_can'] = true;
 $container = new Container();
 $json      = $container->get( LocalJson::class );
 
-assert( $dir === $json->save_path(), 'the save path is filterable' );
+assert( $dir === $json->save_path(), 'files go to the plugin folder in uploads, whatever a filter asks for, got: ' . $json->save_path() );
 assert( array( $dir ) === $json->load_paths(), 'and so are the load paths' );
 
 /*
@@ -65,23 +81,47 @@ $GLOBALS['wpcmb_test_meta']['post'][7]['_wpcmb_config'] = wp_json_encode(
 
 $json->write( 7, array() );
 
-assert( ! is_file( $dir . '/group_early.json' ), 'a save with the directory absent writes no file' );
+assert( ! is_dir( $dir ), 'a save with the directory absent writes no file' );
 
 mkdir( $dir, 0777, true );
 
 assert( $json->is_writing(), 'creating the directory switches writing on' );
 
+// A file from an earlier version, under the old guessable name.
+file_put_contents( $dir . '/group_early.json', '{"key":"group_early"}' );
+
 $json->write( 7, array() );
 
-assert( is_file( $dir . '/group_early.json' ), 'and then a save does write one' );
+$written = (array) glob( $dir . '/group_early-*.json' );
 
-$early = json_decode( (string) file_get_contents( $dir . '/group_early.json' ), true );
+assert( 1 === count( $written ), 'and then a save does write one' );
+
+/*
+ * Reported by a plugin reviewer: a file named after its group key can be
+ * requested directly from a server that ignores the deny rules, because the
+ * key is readable. The name carries a random token kept for the site.
+ */
+assert( 1 === preg_match( '/group_early-[a-z0-9]{20}\.json$/', (string) $written[0] ), 'its name cannot be guessed from the key, got: ' . basename( (string) $written[0] ) );
+assert( ! is_file( $dir . '/group_early.json' ), 'the file under the old guessable name is removed' );
+
+$json->write( 7, array() );
+
+assert( array( (string) $written[0] ) === (array) glob( $dir . '/group_early-*.json' ), 'and the name is the same on the next save' );
+
+// The deny rules are still the first line of defence.
+assert( is_file( $dir . '/.htaccess' ) && is_file( $dir . '/web.config' ) && is_file( $dir . '/index.php' ), 'the folder turns away direct requests' );
+
+$early = json_decode( (string) file_get_contents( (string) $written[0] ), true );
 
 // The stamp travels inside the file: a checkout gives every file the time it
 // was checked out, so the filesystem cannot answer "when did this change".
 assert( isset( $early['modified'] ), 'the file records its own modification stamp' );
 
-unlink( $dir . '/group_early.json' );
+unlink( (string) $written[0] );
+
+foreach ( array( '.htaccess', 'web.config', 'index.php' ) as $guard ) {
+	unlink( $dir . '/' . $guard );
+}
 
 $GLOBALS['wpcmb_test_posts'] = array();
 
@@ -239,7 +279,7 @@ $GLOBALS['wpcmb_test_filters'] = array();
 
 $fresh = new LocalJson( new Container() );
 
-$uploads = sys_get_temp_dir() . '/wpcmb-uploads';
+$uploads = $GLOBALS['wpcmb_test_uploads'];
 
 assert(
 	$fresh->save_path() === $uploads . '/manpreetdev-custom-fields-meta-boxes',

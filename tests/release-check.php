@@ -260,6 +260,12 @@ if ( '' === $wpcmb_read ) {
 		}
 	}
 
+	// The directory shows at most 5,000 characters of a changelog and cuts
+	// the rest, so the full history lives in changelog.txt.
+	if ( 1 === preg_match( '/== Changelog ==\R(.*?)(?=\R== |\z)/s', $wpcmb_read, $wpcmb_changelog ) && strlen( trim( $wpcmb_changelog[1] ) ) > 5000 ) {
+		$wpcmb_readme[] = sprintf( 'the changelog is %d characters; the directory truncates it at 5000', strlen( trim( $wpcmb_changelog[1] ) ) );
+	}
+
 	// The short description is what shows in search results, and the
 	// directory truncates it at 150 characters.
 	if ( 1 === preg_match( '/^License URI:.*\R+\R*(.+)/m', $wpcmb_read, $wpcmb_short ) ) {

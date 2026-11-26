@@ -53,16 +53,14 @@ final class Registry extends Module {
 		add_filter( 'wpcmb/value/load', array( $this, 'format_value' ), 10, 4 );
 		add_filter( 'wpcmb/value/save', array( $this, 'sanitize_value' ), 10, 4 );
 		add_filter( 'wpcmb/admin/field_types', array( $this, 'editor_labels' ) );
-		add_filter( 'wpcmb/validate', array( $this, 'validate_value' ), 10, 3 );
 	}
 
 	/**
 	 * Let a field type reject a value the generic checks allowed.
 	 *
-	 * Hooked rather than called from the Validator, because the Validator
-	 * holds no container — and because going through the filter means a
-	 * third-party type gets server-side validation the same way a built-in
-	 * one does.
+	 * The Validator asks the type directly now, on the value as typed, and
+	 * hands the public `wpcmb/validate` hooks only the sanitized value. Kept
+	 * for code that called it.
 	 *
 	 * @param string               $error Error so far, empty when valid.
 	 * @param mixed                $value Submitted value.

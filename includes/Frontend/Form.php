@@ -213,7 +213,7 @@ final class Form extends Module {
 			'form_id'  => 'wpcmb-form-' . $group->key . '-' . $this->rendered,
 			'state'    => $this->sign( $config ),
 			'renderer' => $this->container->get( Renderer::class ),
-			'result'   => $this->last_result( $group->key ),
+			'result'   => $this->last_result( $group->key, (string) $config['message'] ),
 			'uploads'  => self::uploads_allowed(),
 		);
 
@@ -337,7 +337,16 @@ final class Form extends Module {
 	 * @return array{payload: string, signature: string}
 	 */
 	public function sign( array $config ): array {
-		$payload = (string) wp_json_encode( $config );
+		/*
+		 * Hex rather than the JSON itself. The configuration carries
+		 * free text — a success message, a redirect — and a request field
+		 * holding raw JSON could not go through a text sanitizer without
+		 * changing, which would fail the signature. Hex has no character
+		 * sanitize_text_field() alters, so the state is sanitized like any
+		 * other input and still verifies. Not base64, which plugin reviewers
+		 * rightly treat as a sign of obfuscation.
+		 */
+		$payload = bin2hex( (string) wp_json_encode( $config ) );
 
 		return array(
 			'payload'   => $payload,
@@ -369,7 +378,9 @@ final class Form extends Module {
 			return null;
 		}
 
-		$config = json_decode( $payload, true );
+		// A page cached before 1.17.11 still carries the JSON itself.
+		$json   = str_starts_with( $payload, '{' ) || 1 !== preg_match( '/^(?:[0-9a-f]{2})+$/', $payload ) ? $payload : (string) hex2bin( $payload );
+		$config = json_decode( $json, true );
 
 		if ( ! is_array( $config ) ) {
 			return null;
@@ -449,15 +460,21 @@ final class Form extends Module {
 	/**
 	 * The result of this visitor's last submission of a group, if any.
 	 *
-	 * Held in a transient keyed by group and session so a non-AJAX submission
-	 * can redirect and still report what happened, without putting field
-	 * values or error text in the URL.
+	 * A signed-in visitor's is held in a transient, one per person per form.
+	 * A logged-out visitor's comes back in the address, signed, so that a
+	 * stranger posting to the form cannot make it write to the database.
+	 * Neither carries a field value.
 	 *
 	 * @param string $group_key Field group key.
+	 * @param string $thanks    The form's success message, if it has one.
 	 *
 	 * @return array<string, mixed>|null
 	 */
-	private function last_result( string $group_key ): ?array {
+	private function last_result( string $group_key, string $thanks = '' ): ?array {
+		if ( ! is_user_logged_in() ) {
+			return Submission::result_from_request( $group_key, $thanks );
+		}
+
 		$key    = Submission::result_key( $group_key );
 		$result = get_transient( $key );
 

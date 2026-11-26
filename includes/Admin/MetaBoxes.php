@@ -458,11 +458,11 @@ final class MetaBoxes extends Module {
 	private function form_fields( ObjectRef $ref, ?ObjectRef $form = null ): array {
 		$fields = $this->container->get( Resolver::class )->fields( new Context( $ref ) );
 
-		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Each entry is itself a nonce, verified below; callers verified the form's own.
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Each entry is itself a nonce, verified below; callers verified the form's own.
 		$shown = isset( $_POST['wpcmb_groups'] ) && is_array( $_POST['wpcmb_groups'] )
-			? wp_unslash( $_POST['wpcmb_groups'] )
+			? map_deep( wp_unslash( $_POST['wpcmb_groups'] ), 'sanitize_text_field' )
 			: array();
-		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		foreach ( $shown as $key => $nonce ) {
 			$key = sanitize_key( (string) $key );
@@ -581,9 +581,9 @@ final class MetaBoxes extends Module {
 			return;
 		}
 
-		// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Each value is validated and then sanitized by its own field type below; a blanket sanitizer here would flatten the arrays that composite types post.
+		// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Cleaned on receipt by wpcmb_clean_input() (includes/API/functions.php), then each value is sanitized by its own field type before any hook sees it or it is stored. A text sanitizer cannot be used here: rich text, HTML and code fields hold markup on purpose.
 		$submitted = isset( $_POST[ Renderer::INPUT_PREFIX ] ) && is_array( $_POST[ Renderer::INPUT_PREFIX ] )
-			? wp_unslash( $_POST[ Renderer::INPUT_PREFIX ] )
+			? wpcmb_clean_input( wp_unslash( $_POST[ Renderer::INPUT_PREFIX ] ) )
 			: array();
 		// phpcs:enable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
@@ -879,9 +879,9 @@ final class MetaBoxes extends Module {
 	 * @return array<string, string>
 	 */
 	private function submitted_errors( ObjectRef $ref ): array {
-		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- is_field_submission() verified the nonce; every value is read by the validator, not stored here.
+		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- is_field_submission() verified the nonce. Cleaned on receipt by wpcmb_clean_input() (includes/API/functions.php), then each value is sanitized by its own field type before any hook sees it or it is stored. A text sanitizer cannot be used here: rich text, HTML and code fields hold markup on purpose.
 		$submitted = isset( $_POST[ Renderer::INPUT_PREFIX ] ) && is_array( $_POST[ Renderer::INPUT_PREFIX ] )
-			? wp_unslash( $_POST[ Renderer::INPUT_PREFIX ] )
+			? wpcmb_clean_input( wp_unslash( $_POST[ Renderer::INPUT_PREFIX ] ) )
 			: array();
 		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 

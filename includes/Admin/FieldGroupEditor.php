@@ -410,7 +410,7 @@ final class FieldGroupEditor extends Module {
 		}
 
 		$raw = isset( $_POST['wpcmb'] ) && is_array( $_POST['wpcmb'] )
-			? wp_unslash( $_POST['wpcmb'] ) // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized by FieldGroup::sanitize().
+			? wpcmb_clean_input( wp_unslash( $_POST['wpcmb'] ) ) // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Cleaned on receipt by wpcmb_clean_input() (includes/API/functions.php), then sanitized against this record's own schema by sanitize() below, its trust boundary. A text sanitizer cannot be used here: it would strip markup and percent-encoded icon data that the schema allows.
 			: array();
 
 		$raw['title']    = $post instanceof \WP_Post ? $post->post_title : '';
@@ -458,11 +458,12 @@ final class FieldGroupEditor extends Module {
 			return array();
 		}
 
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Decoded, then sanitized by FieldGroup::sanitize().
-		$decoded = json_decode( wp_unslash( $_POST[ $key ] ), true );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- A JSON document: decoded, cleaned by wpcmb_clean_input() (includes/API/functions.php), then sanitized value by value. Text-sanitizing the raw JSON would corrupt it.
+		$decoded = json_decode( wp_unslash( $_POST[ $key ] ), true, 32 );
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
-		return is_array( $decoded ) ? $decoded : array();
+		// Decoding is not cleaning: what comes out is whatever went in.
+		return is_array( $decoded ) ? (array) wpcmb_clean_input( $decoded ) : array();
 	}
 
 	/**

@@ -359,9 +359,27 @@ function get_post_meta( int $id, string $key = '', bool $single = false ) {
 }
 
 /**
+ * Random alphanumeric string.
+ *
+ * @param int  $length  Length.
+ * @param bool $special Ignored.
+ * @param bool $extra   Ignored.
+ */
+function wp_generate_password( int $length = 12, bool $special = true, bool $extra = false ): string {
+	$chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+	$out   = '';
+
+	for ( $i = 0; $i < $length; $i++ ) {
+		$out .= $chars[ random_int( 0, strlen( $chars ) - 1 ) ];
+	}
+
+	return $out;
+}
+
+/**
  * Option store getter.
  *
- * @param string $name    Option name.
+ * @param string $name          Option name.
  * @param mixed  $default_value Default when unset.
  *
  * @return mixed

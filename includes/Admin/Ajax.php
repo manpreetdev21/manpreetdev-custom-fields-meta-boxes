@@ -128,7 +128,7 @@ final class Ajax extends Module {
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Verified above.
 		$key    = isset( $_POST['group'] ) ? sanitize_key( wp_unslash( $_POST['group'] ) ) : '';
-		$values = isset( $_POST['values'] ) ? json_decode( (string) wp_unslash( $_POST['values'] ), true ) : array(); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Decoded, then each value is sanitized by its own field type.
+		$values = isset( $_POST['values'] ) ? json_decode( (string) wp_unslash( $_POST['values'] ), true, 32 ) : array(); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- A JSON document: decoded, cleaned by wpcmb_clean_input() (includes/API/functions.php), then sanitized value by value. Text-sanitizing the raw JSON would corrupt it.
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		$group = $this->container->get( Repository::class )->get( $key );
@@ -136,6 +136,8 @@ final class Ajax extends Module {
 		if ( ! $group instanceof FieldGroup ) {
 			wp_send_json_error( array( 'message' => __( 'That block no longer exists.', 'manpreetdev-custom-fields-meta-boxes' ) ), 404 );
 		}
+
+		$values = $this->sanitize_for( $group, is_array( $values ) ? (array) wpcmb_clean_input( $values ) : array() );
 
 		wp_send_json_success(
 			array(
@@ -145,6 +147,32 @@ final class Ajax extends Module {
 				),
 			)
 		);
+	}
+
+	/**
+	 * A group's values, each through its own field type's sanitizer.
+	 *
+	 * Only fields the group declares are kept, so nothing else the request
+	 * carried reaches the renderer.
+	 *
+	 * @param FieldGroup           $group  Field group.
+	 * @param array<string, mixed> $values Decoded values.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function sanitize_for( FieldGroup $group, array $values ): array {
+		$renderer = $this->container->get( Renderer::class );
+		$clean    = array();
+
+		foreach ( $group->fields as $field ) {
+			$name = is_array( $field ) ? (string) ( $field['name'] ?? '' ) : '';
+
+			if ( '' !== $name && array_key_exists( $name, $values ) && $renderer->stores_value( $field ) ) {
+				$clean[ $name ] = $renderer->sanitize( $values[ $name ], $field );
+			}
+		}
+
+		return $clean;
 	}
 
 	/**
@@ -222,16 +250,19 @@ final class Ajax extends Module {
 		}
 
 		$columns = array();
+		$subs    = array();
 
 		foreach ( $handler->sub_fields( $definition ) as $sub ) {
 			if ( is_array( $sub ) && ! empty( $sub['name'] ) && $this->is_flat( (string) ( $sub['type'] ?? '' ) ) ) {
-				$columns[] = (string) $sub['name'];
+				$columns[]                     = (string) $sub['name'];
+				$subs[ (string) $sub['name'] ] = $sub;
 			}
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Verified in verified_field(); each cell is cast below.
-		$rows = isset( $_POST['rows'] ) ? json_decode( (string) wp_unslash( $_POST['rows'] ), true ) : array();
-		$rows = is_array( $rows ) ? $rows : array();
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Verified in verified_field(). A JSON document: decoded, cleaned by wpcmb_clean_input() (includes/API/functions.php), then sanitized value by value. Text-sanitizing the raw JSON would corrupt it.
+		$rows     = isset( $_POST['rows'] ) ? json_decode( (string) wp_unslash( $_POST['rows'] ), true, 32 ) : array();
+		$rows     = is_array( $rows ) ? (array) wpcmb_clean_input( $rows ) : array();
+		$renderer = $this->container->get( Renderer::class );
 
 		$lines = array( Csv::line( $columns ) );
 
@@ -243,7 +274,9 @@ final class Ajax extends Module {
 			$cells = array();
 
 			foreach ( $columns as $column ) {
-				$cell    = $row[ $column ] ?? '';
+				// The cell as its column's field would store it: the export says
+				// what saving these rows would keep, not what was in the request.
+				$cell    = $renderer->sanitize( $row[ $column ] ?? '', $subs[ $column ] );
 				$cells[] = is_scalar( $cell ) ? (string) $cell : '';
 			}
 
@@ -280,8 +313,8 @@ final class Ajax extends Module {
 			wp_send_json_error( array( 'message' => __( 'The repeater type is unavailable.', 'manpreetdev-custom-fields-meta-boxes' ) ), 500 );
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Verified in verified_field(); parsed and filtered below.
-		$csv = isset( $_POST['csv'] ) ? (string) wp_unslash( $_POST['csv'] ) : '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Verified in verified_field(). Cleaned by wpcmb_clean_input() (includes/API/functions.php); a CSV file, parsed below, every cell sanitized by its own field type when the rows are saved. A text sanitizer would strip markup and fold the line breaks that separate the rows.
+		$csv = isset( $_POST['csv'] ) ? (string) wpcmb_clean_input( (string) wp_unslash( $_POST['csv'] ) ) : '';
 
 		if ( '' === trim( $csv ) ) {
 			wp_send_json_error( array( 'message' => __( 'That file was empty.', 'manpreetdev-custom-fields-meta-boxes' ) ), 400 );
@@ -400,9 +433,9 @@ final class Ajax extends Module {
 			wp_send_json_error( array( 'message' => __( 'You are not allowed to edit this.', 'manpreetdev-custom-fields-meta-boxes' ) ), 403 );
 		}
 
-		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Verified above; every value is read by the validator, never stored or echoed.
+		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Verified above. Cleaned on receipt by wpcmb_clean_input() (includes/API/functions.php), then each value is sanitized by its own field type before any hook sees it or it is stored. A text sanitizer cannot be used here: rich text, HTML and code fields hold markup on purpose.
 		$submitted = isset( $_POST[ Renderer::INPUT_PREFIX ] ) && is_array( $_POST[ Renderer::INPUT_PREFIX ] )
-			? wp_unslash( $_POST[ Renderer::INPUT_PREFIX ] )
+			? wpcmb_clean_input( wp_unslash( $_POST[ Renderer::INPUT_PREFIX ] ) )
 			: array();
 		// phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
@@ -522,8 +555,9 @@ final class Ajax extends Module {
 		}
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- check_ajax_referer() ran in verified_field(); the signature below is the authorisation.
+		// Hex and hashes: nothing a text sanitizer changes. See Form::sign().
 		$state = isset( $_POST[ Form::STATE ] ) && is_array( $_POST[ Form::STATE ] )
-			? wp_unslash( $_POST[ Form::STATE ] ) // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Verified by signature, not by shape.
+			? map_deep( wp_unslash( $_POST[ Form::STATE ] ), 'sanitize_text_field' )
 			: array();
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
@@ -553,8 +587,10 @@ final class Ajax extends Module {
 	 * nothing arbitrary reaches a name attribute.
 	 */
 	private function request_input_name(): string {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Verified in verified_field(); matched against an exact shape below, which is stricter than any sanitizer.
-		$name = isset( $_POST['name'] ) ? (string) wp_unslash( $_POST['name'] ) : '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified in verified_field().
+		$name = isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '';
+
+		// And then held to an exact shape, which is stricter still.
 
 		return 1 === preg_match( '/^wpcmb_values(\[[A-Za-z0-9_\-]+\])*$/', $name ) ? $name : 'wpcmb_values';
 	}

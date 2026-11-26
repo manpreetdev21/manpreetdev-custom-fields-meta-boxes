@@ -2,7 +2,7 @@
 
 Field groups, meta boxes and a developer-friendly field API for WordPress.
 
-- **Version:** 1.17.10
+- **Version:** 1.17.11
 - **Author:** Manpreet Singh
 - **Requires PHP:** 8.1
 - **Requires WordPress:** 6.8
@@ -1178,7 +1178,6 @@ WordPress 6.4+ already stores, restores, diffs and autosaves any meta key named 
 | `wpcmb/records/{$post_type}` | filter | Records of one type before they are used. Define them in code. |
 | `wpcmb/export` | filter | An export payload before it is written. |
 | `wpcmb/imported` | action | After an import. Receives `array $written, array $payload`. |
-| `wpcmb/json/save_path` | filter | Directory field group files are written to. |
 | `wpcmb/json/load_paths` | filter | Directories field group files are read from. |
 | `wpcmb/json/written` | action | After a group was written to its file. |
 | `wpcmb/json/synced` | action | After groups were imported from their files. |
@@ -1268,7 +1267,13 @@ plugin has no business writing into a directory it does not own.
 The directory is kept out of the web: an `index.php`, an `.htaccess` and a
 `web.config` go in beside the first file written. The JSON is not secret, but it
 is a map of every field, choice and rule on the site, and nobody asked for it to
-be downloadable.
+be downloadable. File names carry a random token kept for the site —
+`group_contact-k3v9…json` — so a file cannot be fetched by guessing it from the
+group key on a server that ignores both rule files, such as nginx.
+
+The write location is not filterable. It used to be, and a filter is a way to
+write anywhere, a theme included; the plugin writes only to its own folder in
+uploads.
 
 **Theme folders are still read.** A site that keeps its field groups in version
 control commits them to `wpcmb-json/` in its theme, and they are found there,
@@ -1276,9 +1281,8 @@ registered, and offered for sync — reading a theme is not writing to one, and
 that is where the version-control benefit actually comes from. Both the child
 and parent theme are read, so a child theme can carry its parent's groups.
 
-A site that genuinely wants the plugin to *write* beside its templates filters
-`wpcmb/json/save_path` to point there. That is the site deciding about its own
-files, which is a different thing from the plugin assuming it.
+To keep groups in version control, copy their files from uploads into
+`wpcmb-json/` in your theme and commit them; the theme copy is read from then on.
 
 Those files are then **read back as groups registered in code**, through the
 same `wpcmb/register_field_groups` hook the PHP export writes against. So a
@@ -1307,8 +1311,8 @@ clock runs ahead is not offered again for ever, and importing does not have to
 rewrite the file to make the two agree (which would put a change in your working
 tree every time you pressed the button).
 
-Filters: `wpcmb/json/save_path` (a string) and `wpcmb/json/load_paths` (an
-array — uploads first, then the child and parent theme, earlier paths winning).
+Filter: `wpcmb/json/load_paths` (an array of directories to read — uploads
+first, then the child and parent theme, earlier paths winning).
 Actions: `wpcmb/json/written`, `wpcmb/json/synced`.
 
 **Field groups only.** The five record types — post types, taxonomies, block

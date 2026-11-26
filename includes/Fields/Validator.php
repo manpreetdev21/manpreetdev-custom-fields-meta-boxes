@@ -412,8 +412,25 @@ final class Validator {
 	 * @param mixed                $value Submitted value.
 	 */
 	private function filter( string $error, array $field, mixed $value ): string {
-		$type = (string) ( $field['type'] ?? '' );
-		$name = (string) ( $field['name'] ?? '' );
+		$type  = (string) ( $field['type'] ?? '' );
+		$name  = (string) ( $field['name'] ?? '' );
+		$types = self::types();
+
+		if ( null !== $types ) {
+			$handler = $types->get( $type );
+
+			// The type's own rule reads what was typed, because that is what
+			// it judges: a malformed address is reported rather than quietly
+			// becoming the empty string its sanitizer would turn it into.
+			if ( '' === $error ) {
+				$error = $handler->validate( $value, $field );
+			}
+
+			// Every hook below is given the value as the field would store it,
+			// never the request. Code that extends validation is not shown
+			// anything a sanitizer has not been through.
+			$value = $handler->sanitize( $value, $field );
+		}
 
 		/**
 		 * Filters the validation result for a value.
@@ -425,12 +442,22 @@ final class Validator {
 		 * @since 1.0.0
 		 *
 		 * @param string               $error Error message, empty when valid.
-		 * @param mixed                $value Submitted value.
+		 * @param mixed                $value The value, sanitized by its field type.
 		 * @param array<string, mixed> $field Field definition.
 		 */
 		$error = (string) apply_filters( 'wpcmb/validate', $error, $value, $field );
 		$error = (string) apply_filters( "wpcmb/validate/type={$type}", $error, $value, $field );
 
 		return (string) apply_filters( "wpcmb/validate/name={$name}", $error, $value, $field );
+	}
+
+	/**
+	 * The field type registry, when the plugin is running.
+	 *
+	 * Absent in the standalone checks, which exercise the generic rules on
+	 * their own.
+	 */
+	private static function types(): ?Registry {
+		return function_exists( 'wpcmb' ) ? wpcmb()->container()->get( Registry::class ) : null;
 	}
 }

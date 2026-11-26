@@ -95,6 +95,7 @@ $wpcmb_include = array(
 	$wpcmb_slug . '.php',
 	'uninstall.php',
 	'readme.txt',
+	'changelog.txt',
 	'LICENSE',
 	'includes',
 	'templates',

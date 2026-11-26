@@ -41,12 +41,30 @@ assert( 'group_contact0001' === $verified['group'], 'the group survives the roun
 assert( 'draft' === $verified['post_status'], 'the status survives the round trip' );
 
 // The whole point: the browser cannot change what the form is allowed to do.
-$tampered = str_replace( '"post_status":"draft"', '"post_status":"publish"', $signed['payload'] );
+// The payload is hex, so a tamperer decodes, edits and re-encodes it.
+$edit = static fn( string $from, string $to ): string => bin2hex( str_replace( $from, $to, (string) hex2bin( $signed['payload'] ) ) );
+
+$tampered = $edit( '"post_status":"draft"', '"post_status":"publish"' );
 assert( $tampered !== $signed['payload'], 'the test payload was actually modified' );
 assert( null === Form::verify( $tampered, $signed['signature'] ), 'editing the status must break the signature' );
 
-$redirected = str_replace( 'owner@example.com', 'attacker@example.com', $signed['payload'] );
+$redirected = $edit( 'owner@example.com', 'attacker@example.com' );
 assert( null === Form::verify( $redirected, $signed['signature'] ), 'editing the notification address must break the signature' );
+
+/*
+ * The state is read through sanitize_text_field(), as the plugin reviewers
+ * ask of request data. Hex is why that is safe: free text in the
+ * configuration — markup, a percent sign, a line break — would otherwise be
+ * changed by the sanitizer and fail the signature.
+ */
+$awkward = ( new Form( new WPCMB\Container() ) )->sign( array_merge( $config, array( 'message' => "Thanks <b>100%ab</b>\nsee you" ) ) );
+
+assert( sanitize_text_field( $awkward['payload'] ) === $awkward['payload'], 'a text sanitizer leaves the payload exactly as it was' );
+assert( "Thanks <b>100%ab</b>\nsee you" === Form::verify( sanitize_text_field( $awkward['payload'] ), $awkward['signature'] )['message'], 'and it still verifies, message intact' );
+
+// A page cached before the change carries the JSON itself, and still works.
+$legacy = (string) wp_json_encode( $config );
+assert( 'group_contact0001' === ( Form::verify( $legacy, Form::signature( $legacy ) )['group'] ?? '' ), 'a payload in the old format still verifies' );
 
 assert( null === Form::verify( $signed['payload'], 'not-a-signature' ), 'a wrong signature is rejected' );
 assert( null === Form::verify( '', '' ), 'an empty payload is rejected' );
