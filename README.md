@@ -2,7 +2,7 @@
 
 Field groups, meta boxes and a developer-friendly field API for WordPress.
 
-- **Version:** 1.17.11
+- **Version:** 1.17.12
 - **Author:** Manpreet Singh
 - **Requires PHP:** 8.1
 - **Requires WordPress:** 6.8

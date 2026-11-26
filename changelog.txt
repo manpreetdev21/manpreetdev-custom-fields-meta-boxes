@@ -3,6 +3,17 @@
 Every release, newest first. readme.txt carries only the latest few, because the
 plugin directory shows at most 5,000 characters of a changelog.
 
+= 1.17.12 =
+* Fixed: duplicating a field group could switch off the original. The copy's keys were found by a pattern that only matched a key with no underscore after its prefix, so `group_contact_form` and most real keys were copied unchanged. The copy then shared its key with the original and, being inactive and loaded later, replaced it everywhere the group was used. Keys are now taken from where keys live — the group, every field, sub field and layout — and replaced only where a key is kept, so conditional rules follow the copy's fields while names and labels are left alone.
+* Should two groups ever share a key, an inactive one no longer hides an active one.
+* Fixed: the Modified column showed the date a group was created, under a heading saying when it changed. It now shows and sorts by the last change, newest first by default. An inactive group showed 1 January 1970, because WordPress keeps no GMT time on a draft.
+* Fixed: the Key column could be sorted, but sorted by a menu order no field group sets, so both directions gave the same list. A group key is random, so the column is no longer sortable.
+* Fixed: Bulk Edit offered Private and Pending Review, and Quick Edit Private and a password. Each switched the group off while leaving it out of the Inactive view and out of the lists that offer groups for export. A field group is now always saved as Active or Inactive, groups already in such a state load as inactive and say so, and a password is never kept.
+* Fixed: a group restored from the trash always came back inactive, because WordPress restores every post as a draft. A field group now returns as it was.
+* Search finds groups by their key and by any field's name or key, as well as by title.
+* Quick Edit is removed, as the code always intended, and so is the month filter, which filtered by creation date beside a Modified column. The views read Active and Inactive, the notices after trashing, restoring and deleting say "field group", and a trashed group no longer offers Duplicate.
+* The sync notice says the newer version is in a JSON file, which may be in uploads or the theme.
+
 = 1.17.11 =
 * Local JSON writes only to this plugin's folder in uploads. The `wpcmb/json/save_path` filter is removed: it could point the writes anywhere, a theme included. Theme folders are still read, so groups committed to `wpcmb-json/` in a theme keep working.
 * Local JSON file names carry a random token kept for the site, so a group's configuration cannot be fetched by guessing its file name on a server that ignores the folder's deny rules. Existing files are renamed the next time their group is saved.

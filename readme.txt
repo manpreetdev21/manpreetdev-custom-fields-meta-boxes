@@ -4,7 +4,7 @@ Tags: custom fields, meta box, repeater, options page, custom post type
 Requires at least: 6.8
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.17.11
+Stable tag: 1.17.12
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -96,6 +96,12 @@ Yes. Every string is translatable under the `manpreetdev-custom-fields-meta-boxe
 
 == Changelog ==
 
+= 1.17.12 =
+* Fixed: duplicating a field group could switch off the original. Keys with an underscore after their prefix — most of them — were not renamed, so the inactive copy took over the original's key. Every key is now renamed, conditional rules follow, and an inactive group can never hide an active one.
+* Fixed: the Modified column showed when a group was created, not when it last changed, and an inactive group showed 1970. Sorting by Key did nothing and is removed.
+* Fixed: Private and Pending statuses switched a group off without saying so. A field group is now always Active or Inactive, and one restored from the trash keeps the state it had.
+* Search also finds groups by key and field name. Quick Edit and the month filter are removed, the views read Active and Inactive, and notices say "field group" rather than "post".
+
 = 1.17.11 =
 * Local JSON writes only to this plugin's folder in uploads. The `wpcmb/json/save_path` filter is removed, and file names carry a random per-site token so they cannot be guessed.
 * Submitted values are cleaned the moment they are received, and validation hooks are given only sanitized values.
@@ -112,9 +118,6 @@ Yes. Every string is translatable under the `manpreetdev-custom-fields-meta-boxe
 * "Hide on screen" now works in the block editor.
 * Fixed: "Beside fields" labels left no room for the field in narrow positions.
 
-= 1.17.8 =
-* Fixed: image, file and gallery fields returned nothing to logged-out visitors.
-* Fixed: password managers filled the editor's own login into Password fields.
 
 = Earlier versions =
 The full history of every release is in `changelog.txt`, included with the plugin.

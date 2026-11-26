@@ -1492,6 +1492,164 @@ wpcmb_group(
 	}
 );
 wpcmb_group(
+	'duplicating a field group gives every key a new value and leaves the original live',
+	static function (): void {
+		$repo   = wpcmb()->container()->get( WPCMB\Fields\Repository::class );
+		$suffix = strtolower( wp_generate_password( 5, false, false ) );
+		$key    = 'group_itest_dup_' . $suffix;
+
+		$source = (int) wp_insert_post( array( 'post_type' => 'wpcmb_field_group', 'post_status' => 'publish', 'post_title' => 'Integration duplicate ' . $suffix ) );
+
+		$GLOBALS['wpcmb_created'][] = array( 'type' => 'post', 'id' => $source );
+
+		/*
+		 * Keys with underscores after their prefix, which is how most keys
+		 * look — and which the old pattern never matched — plus a sub field,
+		 * a layout, a conditional rule pointing at a field, and a name and a
+		 * label that contain key-like text without being keys.
+		 */
+		$repo->save(
+			$source,
+			WPCMB\Fields\FieldGroup::sanitize(
+				array(
+					'key'    => $key,
+					'title'  => 'x',
+					'fields' => array(
+						array( 'key' => 'field_itest_dup_pick', 'name' => 'field_itest_dup_pick', 'label' => 'See field_itest_dup_pick', 'type' => 'text' ),
+						array(
+							'key'         => 'field_itest_dup_shown',
+							'name'        => 'itest_dup_shown',
+							'label'       => 'Shown',
+							'type'        => 'text',
+							'conditional' => array( 'action' => 'show', 'groups' => array( array( array( 'field' => 'field_itest_dup_pick', 'operator' => '==', 'value' => 'yes' ) ) ) ),
+						),
+						array(
+							'key'        => 'field_itest_dup_rows',
+							'name'       => 'itest_dup_rows',
+							'label'      => 'Rows',
+							'type'       => 'repeater',
+							'sub_fields' => array( array( 'key' => 'field_itest_dup_cell', 'name' => 'itest_dup_cell', 'label' => 'Cell', 'type' => 'text' ) ),
+						),
+						array(
+							'key'     => 'field_itest_dup_flex',
+							'name'    => 'itest_dup_flex',
+							'label'   => 'Flex',
+							'type'    => 'flexible_content',
+							'layouts' => array( array( 'key' => 'layout_itest_dup_hero', 'name' => 'hero', 'label' => 'Hero', 'sub_fields' => array() ) ),
+						),
+					),
+					'location' => array( array( array( 'param' => 'post_type', 'operator' => '==', 'value' => 'post' ) ) ),
+				)
+			)
+		);
+
+		$copy = $repo->duplicate( $source );
+
+		wpcmb_is( is_int( $copy ), 'the group is duplicated' );
+
+		$GLOBALS['wpcmb_created'][] = array( 'type' => 'post', 'id' => (int) $copy );
+
+		$original = json_decode( (string) get_post_meta( $source, '_wpcmb_config', true ), true );
+		$copied   = json_decode( (string) get_post_meta( (int) $copy, '_wpcmb_config', true ), true );
+
+		wpcmb_is( $copied['key'] !== $original['key'] && str_starts_with( $copied['key'], 'group_' ), 'the copy has a group key of its own, got: ' . $copied['key'] );
+
+		$keys = static function ( array $config ): array {
+			$found = array();
+			array_walk_recursive(
+				$config,
+				static function ( $value, $name ) use ( &$found ): void {
+					if ( 'key' === $name ) {
+						$found[] = $value;
+					}
+				}
+			);
+
+			return $found;
+		};
+
+		wpcmb_is( array() === array_intersect( $keys( $original ), $keys( $copied ) ), 'no field or layout key is shared, at any depth' );
+		wpcmb_is( 'field_itest_dup_pick' === $copied['fields'][0]['name'] && 'See field_itest_dup_pick' === $copied['fields'][0]['label'], 'a name or label that only looks like a key is left alone' );
+		wpcmb_is( $copied['fields'][1]['conditional']['groups'][0][0]['field'] === $copied['fields'][0]['key'], 'a conditional rule points at the copy\'s field, not the original\'s' );
+
+		$repo->flush();
+
+		wpcmb_is( $source === ( $repo->all( true )[ $key ]->id ?? 0 ), 'the original group still answers to its key' );
+		wpcmb_is( 'draft' === get_post_status( (int) $copy ), 'and the copy starts inactive' );
+
+		/* Should two groups ever share a key, the inactive one does not win. */
+		$clash = (int) wp_insert_post( array( 'post_type' => 'wpcmb_field_group', 'post_status' => 'draft', 'post_title' => 'Integration zz clash, loaded after the original ' . $suffix ) );
+
+		$GLOBALS['wpcmb_created'][] = array( 'type' => 'post', 'id' => $clash );
+
+		$repo->save( $clash, $original );
+		$repo->flush();
+
+		wpcmb_is( $source === ( $repo->all( true )[ $key ]->id ?? 0 ), 'an inactive group with the same key does not replace an active one' );
+	}
+);
+
+wpcmb_group(
+	'a field group is active or inactive, and is restored as it was',
+	static function (): void {
+		$suffix = strtolower( wp_generate_password( 5, false, false ) );
+		$ids    = array();
+
+		foreach ( array( 'private', 'pending', 'publish' ) as $status ) {
+			$ids[ $status ] = (int) wp_insert_post(
+				array(
+					'post_type'     => 'wpcmb_field_group',
+					'post_status'   => $status,
+					'post_title'    => 'Integration status ' . $status . ' ' . $suffix,
+					'post_password' => 'secret',
+				)
+			);
+
+			$GLOBALS['wpcmb_created'][] = array( 'type' => 'post', 'id' => $ids[ $status ] );
+		}
+
+		wpcmb_is( 'draft' === get_post_status( $ids['private'] ), 'private is saved as inactive' );
+		wpcmb_is( 'draft' === get_post_status( $ids['pending'] ), 'pending is saved as inactive' );
+		wpcmb_is( '' === get_post( $ids['publish'] )->post_password, 'and a field group has no password' );
+
+		// A post of another type keeps what it was given.
+		$page = (int) wp_insert_post( array( 'post_type' => 'page', 'post_status' => 'private', 'post_title' => 'Integration private page ' . $suffix ) );
+
+		$GLOBALS['wpcmb_created'][] = array( 'type' => 'post', 'id' => $page );
+
+		wpcmb_is( 'private' === get_post_status( $page ), 'other post types are left alone' );
+
+		wp_trash_post( $ids['publish'] );
+		wp_untrash_post( $ids['publish'] );
+
+		wpcmb_is( 'publish' === get_post_status( $ids['publish'] ), 'an active group taken out of the trash is active again' );
+
+		wp_trash_post( $ids['private'] );
+		wp_untrash_post( $ids['private'] );
+
+		wpcmb_is( 'draft' === get_post_status( $ids['private'] ), 'and an inactive one is inactive' );
+
+		wp_trash_post( $page );
+		wp_untrash_post( $page );
+
+		wpcmb_is( 'draft' === get_post_status( $page ), 'while WordPress restores everything else as a draft, as it always has' );
+
+		/* A draft has no GMT modified time; the list must not read one. */
+		$draft = (int) wp_insert_post( array( 'post_type' => 'wpcmb_field_group', 'post_status' => 'draft', 'post_title' => 'Integration new draft ' . $suffix ) );
+
+		$GLOBALS['wpcmb_created'][] = array( 'type' => 'post', 'id' => $draft );
+
+		$list = wpcmb()->container()->get( WPCMB\Admin\FieldGroupList::class );
+
+		ob_start();
+		$list->render_column( 'wpcmb_modified', $draft );
+		$cell = (string) ob_get_clean();
+
+		wpcmb_is( ! str_contains( $cell, '1970' ) && str_contains( $cell, gmdate( 'Y' ) ), 'an inactive group\'s Modified date is its own, got: ' . wp_strip_all_tags( $cell ) );
+	}
+);
+
+wpcmb_group(
 	'a post type and a taxonomy join up from either side',
 	static function (): void {
 		$types = wpcmb()->container()->get( WPCMB\PostTypes\CustomPostTypes::class );

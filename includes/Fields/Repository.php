@@ -406,7 +406,10 @@ final class Repository {
 		$posts = get_posts(
 			array(
 				'post_type'              => FieldGroupPostType::POST_TYPE,
-				'post_status'            => array( 'publish', 'draft' ),
+				// A group is active or it is not. A status from before that was
+				// enforced — private, pending, scheduled — still loads, inactive,
+				// rather than disappearing from every list.
+				'post_status'            => array( 'publish', 'draft', 'pending', 'private', 'future' ),
 				'posts_per_page'         => -1,
 				'orderby'                => array(
 					'menu_order' => 'ASC',
@@ -422,7 +425,18 @@ final class Repository {
 		$raw    = array();
 
 		foreach ( $posts as $post ) {
-			$group                 = FieldGroup::from_post( $post );
+			$group = FieldGroup::from_post( $post );
+
+			/*
+			 * Two groups with one key — copied, imported twice, synced from
+			 * a file — must not let an inactive one hide an active one. The
+			 * first loaded keeps the key unless the newcomer is active and it
+			 * is not.
+			 */
+			if ( isset( $groups[ $group->key ] ) && ( $groups[ $group->key ]->is_active() || ! $group->is_active() ) ) {
+				continue;
+			}
+
 			$groups[ $group->key ] = $group;
 			$raw[ $group->key ]    = array( 'id' => $group->id ) + $group->to_array();
 		}
@@ -435,31 +449,73 @@ final class Repository {
 	/**
 	 * Give every key in a group configuration a fresh value.
 	 *
-	 * Rewriting the encoded configuration rather than walking the tree means
-	 * references to a key are remapped too — conditional logic rules point at
-	 * field keys, and a tree walk would rename the fields while leaving the
-	 * rules pointing at the original group's fields.
+	 * The keys are found where keys live — the group, each field, each
+	 * layout, at every depth — and then every string in the configuration
+	 * that is exactly one of them is replaced. That second step is what
+	 * carries conditional logic across: a rule points at a field by its key,
+	 * and has to point at the copy's field, not the original's.
+	 *
+	 * It used to find keys by pattern, which only matched a key with no
+	 * underscore after its prefix. `group_contact_form` was left as it was,
+	 * so the copy shared its key with the original — and being loaded later,
+	 * the inactive copy replaced the live group everywhere it was used.
 	 *
 	 * @param array<string, mixed> $config Group configuration.
 	 *
 	 * @return array<string, mixed>
 	 */
 	private function rekey( array $config ): array {
-		$json = (string) wp_json_encode( $config );
-
-		if ( ! preg_match_all( '/\b(group|field|layout)_[a-z0-9]+\b/', $json, $matches ) ) {
-			return $config;
-		}
-
 		$replacements = array();
 
-		foreach ( array_unique( $matches[0] ) as $index => $old ) {
-			$replacements[ $old ] = FieldGroup::generate_key( $matches[1][ $index ] );
+		if ( '' !== (string) ( $config['key'] ?? '' ) ) {
+			$replacements[ (string) $config['key'] ] = FieldGroup::generate_key( 'group' );
 		}
 
-		$json    = strtr( $json, $replacements );
-		$decoded = json_decode( $json, true );
+		$collect = static function ( array $fields ) use ( &$collect, &$replacements ): void {
+			foreach ( $fields as $field ) {
+				if ( ! is_array( $field ) ) {
+					continue;
+				}
 
-		return is_array( $decoded ) ? $decoded : $config;
+				if ( '' !== (string) ( $field['key'] ?? '' ) ) {
+					$replacements[ (string) $field['key'] ] = FieldGroup::generate_key( 'field' );
+				}
+
+				$collect( is_array( $field['sub_fields'] ?? null ) ? $field['sub_fields'] : array() );
+
+				foreach ( is_array( $field['layouts'] ?? null ) ? $field['layouts'] : array() as $layout ) {
+					if ( ! is_array( $layout ) ) {
+						continue;
+					}
+
+					if ( '' !== (string) ( $layout['key'] ?? '' ) ) {
+						$replacements[ (string) $layout['key'] ] = FieldGroup::generate_key( 'layout' );
+					}
+
+					$collect( is_array( $layout['sub_fields'] ?? null ) ? $layout['sub_fields'] : array() );
+				}
+			}
+		};
+
+		$collect( is_array( $config['fields'] ?? null ) ? $config['fields'] : array() );
+
+		/*
+		 * Only where a key is kept: a `key`, and the `field` a conditional
+		 * rule points at. A name, a label or a choice is text, even when its
+		 * text is the same as some key.
+		 */
+		$swap = static function ( array $node ) use ( &$swap, $replacements ): array {
+			foreach ( $node as $name => $value ) {
+				if ( is_array( $value ) ) {
+					$node[ $name ] = $swap( $value );
+				} elseif ( ( 'key' === $name || 'field' === $name ) && is_string( $value ) && isset( $replacements[ $value ] ) ) {
+					$node[ $name ] = $replacements[ $value ];
+				}
+			}
+
+			return $node;
+		};
+
+		return $swap( $config );
 	}
 }

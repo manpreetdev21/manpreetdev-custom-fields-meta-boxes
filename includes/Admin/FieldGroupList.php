@@ -60,6 +60,10 @@ final class FieldGroupList extends Module {
 		add_filter( 'post_class', array( $this, 'row_class' ), 10, 3 );
 		add_filter( 'display_post_states', array( $this, 'post_states' ), 10, 2 );
 		add_filter( 'post_date_column_status', array( $this, 'hide_date_status' ), 10, 2 );
+		add_filter( "views_edit-{$type}", array( $this, 'views' ) );
+		add_filter( 'disable_months_dropdown', array( $this, 'no_months' ), 10, 2 );
+		add_filter( 'posts_search', array( $this, 'search_config' ), 10, 2 );
+		add_action( 'pre_get_posts', array( $this, 'default_order' ) );
 		add_action( 'admin_action_' . self::ACTION_DUPLICATE, array( $this, 'handle_duplicate' ) );
 		add_action( 'admin_notices', array( $this, 'duplicate_notice' ) );
 		add_action( 'admin_action_' . LocalJson::ACTION_SYNC, array( $this, 'handle_sync' ) );
@@ -86,22 +90,130 @@ final class FieldGroupList extends Module {
 			'wpcmb_key'      => __( 'Key', 'manpreetdev-custom-fields-meta-boxes' ),
 			'wpcmb_fields'   => __( 'Fields', 'manpreetdev-custom-fields-meta-boxes' ),
 			'wpcmb_location' => __( 'Location', 'manpreetdev-custom-fields-meta-boxes' ),
-			'date'           => __( 'Modified', 'manpreetdev-custom-fields-meta-boxes' ),
+			'wpcmb_modified' => __( 'Modified', 'manpreetdev-custom-fields-meta-boxes' ),
 		);
 	}
 
 	/**
-	 * Allow sorting by field count and menu order.
+	 * Sortable columns: the title and when it last changed.
+	 *
+	 * The Key header used to sort by the post's menu order, which a field
+	 * group never sets — its Order lives in its settings — so it sorted by
+	 * nothing and both directions gave the same list. A group key is random
+	 * by design, so there is no order worth offering in its place.
 	 *
 	 * @param array<string, string> $columns Sortable columns.
 	 *
 	 * @return array<string, string>
 	 */
 	public function sortable_columns( $columns ): array {
-		$columns              = is_array( $columns ) ? $columns : array();
-		$columns['wpcmb_key'] = 'menu_order';
+		$columns = is_array( $columns ) ? $columns : array();
+
+		unset( $columns['date'] );
+
+		$columns['wpcmb_modified'] = array( 'modified', true );
 
 		return $columns;
+	}
+
+	/**
+	 * List the most recently changed groups first, unless asked otherwise.
+	 *
+	 * @param \WP_Query $query The list query.
+	 */
+	public function default_order( $query ): void {
+		if ( ! $this->is_list_query( $query ) || '' !== (string) $query->get( 'orderby' ) ) {
+			return;
+		}
+
+		$query->set( 'orderby', 'modified' );
+		$query->set( 'order', 'DESC' );
+	}
+
+	/**
+	 * Find groups by key and by field name, not only by title.
+	 *
+	 * The list shows each group's key, and a field name is what a template
+	 * uses — "which group is `hero_title` in?" is the question people bring
+	 * to this box. Both are in the stored configuration, which is searched
+	 * alongside the title.
+	 *
+	 * @param string    $search SQL WordPress built for the title search.
+	 * @param \WP_Query $query  The list query.
+	 */
+	public function search_config( $search, $query ): string {
+		$search = (string) $search;
+		$term   = $query instanceof \WP_Query ? trim( (string) $query->get( 's' ) ) : '';
+
+		if ( '' === $search || '' === $term || ! $this->is_list_query( $query ) ) {
+			return $search;
+		}
+
+		global $wpdb;
+
+		$config = $wpdb->prepare(
+			"{$wpdb->posts}.ID IN ( SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value LIKE %s )",
+			FieldGroupPostType::META_CONFIG,
+			'%' . $wpdb->esc_like( $term ) . '%'
+		);
+
+		// WordPress's clause opens with " AND (" around the title terms; the
+		// configuration match joins it as one more alternative.
+		return (string) preg_replace( '/^\s*AND\s*\(/', ' AND (' . $config . ' OR ', $search, 1 );
+	}
+
+	/**
+	 * Name the two views for what they mean here.
+	 *
+	 * A draft group is inactive, which is what its row already says; the
+	 * view above the list called the same groups "Drafts".
+	 *
+	 * @param array<string, string> $views View links.
+	 *
+	 * @return array<string, string>
+	 */
+	public function views( $views ): array {
+		$views  = is_array( $views ) ? $views : array();
+		$labels = array(
+			'publish' => __( 'Active', 'manpreetdev-custom-fields-meta-boxes' ),
+			'draft'   => __( 'Inactive', 'manpreetdev-custom-fields-meta-boxes' ),
+		);
+
+		foreach ( $labels as $status => $label ) {
+			if ( isset( $views[ $status ] ) ) {
+				$views[ $status ] = (string) preg_replace( '/>[^<>]+(<span class="count">)/', '>' . esc_html( $label ) . ' $1', $views[ $status ], 1 );
+			}
+		}
+
+		return $views;
+	}
+
+	/**
+	 * No month filter on this list.
+	 *
+	 * It filters by the month a group was created, beside a column showing
+	 * when each was last changed, which reads as a filter that gets it wrong.
+	 *
+	 * @param bool   $disabled  Whether it is disabled already.
+	 * @param string $post_type Post type of the list.
+	 */
+	public function no_months( $disabled, $post_type = '' ): bool {
+		return FieldGroupPostType::POST_TYPE === $post_type ? true : (bool) $disabled;
+	}
+
+	/**
+	 * Whether a query is this screen's own list.
+	 *
+	 * @param mixed $query Query.
+	 */
+	private function is_list_query( $query ): bool {
+		if ( ! $query instanceof \WP_Query || ! $query->is_main_query() || ! function_exists( 'get_current_screen' ) ) {
+			return false;
+		}
+
+		$screen = get_current_screen();
+
+		return $screen instanceof \WP_Screen && 'edit-' . FieldGroupPostType::POST_TYPE === $screen->id;
 	}
 
 	/**
@@ -132,6 +244,33 @@ final class FieldGroupList extends Module {
 					'<span class="wpcmb-cell-count%s">%s</span>',
 					0 === $count ? ' is-empty' : '',
 					esc_html( 0 === $count ? __( 'None', 'manpreetdev-custom-fields-meta-boxes' ) : (string) $count )
+				);
+				break;
+
+			case 'wpcmb_modified':
+				/*
+				 * From the local time, which every post has. WordPress leaves the
+				 * GMT one empty on a draft, so reading that put an inactive group
+				 * — any new one, any copy — at 1 January 1970.
+				 */
+				$modified = get_post_datetime( (int) $post_id, 'modified' );
+
+				if ( ! $modified instanceof \DateTimeImmutable ) {
+					break;
+				}
+
+				// The same wording WordPress uses for the date column it replaces.
+				printf(
+					'<time datetime="%s">%s</time>',
+					esc_attr( $modified->format( 'c' ) ),
+					esc_html(
+						sprintf(
+							/* translators: 1: date, 2: time. */
+							__( '%1$s at %2$s', 'manpreetdev-custom-fields-meta-boxes' ),
+							wp_date( __( 'Y/m/d', 'manpreetdev-custom-fields-meta-boxes' ), $modified->getTimestamp() ),
+							wp_date( __( 'g:i a', 'manpreetdev-custom-fields-meta-boxes' ), $modified->getTimestamp() )
+						)
+					)
 				);
 				break;
 
@@ -203,11 +342,15 @@ final class FieldGroupList extends Module {
 			return $actions;
 		}
 
-		if ( ! current_user_can( FieldGroupPostType::capability() ) ) {
+		// A trashed group is restored or deleted, not copied.
+		if ( ! current_user_can( FieldGroupPostType::capability() ) || 'trash' === $post->post_status ) {
 			return $actions;
 		}
 
-		unset( $actions['inline hide-if-js'] );
+		// Quick Edit offers a date, a password and a private status, none of
+		// which a field group has. Bulk Edit stays, for switching many on or
+		// off at once.
+		unset( $actions['inline hide-if-no-js'], $actions['inline hide-if-js'] );
 
 		$url = wp_nonce_url(
 			admin_url( 'admin.php?action=' . self::ACTION_DUPLICATE . '&post=' . $post->ID ),
@@ -305,7 +448,7 @@ final class FieldGroupList extends Module {
 			esc_html(
 				sprintf(
 					/* translators: %d: number of field groups. */
-					_n( '%d field group has a newer version in your theme.', '%d field groups have a newer version in your theme.', count( $available ), 'manpreetdev-custom-fields-meta-boxes' ),
+					_n( '%d field group has a newer version in its JSON file.', '%d field groups have a newer version in their JSON files.', count( $available ), 'manpreetdev-custom-fields-meta-boxes' ),
 					count( $available )
 				)
 			),
@@ -362,9 +505,12 @@ final class FieldGroupList extends Module {
 
 		if ( $post instanceof \WP_Post
 			&& FieldGroupPostType::POST_TYPE === $post->post_type
-			&& 'draft' === $post->post_status
+			&& 'publish' !== $post->post_status
+			&& 'trash' !== $post->post_status
 		) {
-			unset( $states['draft'] );
+			// Draft is what inactive is. A group left pending or private by an
+			// earlier version is inactive too, and says so the same way.
+			unset( $states['draft'], $states['pending'], $states['private'], $states['scheduled'] );
 			$states['wpcmb_inactive'] = __( 'Inactive', 'manpreetdev-custom-fields-meta-boxes' );
 		}
 
